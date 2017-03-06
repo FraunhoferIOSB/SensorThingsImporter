@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -28,6 +28,9 @@ import java.util.TreeMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.DatastreamMapper;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.DsMapperFilter;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.DsMapperFixed;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options.Option;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options.OptionDouble;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options.OptionSingle;
@@ -166,6 +169,12 @@ public class OptionsCsv {
         List<String> arguments = new ArrayList<>(args);
         while (!arguments.isEmpty()) {
             String key = arguments.get(0);
+            if (!key.startsWith("-")) {
+                // Not an option.
+                LOGGER.debug("Not an option: {}", key);
+                continue;
+            }
+
             Option option = optionMap.get(key);
             if (option == null) {
                 for (String optionKey : optionMap.keySet()) {
@@ -177,9 +186,10 @@ public class OptionsCsv {
             }
 
             if (option == null) {
-                throw new IllegalArgumentException("Unknown option: " + key);
+                LOGGER.debug("Unknown option: {}", key);
+            } else {
+                option.consume(arguments);
             }
-            option.consume(arguments);
         }
         return this;
     }
