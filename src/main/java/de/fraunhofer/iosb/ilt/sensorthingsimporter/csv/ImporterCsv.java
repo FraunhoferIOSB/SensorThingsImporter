@@ -23,7 +23,10 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -40,7 +43,12 @@ import org.slf4j.LoggerFactory;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.DatastreamMapper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options.OptionDouble;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.sta.model.Datastream;
+import de.fraunhofer.iosb.ilt.sta.model.Entity;
+import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
+import de.fraunhofer.iosb.ilt.sta.model.ext.DataArrayDocument;
+import de.fraunhofer.iosb.ilt.sta.model.ext.DataArrayValue;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 
 /**
@@ -62,6 +70,11 @@ public class ImporterCsv {
     private long rowSkip;
     private boolean doSleep;
     private long sleepTime;
+    private boolean dataArray = false;
+    private RecordConverterCSV rcCsv;
+    private Map<Entity, DataArrayValue> davMap = new HashMap<>();
+    private Entity lastDatastream;
+    private DataArrayValue lastDav;
 
     public void parseArguments(List<String> args) {
         options.parseArguments(args);
@@ -72,6 +85,8 @@ public class ImporterCsv {
         if (noAct) {
             LOGGER.info("Not making any changes.");
         }
+
+        dataArray = options.getUseDataArray().isSet();
 
         String serverUrl = options.getServerUrl().getValue();
         LOGGER.info("Using service: {}", serverUrl);
@@ -84,8 +99,8 @@ public class ImporterCsv {
 
         DatastreamMapper datastreamMapper = options.createDatastreamMapper(service);
 
-        RecordConverterCSV rcv = new RecordConverterCSV(options, datastreamMapper);
-        rcv.setVerbose(noAct);
+        rcCsv = new RecordConverterCSV(options, datastreamMapper);
+        rcCsv.setVerbose(noAct);
 
         limitRows = false;
         rowLimit = options.getRowLimit().getValue();
@@ -109,10 +124,10 @@ public class ImporterCsv {
 
         messageIntervalStart = options.getMessageInterval().getValue();
 
-        importLoop(parser, rcv, noAct);
+        importLoop(parser, noAct);
     }
 
-    private void importLoop(CSVParser parser, RecordConverterCSV rcv, boolean noAct) {
+    private void importLoop(CSVParser parser, boolean noAct) {
         LOGGER.info("Reading {} rows (0=∞), skipping {} rows.", rowLimit, rowSkip);
         int rowCount = 0;
         int totalCount = 0;
@@ -127,10 +142,13 @@ public class ImporterCsv {
                     rowSkip--;
                     continue;
                 }
-                Observation obs = rcv.convert(record);
-                if (!noAct) {
+                Observation obs = rcCsv.convert(record);
+                if (!dataArray && !noAct) {
                     service.create(obs);
                     inserted++;
+                }
+                if (dataArray) {
+                    addToDataArray(obs);
                 }
 
                 rowCount++;
@@ -139,6 +157,10 @@ public class ImporterCsv {
                 }
                 nextMessage--;
                 if (nextMessage == 0) {
+                    if (dataArray) {
+                        inserted += sendDataArray(noAct);
+                    }
+
                     nextMessage = messageIntervalStart;
                     Calendar now = Calendar.getInstance();
                     double seconds = 1e-3 * (now.getTimeInMillis() - start.getTimeInMillis());
@@ -147,6 +169,9 @@ public class ImporterCsv {
                 }
                 maybeSleep();
             }
+            if (dataArray) {
+                inserted += sendDataArray(noAct);
+            }
         } catch (Exception e) {
             LOGGER.error("Exception:", e);
         }
@@ -154,6 +179,56 @@ public class ImporterCsv {
         double seconds = 1e-3 * (now.getTimeInMillis() - start.getTimeInMillis());
         double rowsPerSec = inserted / seconds;
         LOGGER.info("Parsed {} rows of {}, inserted {} observations in {}s ({}/s).", rowCount, totalCount, inserted, String.format("%.1f", seconds), String.format("%.1f", rowsPerSec));
+    }
+
+    private void addToDataArray(Observation o) throws ServiceFailureException {
+        Entity ds = o.getDatastream();
+        if (ds == null) {
+            ds = o.getMultiDatastream();
+        }
+        if (ds == null) {
+            throw new IllegalArgumentException("Observation must have a (Multi)Datastream.");
+        }
+        if (ds != lastDatastream) {
+            findDataArrayValue(ds);
+        }
+        lastDav.addObservation(o);
+    }
+
+    private void findDataArrayValue(Entity ds) {
+        DataArrayValue dav = davMap.get(ds);
+        if (dav == null) {
+            if (ds instanceof Datastream) {
+                dav = new DataArrayValue((Datastream) ds, rcCsv.getDefinedProperties());
+            } else {
+                dav = new DataArrayValue((MultiDatastream) ds, rcCsv.getDefinedProperties());
+            }
+            davMap.put(ds, dav);
+        }
+        lastDav = dav;
+        lastDatastream = ds;
+    }
+
+    private int sendDataArray(boolean noAct) throws ServiceFailureException {
+        int inserted = 0;
+        if (!noAct && !davMap.isEmpty()) {
+            DataArrayDocument dad = new DataArrayDocument();
+            dad.getValue().addAll(davMap.values());
+            List<String> locations = service.create(dad);
+            long error = locations.stream().filter(
+                    location -> location.startsWith("error")
+            ).count();
+            if (error > 0) {
+                Optional<String> first = locations.stream().filter(location -> location.startsWith("error")).findFirst();
+                LOGGER.warn("Failed to insert {} Observations. First error: {}", error, first);
+            }
+            long nonError = locations.size() - error;
+            inserted += nonError;
+        }
+        davMap.clear();
+        lastDav = null;
+        lastDatastream = null;
+        return inserted;
     }
 
     private void maybeSleep() {

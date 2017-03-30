@@ -16,18 +16,20 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.DatastreamMapper;
-
 import java.time.ZonedDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.threeten.extra.Interval;
 
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.DatastreamMapper;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
+import de.fraunhofer.iosb.ilt.sta.model.ext.DataArrayValue;
 
 /**
  *
@@ -52,6 +54,21 @@ public class RecordConverterCSV {
         colPhenTime = options.getColPhenomenonTime().getValue();
         colResultTime = options.getColResultTime().getValue();
         colValidTime = options.getColValidTime().getValue();
+    }
+
+    public Set<DataArrayValue.Property> getDefinedProperties() {
+        Set<DataArrayValue.Property> value = new HashSet<>();
+        value.add(DataArrayValue.Property.Result);
+        if (colPhenTime >= 0) {
+            value.add(DataArrayValue.Property.PhenomenonTime);
+        }
+        if (colResultTime >= 0) {
+            value.add(DataArrayValue.Property.ResultTime);
+        }
+        if (colValidTime >= 0) {
+            value.add(DataArrayValue.Property.ValidTime);
+        }
+        return value;
     }
 
     public RecordConverterCSV setVerbose(boolean verbose) {

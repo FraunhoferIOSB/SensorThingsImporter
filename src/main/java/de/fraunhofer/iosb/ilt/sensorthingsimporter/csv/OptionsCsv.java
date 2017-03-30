@@ -78,6 +78,7 @@ public class OptionsCsv {
     private final OptionSingle<Long> sleep;
     private final OptionToggle noAct;
     private final OptionToggle tabDelimited;
+    private final OptionToggle useDataArray;
     private final OptionDouble<String, String> basicAuth;
     private final OptionSingle<Integer> messageInterval;
 
@@ -139,6 +140,11 @@ public class OptionsCsv {
         tabDelimited = addOption(
                 new OptionToggle("-tab")
                 .setDescription("Use tab as delimiter instead of comma."));
+        useDataArray = addOption(
+                new OptionToggle("-dataArray", "-da")
+                .setDescription("Use the SensorThingsAPI DataArray extension to post Observations.",
+                        "This is much more efficient when posting many observations.",
+                        "The number of items grouped together is determined by the messageInterval setting."));
         basicAuth = addOption(
                 new OptionDouble<String, String>("-basic")
                 .setParams(new ParameterString("username", ""), new ParameterString("password", ""))
@@ -266,6 +272,10 @@ public class OptionsCsv {
 
     public OptionToggle getTabDelimited() {
         return tabDelimited;
+    }
+
+    public OptionToggle getUseDataArray() {
+        return useDataArray;
     }
 
     public OptionSingle<Long> getRowLimit() {
