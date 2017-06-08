@@ -51,6 +51,11 @@ java -jar SensorThingsImporter-0.1-SNAPSHOT.jar -help
 -tab :
     Use tab as delimiter instead of comma.
 
+-dataarray -da :
+    Use the SensorThingsAPI DataArray extension to post Observations.
+    This is much more efficient when posting many observations.
+    The number of items grouped together is determined by the messageInterval setting.
+
 -basic [username] [password] :
     Use basic auth.
 
