@@ -16,15 +16,15 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
-import org.apache.commons.csv.CSVRecord;
-
+import de.fraunhofer.iosb.ilt.configurable.Configurable;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
+import org.apache.commons.csv.CSVRecord;
 
 /**
  *
  * @author scf
  */
-public interface DatastreamMapper {
+public interface DatastreamMapper extends Configurable<Object, Object> {
 
     /**
      * Get the Datastream to be used for the given record.

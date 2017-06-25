@@ -16,9 +16,14 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
-import org.apache.commons.csv.CSVRecord;
-
+import com.google.gson.JsonElement;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
+import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
+import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
+import org.apache.commons.csv.CSVRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A datastream mapper that always returns the same Datastream.
@@ -27,15 +32,54 @@ import de.fraunhofer.iosb.ilt.sta.model.Datastream;
  */
 public class DsMapperFixed implements DatastreamMapper {
 
-    private final Datastream ds;
+	/**
+	 * The logger for this class.
+	 */
+	private static final Logger LOGGER = LoggerFactory.getLogger(DsMapperFixed.class);
 
-    public DsMapperFixed(Datastream ds) {
-        this.ds = ds;
-    }
+	private SensorThingsService service;
 
-    @Override
-    public Datastream getDatastreamFor(CSVRecord record) {
-        return ds;
-    }
+	private Datastream ds;
+
+	private EditorInt editor;
+
+	public DsMapperFixed() {
+		this.ds = null;
+	}
+
+	@Override
+	public void configure(JsonElement config, Object context, Object edtCtx) {
+		if (!(context instanceof SensorThingsService)) {
+			throw new IllegalArgumentException("Context must be a SensorThingsService. We got a " + context.getClass());
+		}
+		service = (SensorThingsService) context;
+		getConfigEditor(service, edtCtx).setConfig(config, service, edtCtx);
+	}
+
+	private void init() {
+		long dsId = editor.getValue();
+		try {
+			ds = service.datastreams().find(dsId);
+			LOGGER.info("Using fixed datatsream: {}", ds.getName());
+		} catch (ServiceFailureException exc) {
+			throw new IllegalArgumentException("Could not fetch datastream for id " + dsId, exc);
+		}
+	}
+
+	@Override
+	public EditorInt getConfigEditor(Object context, Object edtCtx) {
+		if (editor == null) {
+			editor = new EditorInt(Integer.MIN_VALUE, Integer.MAX_VALUE, 1, 0, "Datastream ID", "The datastream id to add the observations to.");
+		}
+		return editor;
+	}
+
+	@Override
+	public Datastream getDatastreamFor(CSVRecord record) {
+		if (ds == null) {
+			init();
+		}
+		return ds;
+	}
 
 }
