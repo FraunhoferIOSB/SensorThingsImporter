@@ -102,6 +102,7 @@ public class Options {
 
 			if (option == null) {
 				LOGGER.debug("Unknown option: {}", key);
+				arguments.remove(0);
 			} else {
 				option.consume(arguments);
 			}
