@@ -20,6 +20,7 @@ import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
+import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
@@ -40,6 +41,7 @@ public class DsMapperFixed implements DatastreamMapper {
 	private SensorThingsService service;
 
 	private Datastream ds;
+	private MultiDatastream mds;
 
 	private EditorInt editor;
 
@@ -56,13 +58,18 @@ public class DsMapperFixed implements DatastreamMapper {
 		getConfigEditor(service, edtCtx).setConfig(config, service, edtCtx);
 	}
 
-	private void init() {
+	private void init(boolean multi) {
 		long dsId = editor.getValue();
 		try {
-			ds = service.datastreams().find(dsId);
-			LOGGER.info("Using fixed datatsream: {}", ds.getName());
+			if (multi) {
+				mds = service.multiDatastreams().find(dsId);
+				LOGGER.info("Using fixed multiDatastream: {}", mds.getName());
+			} else {
+				ds = service.datastreams().find(dsId);
+				LOGGER.info("Using fixed datatsream: {}", ds.getName());
+			}
 		} catch (ServiceFailureException exc) {
-			throw new IllegalArgumentException("Could not fetch datastream for id " + dsId, exc);
+			throw new IllegalArgumentException("Could not fetch (multi)datastream for id " + dsId, exc);
 		}
 	}
 
@@ -77,9 +84,17 @@ public class DsMapperFixed implements DatastreamMapper {
 	@Override
 	public Datastream getDatastreamFor(CSVRecord record) {
 		if (ds == null) {
-			init();
+			init(false);
 		}
 		return ds;
+	}
+
+	@Override
+	public MultiDatastream getMultiDatastreamFor(CSVRecord record) {
+		if (mds == null) {
+			init(true);
+		}
+		return mds;
 	}
 
 }

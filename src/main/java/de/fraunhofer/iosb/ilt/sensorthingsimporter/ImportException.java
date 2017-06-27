@@ -16,24 +16,31 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
-import de.fraunhofer.iosb.ilt.configurable.Configurable;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import org.apache.commons.csv.CSVRecord;
-
 /**
  *
  * @author scf
  */
-public interface DatastreamMapper extends Configurable<Object, Object> {
+public class ImportException extends Exception {
 
-	/**
-	 * Get the Datastream to be used for the given record.
-	 *
-	 * @param record The record to get the Datastream for.
-	 * @return The Datastream to use for the given record.
-	 */
-	public Datastream getDatastreamFor(CSVRecord record);
+	private static final long serialVersionUID = -1365036034620856087L;
 
-	public MultiDatastream getMultiDatastreamFor(CSVRecord record);
+	public ImportException() {
+	}
+
+	public ImportException(String message) {
+		super(message);
+	}
+
+	public ImportException(Throwable cause) {
+		super(cause);
+	}
+
+	public ImportException(String message, Throwable cause) {
+		super(message, cause);
+	}
+
+	public ImportException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+		super(message, cause, enableSuppression, writableStackTrace);
+	}
+
 }

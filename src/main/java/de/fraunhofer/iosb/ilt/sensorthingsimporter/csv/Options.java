@@ -18,7 +18,9 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options.Option;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options.OptionSingle;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options.OptionToggle;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options.ParameterString;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -33,12 +35,12 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
-public class OptionsCsv {
+public class Options {
 
 	/**
 	 * The logger for this class.
 	 */
-	private static final Logger LOGGER = LoggerFactory.getLogger(OptionsCsv.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(Options.class);
 	private static final Comparator<String> KEY_COMPARATOR = (String o1, String o2) -> {
 		if (o1.length() == o2.length()) {
 			return String.CASE_INSENSITIVE_ORDER.compare(o1, o2);
@@ -48,12 +50,18 @@ public class OptionsCsv {
 	private final Set<String> keys = new HashSet<>();
 	private final Map<String, Option> optionMap = new TreeMap<>(KEY_COMPARATOR);
 	private final List<Option> options = new ArrayList<>();
-	private final OptionToggle noAct;
 
-	public OptionsCsv() {
+	private final OptionToggle noAct;
+	private final OptionSingle<String> fileName;
+
+	public Options() {
 		noAct = addOption(
 				new OptionToggle("-noact", "-n")
 						.setDescription("Read the file and give output, but do not actually post observations."));
+		fileName = addOption(
+				new OptionSingle<String>("-config", "-c")
+						.setParam(new ParameterString("file path", ""))
+						.setDescription("The path to the config json file."));
 	}
 
 	public List<Option> getOptions() {
@@ -72,7 +80,7 @@ public class OptionsCsv {
 		return o;
 	}
 
-	public OptionsCsv parseArguments(List<String> args) {
+	public Options parseArguments(List<String> args) {
 		List<String> arguments = new ArrayList<>(args);
 		while (!arguments.isEmpty()) {
 			String key = arguments.get(0);
@@ -103,6 +111,10 @@ public class OptionsCsv {
 
 	public OptionToggle getNoAct() {
 		return noAct;
+	}
+
+	public OptionSingle<String> getFileName() {
+		return fileName;
 	}
 
 }

@@ -20,6 +20,7 @@ import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
+import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.ext.EntityList;
 import de.fraunhofer.iosb.ilt.sta.query.Query;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
@@ -42,6 +43,7 @@ public class DsMapperFilter implements DatastreamMapper {
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(DsMapperFilter.class);
 	private final Map<String, Datastream> datastreamCache = new HashMap<>();
+	private final Map<String, MultiDatastream> multiDatastreamCache = new HashMap<>();
 	private final Pattern placeHolderPattern = Pattern.compile("\\{([0-9]+)\\}");
 
 	private SensorThingsService service;
@@ -86,6 +88,18 @@ public class DsMapperFilter implements DatastreamMapper {
 		}
 	}
 
+	@Override
+	public MultiDatastream getMultiDatastreamFor(CSVRecord record) {
+		try {
+			String filter = fillTemplate(record);
+			MultiDatastream ds = getMultiDatastreamFor(filter);
+			return ds;
+		} catch (ServiceFailureException ex) {
+			LOGGER.error("Failed to fetch datastream.", ex);
+			throw new IllegalArgumentException(ex);
+		}
+	}
+
 	public Datastream getDatastreamFor(String filter) throws ServiceFailureException {
 		Datastream ds = datastreamCache.get(filter);
 		if (ds != null) {
@@ -101,6 +115,23 @@ public class DsMapperFilter implements DatastreamMapper {
 		LOGGER.info("Found datastream {} for query {}.", ds.getId(), filter);
 		datastreamCache.put(filter, ds);
 		return ds;
+	}
+
+	public MultiDatastream getMultiDatastreamFor(String filter) throws ServiceFailureException {
+		MultiDatastream mds = multiDatastreamCache.get(filter);
+		if (mds != null) {
+			return mds;
+		}
+		Query<MultiDatastream> query = service.multiDatastreams().query().filter(filter);
+		EntityList<MultiDatastream> streams = query.list();
+		if (streams.size() != 1) {
+			LOGGER.error("Found incorrect number of multiDatastreams: {}", streams.size());
+			throw new IllegalArgumentException("Found incorrect number of multiDatastreams: " + streams.size());
+		}
+		mds = streams.iterator().next();
+		LOGGER.info("Found multiDatastreams {} for query {}.", mds.getId(), filter);
+		multiDatastreamCache.put(filter, mds);
+		return mds;
 	}
 
 	private String fillTemplate(CSVRecord record) {

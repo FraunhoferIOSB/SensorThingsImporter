@@ -17,23 +17,21 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
 import de.fraunhofer.iosb.ilt.configurable.Configurable;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import org.apache.commons.csv.CSVRecord;
+import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 
 /**
  *
  * @author scf
  */
-public interface DatastreamMapper extends Configurable<Object, Object> {
+public interface Importer extends Configurable<SensorThingsService, Object> {
 
 	/**
-	 * Get the Datastream to be used for the given record.
+	 * Set the importer to do a dry-run. Files are parsed, but no observations
+	 * created.
 	 *
-	 * @param record The record to get the Datastream for.
-	 * @return The Datastream to use for the given record.
+	 * @param noAct if true, nothing is actually done.
 	 */
-	public Datastream getDatastreamFor(CSVRecord record);
+	public void setNoAct(boolean noAct);
 
-	public MultiDatastream getMultiDatastreamFor(CSVRecord record);
+	public void doImport() throws ImportException;
 }

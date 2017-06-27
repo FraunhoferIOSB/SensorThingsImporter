@@ -17,13 +17,17 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
 import com.google.gson.JsonElement;
-import de.fraunhofer.iosb.ilt.configurable.Configurable;
+import de.fraunhofer.iosb.ilt.configurable.EditorFactory;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthMethod;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.Validator;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.Entity;
@@ -34,11 +38,10 @@ import de.fraunhofer.iosb.ilt.sta.model.ext.DataArrayValue;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
@@ -47,6 +50,11 @@ import java.util.Optional;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,13 +62,12 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
-public class ImporterCsv implements Configurable<SensorThingsService, Object> {
+public class ImporterCsv implements Importer {
 
 	/**
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(ImporterCsv.class);
-	private final OptionsCsv options = new OptionsCsv();
 	private SensorThingsService service;
 	private int messageIntervalStart;
 	private boolean limitRows;
@@ -70,7 +77,9 @@ public class ImporterCsv implements Configurable<SensorThingsService, Object> {
 	private long sleepTime;
 	private boolean dataArray = false;
 
-	private final RecordConverterCSV rcCsv = new RecordConverterCSV();
+	private final List<RecordConverterCSV> rcCsvs = new ArrayList<>();
+
+	private Validator validator;
 
 	private final Map<Entity, DataArrayValue> davMap = new HashMap<>();
 
@@ -78,9 +87,11 @@ public class ImporterCsv implements Configurable<SensorThingsService, Object> {
 	private DataArrayValue lastDav;
 
 	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
-	private EditorString editorService;
 	private EditorBoolean editorUseDataArray;
-	private EditorSubclass<Object, Object, AuthMethod> editorAuthMethod;
+
+	private EditorList<SensorThingsService, Object, RecordConverterCSV, EditorClass<SensorThingsService, Object, RecordConverterCSV>> editorConverters;
+
+	private EditorSubclass<SensorThingsService, Object, Validator> editorValidator;
 
 	private EditorInt editorRowLimit;
 	private EditorInt editorRowSkip;
@@ -92,16 +103,20 @@ public class ImporterCsv implements Configurable<SensorThingsService, Object> {
 	private EditorString editorDelimiter;
 	private EditorBoolean editorTabDelim;
 
+	private boolean noAct = false;
+
+	public ImporterCsv() {
+	}
+
+	@Override
+	public void setNoAct(boolean noAct) {
+		this.noAct = noAct;
+	}
+
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
-		service = new SensorThingsService();
+		service = context;
 		getConfigEditor(service, edtCtx).setConfig(config, service, edtCtx);
-		try {
-			service.setEndpoint(new URI(editorService.getValue()));
-		} catch (URISyntaxException ex) {
-			LOGGER.error("Failed to create service.", ex);
-			throw new IllegalArgumentException("Failed to create service.", ex);
-		}
 	}
 
 	@Override
@@ -109,19 +124,19 @@ public class ImporterCsv implements Configurable<SensorThingsService, Object> {
 		if (editor == null) {
 			editor = new EditorMap<>();
 
-			editor.addOption("recordConvertor", rcCsv.getConfigEditor(context, edtCtx), false);
+			EditorFactory<EditorClass<SensorThingsService, Object, RecordConverterCSV>> factory;
+			factory = () -> new EditorClass<>(RecordConverterCSV.class);
+			editorConverters = new EditorList(factory, "Converters", "The classes that convert columns into observations.");
+			editor.addOption("recordConvertors", editorConverters, false);
 
-			editorService = new EditorString("https://service.somewhere/path/v1.0", 1, "Service URL", "The url of the server.");
-			editor.addOption("serviceUrl", editorService, false);
+			editorValidator = new EditorSubclass(Validator.class, "Validator", "The validator to use.", false, "className");
+			editor.addOption("validator", editorValidator, true);
 
 			editorUseDataArray = new EditorBoolean(false, "Use DataArrays",
 					"Use the SensorThingsAPI DataArray extension to post Observations. "
 					+ "This is much more efficient when posting many observations. "
 					+ "The number of items grouped together is determined by the messageInterval setting.");
 			editor.addOption("useDataArrays", editorUseDataArray, true);
-
-			editorAuthMethod = new EditorSubclass<>(AuthMethod.class, "Auth Method", "The authentication method the service uses.", false, "className");
-			editor.addOption("authMethod", editorAuthMethod, true);
 
 			editorRowLimit = new EditorInt(0, Integer.MAX_VALUE, 1, 0, "Row Limit", "The maximum number of rows to insert as observations (0=no limit).");
 			editor.addOption("rowLimit", editorRowLimit, true);
@@ -150,20 +165,23 @@ public class ImporterCsv implements Configurable<SensorThingsService, Object> {
 		return editor;
 	}
 
-	public void parseArguments(List<String> args) {
-		options.parseArguments(args);
-	}
-
-	public void doImport() throws MalformedURLException, URISyntaxException, ServiceFailureException, IOException {
-		boolean noAct = options.getNoAct().isSet();
+	@Override
+	public void doImport() throws ImportException {
 		if (noAct) {
 			LOGGER.info("Not making any changes.");
 		}
-		rcCsv.setVerbose(noAct);
+
+		rcCsvs.clear();
+		rcCsvs.addAll(editorConverters.getValue());
+		for (RecordConverterCSV rcCsv : rcCsvs) {
+			rcCsv.setVerbose(noAct);
+		}
+		validator = editorValidator.getValue();
+		if (validator == null) {
+			validator = new Validator.ValidatorNull();
+		}
 
 		dataArray = editorUseDataArray.getValue();
-
-		editorAuthMethod.getValue().setAuth(service);
 
 		limitRows = false;
 		rowLimit = editorRowLimit.getValue();
@@ -188,10 +206,10 @@ public class ImporterCsv implements Configurable<SensorThingsService, Object> {
 		}
 
 		String input = editorInput.getValue();
-		URL inUrl = null;
+		URI inUrl = null;
 		try {
-			inUrl = new URL(input);
-		} catch (MalformedURLException e) {
+			inUrl = new URI(input);
+		} catch (URISyntaxException e) {
 		}
 		File inFile = null;
 		try {
@@ -201,14 +219,23 @@ public class ImporterCsv implements Configurable<SensorThingsService, Object> {
 
 		String charset = editorCharSet.getValue();
 		CSVParser parser;
-		if (inUrl != null) {
-			parser = CSVParser.parse(inUrl, Charset.forName(charset), format);
-		} else if (inFile != null) {
-			parser = CSVParser.parse(inFile, Charset.forName(charset), format);
-		} else {
-			throw new IllegalArgumentException("No valid input url or file.");
+		try {
+			if (inUrl != null) {
+				CloseableHttpClient client = HttpClients.createSystem();
+				HttpGet get = new HttpGet(inUrl);
+				CloseableHttpResponse response = client.execute(get);
+				String data = EntityUtils.toString(response.getEntity(), charset);
+				parser = CSVParser.parse(data, format);
+			} else if (inFile != null) {
+				parser = CSVParser.parse(inFile, Charset.forName(charset), format);
+			} else {
+				LOGGER.error("Failed");
+				throw new ImportException("No valid input url or file.");
+			}
+		} catch (IOException exc) {
+			LOGGER.error("Failed", exc);
+			throw new ImportException("Failed to handle csv file.", exc);
 		}
-
 		messageIntervalStart = editorMsgInterval.getValue();
 
 		importLoop(parser, noAct);
@@ -229,13 +256,17 @@ public class ImporterCsv implements Configurable<SensorThingsService, Object> {
 					rowSkip--;
 					continue;
 				}
-				Observation obs = rcCsv.convert(record);
-				if (!dataArray && !noAct) {
-					service.create(obs);
-					inserted++;
-				}
-				if (dataArray) {
-					addToDataArray(obs);
+				for (RecordConverterCSV rcCsv : rcCsvs) {
+					Observation obs = rcCsv.convert(record);
+					if (validator.isValid(obs)) {
+						if (!dataArray && !noAct) {
+							service.create(obs);
+							inserted++;
+						}
+						if (dataArray) {
+							addToDataArray(obs, rcCsv);
+						}
+					}
 				}
 
 				rowCount++;
@@ -268,7 +299,7 @@ public class ImporterCsv implements Configurable<SensorThingsService, Object> {
 		LOGGER.info("Parsed {} rows of {}, inserted {} observations in {}s ({}/s).", rowCount, totalCount, inserted, String.format("%.1f", seconds), String.format("%.1f", rowsPerSec));
 	}
 
-	private void addToDataArray(Observation o) throws ServiceFailureException {
+	private void addToDataArray(Observation o, RecordConverterCSV rcCsv) throws ServiceFailureException {
 		Entity ds = o.getDatastream();
 		if (ds == null) {
 			ds = o.getMultiDatastream();
@@ -277,12 +308,12 @@ public class ImporterCsv implements Configurable<SensorThingsService, Object> {
 			throw new IllegalArgumentException("Observation must have a (Multi)Datastream.");
 		}
 		if (ds != lastDatastream) {
-			findDataArrayValue(ds);
+			findDataArrayValue(ds, rcCsv);
 		}
 		lastDav.addObservation(o);
 	}
 
-	private void findDataArrayValue(Entity ds) {
+	private void findDataArrayValue(Entity ds, RecordConverterCSV rcCsv) {
 		DataArrayValue dav = davMap.get(ds);
 		if (dav == null) {
 			if (ds instanceof Datastream) {

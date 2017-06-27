@@ -1,25 +1,92 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
+import java.io.File;
+import java.io.IOException;
 import java.net.URL;
+import java.util.Map;
 import java.util.ResourceBundle;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.control.Label;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ScrollPane;
+import javafx.stage.FileChooser;
+import org.apache.commons.io.FileUtils;
+import org.slf4j.LoggerFactory;
 
 public class FXMLController implements Initializable {
-    
-    @FXML
-    private Label label;
-    
-    @FXML
-    private void handleButtonAction(ActionEvent event) {
-        System.out.println("You clicked me!");
-        label.setText("Hello World!");
-    }
-    
-    @Override
-    public void initialize(URL url, ResourceBundle rb) {
-        // TODO
-    }    
+
+	/**
+	 * The logger for this class.
+	 */
+	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(FXMLController.class);
+	@FXML
+	private ScrollPane paneConfig;
+	@FXML
+	private Button buttonLoad;
+	@FXML
+	private Button buttonSave;
+	@FXML
+	private Button buttonImport;
+	@FXML
+	private CheckBox toggleNoAct;
+
+	private ImporterWrapper wrapper;
+	private EditorMap<Object, Object, Map<String, Object>> configEditor;
+	private FileChooser fileChooser = new FileChooser();
+
+	@FXML
+	private void actionLoad(ActionEvent event) {
+		fileChooser.setTitle("Load Config");
+		File file = fileChooser.showOpenDialog(paneConfig.getScene().getWindow());
+		try {
+			String config = FileUtils.readFileToString(file, "UTF-8");
+			JsonElement json = new JsonParser().parse(config);
+			wrapper.configure(json, null, null);
+		} catch (IOException ex) {
+			LOGGER.error("Failed to read file", ex);
+			Alert alert = new Alert(Alert.AlertType.ERROR);
+			alert.setTitle("failed to read file");
+			alert.setContentText(ex.getLocalizedMessage());
+			alert.showAndWait();
+		}
+	}
+
+	@FXML
+	private void actionSave(ActionEvent event) {
+		JsonElement json = configEditor.getConfig();
+		String config = new Gson().toJson(json);
+		fileChooser.setTitle("Save Config");
+		File file = fileChooser.showSaveDialog(paneConfig.getScene().getWindow());
+
+		try {
+			FileUtils.writeStringToFile(file, config, "UTF-8");
+		} catch (IOException ex) {
+			LOGGER.error("Failed to write file.", ex);
+			Alert alert = new Alert(Alert.AlertType.ERROR);
+			alert.setTitle("failed to write file");
+			alert.setContentText(ex.getLocalizedMessage());
+			alert.showAndWait();
+		}
+	}
+
+	@FXML
+	private void actionImport(ActionEvent event) {
+		JsonElement json = configEditor.getConfig();
+		String config = new Gson().toJson(json);
+		MainApp.importConfig(config, toggleNoAct.isSelected());
+	}
+
+	@Override
+	public void initialize(URL url, ResourceBundle rb) {
+		wrapper = new ImporterWrapper();
+		configEditor = wrapper.getConfigEditor(null, null);
+		paneConfig.setContent(configEditor.getNode());
+	}
 }
