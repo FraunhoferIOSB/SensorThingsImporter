@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2017 Fraunhofer IOSB
+ * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,12 +26,16 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthMethod;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.Options;
+import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,4 +125,17 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 			LOGGER.trace("Failed to import.", exc);
 		}
 	}
+
+	public static void importConfig(String config, boolean noAct) {
+		ImporterWrapper wrapper = new ImporterWrapper();
+		wrapper.doImport(config, noAct);
+	}
+
+	public static void importCmdLine(List<String> arguments) throws URISyntaxException, IOException, MalformedURLException, ServiceFailureException {
+		Options options = new Options().parseArguments(arguments);
+
+		ImporterWrapper wrapper = new ImporterWrapper();
+		wrapper.doImport(options);
+	}
+
 }

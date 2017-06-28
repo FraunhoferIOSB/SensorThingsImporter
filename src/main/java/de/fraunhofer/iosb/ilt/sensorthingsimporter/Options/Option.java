@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2017 Fraunhofer IOSB
+ * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,35 +26,35 @@ import java.util.List;
  */
 public interface Option {
 
-    /**
-     * A List because order is important.
-     *
-     * @return The keys of the option, in the order they are matched.
-     */
-    public List<String> getKeys();
+	/**
+	 * A List because order is important.
+	 *
+	 * @return The keys of the option, in the order they are matched.
+	 */
+	public List<String> getKeys();
 
-    public boolean matches(String arg);
+	public boolean matches(String arg);
 
-    /**
-     * Will consume arguments from the list until satisfied. Will always consume
-     * at least the first argument, which should start with, or be, the key.
-     *
-     * @param args The arguments to consume at least one of.
-     */
-    public void consume(List<String> args);
+	/**
+	 * Will consume arguments from the list until satisfied. Will always consume
+	 * at least the first argument, which should start with, or be, the key.
+	 *
+	 * @param args The arguments to consume at least one of.
+	 */
+	public void consume(List<String> args);
 
-    /**
-     * Returns true if the option was explicitly set, false otherwise. If the
-     * option was not set, it might still return a default value.
-     *
-     * @return true if the option was set.
-     */
-    public boolean isSet();
+	/**
+	 * Returns true if the option was explicitly set, false otherwise. If the
+	 * option was not set, it might still return a default value.
+	 *
+	 * @return true if the option was set.
+	 */
+	public boolean isSet();
 
-    public String[] getDescription();
+	public String[] getDescription();
 
-    public default List<Parameter> getParameters() {
-        return new ArrayList<>();
-    }
+	public default List<Parameter> getParameters() {
+		return new ArrayList<>();
+	}
 
 }

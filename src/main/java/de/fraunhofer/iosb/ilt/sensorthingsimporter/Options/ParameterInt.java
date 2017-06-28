@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2017 Fraunhofer IOSB
+ * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,31 +23,31 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.Options;
  */
 public class ParameterInt implements Parameter<Integer> {
 
-    private final String name;
-    private Integer value;
+	private final String name;
+	private Integer value;
 
-    /**
-     * @param name The name of the parameter used in the help.
-     * @param value The default value.
-     */
-    public ParameterInt(String name, Integer value) {
-        this.name = name;
-        this.value = value;
-    }
+	/**
+	 * @param name The name of the parameter used in the help.
+	 * @param value The default value.
+	 */
+	public ParameterInt(String name, Integer value) {
+		this.name = name;
+		this.value = value;
+	}
 
-    @Override
-    public Integer parse(String arg) {
-        value = Integer.parseInt(arg);
-        return value;
-    }
+	@Override
+	public Integer parse(String arg) {
+		value = Integer.parseInt(arg);
+		return value;
+	}
 
-    @Override
-    public Integer getValue() {
-        return value;
-    }
+	@Override
+	public Integer getValue() {
+		return value;
+	}
 
-    @Override
-    public String getName() {
-        return name;
-    }
+	@Override
+	public String getName() {
+		return name;
+	}
 }

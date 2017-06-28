@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2017 Fraunhofer IOSB
+ * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,24 +26,24 @@ import java.util.List;
  */
 public class OptionToggle extends OptionBase {
 
-    public OptionToggle(String... keys) {
-        super(keys);
-    }
+	public OptionToggle(String... keys) {
+		super(keys);
+	}
 
-    @Override
-    public void consume(List<String> args) {
-        String first = args.remove(0);
-        String matchedKey = findKey(first);
-        if (matchedKey.isEmpty()) {
-            throw new IllegalStateException("First argument does not mach any key!");
-        }
-        setSet(true);
-    }
+	@Override
+	public void consume(List<String> args) {
+		String first = args.remove(0);
+		String matchedKey = findKey(first);
+		if (matchedKey.isEmpty()) {
+			throw new IllegalStateException("First argument does not mach any key!");
+		}
+		setSet(true);
+	}
 
-    @Override
-    public OptionToggle setDescription(String... description) {
-        super.setDescription(description);
-        return this;
-    }
+	@Override
+	public OptionToggle setDescription(String... description) {
+		super.setDescription(description);
+		return this;
+	}
 
 }
