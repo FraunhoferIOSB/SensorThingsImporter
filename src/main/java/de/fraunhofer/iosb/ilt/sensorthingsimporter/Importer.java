@@ -18,21 +18,21 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
 import de.fraunhofer.iosb.ilt.configurable.Configurable;
+import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
+import java.util.List;
 
 /**
  *
  * @author scf
  */
-public interface Importer extends Configurable<SensorThingsService, Object> {
+public interface Importer extends Configurable<SensorThingsService, Object>, Iterable<List<Observation>> {
 
 	/**
-	 * Set the importer to do a dry-run. Files are parsed, but no observations
-	 * created.
+	 * Tell the importer to give lots of output.
 	 *
-	 * @param noAct if true, nothing is actually done.
+	 * @param verbose flag indicating that the importer should give lots of
+	 * output.
 	 */
-	public void setNoAct(boolean noAct);
-
-	public void doImport() throws ImportException;
+	public void setVerbose(boolean verbose);
 }
