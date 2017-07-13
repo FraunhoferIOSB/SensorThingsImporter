@@ -83,6 +83,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 
 		sleepTime = editorSleepTime.getValue();
 		doSleep = sleepTime > 0;
+		messageIntervalStart = editorMsgInterval.getValue();
 	}
 
 	@Override
@@ -96,7 +97,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 			editorValidator = new EditorSubclass(Validator.class, "Validator", "The validator to use.", false, "className");
 			editor.addOption("validator", editorValidator, true);
 
-			editorUploader = new EditorClass(ObservationUploader.class);
+			editorUploader = new EditorClass(ObservationUploader.class, "Uploader", "The class to use for uploading the observations to a server.");
 			editor.addOption("uploader", editorUploader, false);
 
 			editorSleepTime = new EditorInt(0, Integer.MAX_VALUE, 1, 0, "Sleep Time", "Sleep for this number of ms after each insert.");
@@ -109,13 +110,17 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 	}
 
 	private void doImport() throws ImportException, ServiceFailureException {
-		int inserted = 0;
+		int generated = 0;
+		int validated = 0;
+		int inserted;
 		int nextMessage = messageIntervalStart;
 		Calendar start = Calendar.getInstance();
 
 		for (List<Observation> observations : importer) {
 			for (Observation observation : observations) {
+				generated++;
 				if (validator.isValid(observation)) {
+					validated++;
 					uploader.addObservation(observation);
 					nextMessage--;
 					if (nextMessage == 0) {
@@ -125,7 +130,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 						Calendar now = Calendar.getInstance();
 						double seconds = 1e-3 * (now.getTimeInMillis() - start.getTimeInMillis());
 						double rowsPerSec = inserted / seconds;
-						LOGGER.info("Processed {} Observations in {}s: {}/s.", inserted, String.format("%.1f", seconds), String.format("%.1f", rowsPerSec));
+						LOGGER.info("Genereated {}, Validated {}, Inserted {} Observations in {}s: {}/s.", generated, validated, inserted, String.format("%.1f", seconds), String.format("%.1f", rowsPerSec));
 					}
 					maybeSleep();
 				}
@@ -136,7 +141,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 		Calendar now = Calendar.getInstance();
 		double seconds = 1e-3 * (now.getTimeInMillis() - start.getTimeInMillis());
 		double rowsPerSec = inserted / seconds;
-		LOGGER.info("Inserted {} observations in {}s ({}/s).", inserted, String.format("%.1f", seconds), String.format("%.1f", rowsPerSec));
+		LOGGER.info("Genereated {}, Validated {}, Inserted {} observations in {}s ({}/s).", generated, validated, inserted, String.format("%.1f", seconds), String.format("%.1f", rowsPerSec));
 	}
 
 	private void maybeSleep() {
