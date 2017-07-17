@@ -37,9 +37,6 @@ import de.fraunhofer.iosb.ilt.sta.model.ext.EntityList;
 import de.fraunhofer.iosb.ilt.sta.query.Query;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.time.ZoneId;
@@ -112,7 +109,7 @@ public class Awaa implements Importer {
 			editorDocumentParser = new EditorSubclass<>(DocumentParser.class, "DocumentParser", "The parser that transforms a document into Observations.");
 			editor.addOption("documentParser", editorDocumentParser, false);
 
-			editorFetchUrl = new EditorString("http://someHost.com/some/path?station={externalId}&timefrom={startTime}&timeto={endTime}&what={obsPropName}", 1, "fetchUrl", "The url to fetch data from.");
+			editorFetchUrl = new EditorString("http://someHost.com/some/path?station={awaaId}&timefrom={startTime}&timeto={endTime}&what={obsPropName}", 1, "fetchUrl", "The url to fetch data from.");
 			editor.addOption("fetchUrl", editorFetchUrl, false);
 
 			editorStartTime = new EditorString("2017-01-01T00:00:00Z", 1, "StartTime", "The starting time, if the datastream has no observations yet.");
@@ -152,9 +149,8 @@ public class Awaa implements Importer {
 
 		public ObsListIter() throws ImportException {
 			try {
-				SensorThingsService service = new SensorThingsService(new URL("http://localhost:8080/SensorThingsService/v1.0"));
 				Query<Datastream> dsQuery = service.datastreams().query()
-						.filter("Thing/properties/externalId gt 0")
+						.filter("Thing/properties/awaaId gt 0")
 						.top(1000)
 						.expand("ObservedProperty($select=id,name),Thing($select=id,name,properties),Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
 				EntityList<Datastream> dsList = dsQuery.list();
@@ -162,24 +158,24 @@ public class Awaa implements Importer {
 				datastreams = dsList.fullIterator();
 
 				Query<MultiDatastream> mdsQuery = service.multiDatastreams().query()
-						.filter("Thing/properties/externalId gt 0")
+						.filter("Thing/properties/awaaId gt 0")
 						.top(1000)
 						.expand("ObservedProperties($select=id,name),Thing($select=id,name,properties),Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
 				EntityList<MultiDatastream> mdsList = mdsQuery.list();
 				LOGGER.info("MultiDatastreams: {}", mdsList.size());
 				multiDatastreams = mdsList.fullIterator();
 
-			} catch (MalformedURLException | URISyntaxException | ServiceFailureException exc) {
+			} catch (ServiceFailureException exc) {
 				LOGGER.error("Failed.", exc);
 				throw new ImportException(exc);
 			}
 		}
 
-		private String fetchDocumentFor(Object externalId, ZonedDateTime timeStart, ObservedProperty obsProp) throws IOException {
+		private String fetchDocumentFor(Object awaaId, ZonedDateTime timeStart, ObservedProperty obsProp) throws IOException {
 			ZonedDateTime timeEnd = timeStart.plusHours(editorMaxHours.getValue());
 
 			Map<String, String> replaces = new HashMap<>();
-			replaces.put("externalId", translator.translate(externalId.toString()));
+			replaces.put("awaaId", translator.translate(awaaId.toString()));
 			replaces.put("startTime", timeStart.format(timeFormatter));
 			replaces.put("endTime", timeEnd.format(timeFormatter));
 			replaces.put("obsPropName", translator.translate(obsProp.getName()));
@@ -201,7 +197,7 @@ public class Awaa implements Importer {
 
 		private List<Observation> computeForDatastreams() throws IOException, ServiceFailureException, ImportException {
 			Datastream ds = datastreams.next();
-			Object externalId = ds.getThing().getProperties().get("externalId");
+			Object awaaId = ds.getThing().getProperties().get("awaaId");
 			ZonedDateTime timeStart;
 			if (ds.getObservations().toList().isEmpty()) {
 				timeStart = TimeObject.parse(editorStartTime.getValue()).getAsDateTime();
@@ -209,7 +205,7 @@ public class Awaa implements Importer {
 				timeStart = ds.getObservations().toList().get(0).getPhenomenonTime().getAsDateTime();
 			}
 			ObservedProperty obsProp = ds.getObservedProperty();
-			String data = fetchDocumentFor(externalId, timeStart, obsProp);
+			String data = fetchDocumentFor(awaaId, timeStart, obsProp);
 			List<Observation> observations = docParser.process(ds, data);
 			LOGGER.info("Parsed {} observations.", observations.size());
 			return observations;
@@ -217,7 +213,7 @@ public class Awaa implements Importer {
 
 		private List<Observation> computeForMultiDatastreams() throws IOException, ServiceFailureException, ImportException {
 			MultiDatastream mds = multiDatastreams.next();
-			Object externalId = mds.getThing().getProperties().get("externalId");
+			Object awaaId = mds.getThing().getProperties().get("awaaId");
 			ZonedDateTime timeStart;
 			if (mds.getObservations().toList().isEmpty()) {
 				timeStart = TimeObject.parse(editorStartTime.getValue()).getAsDateTime();
@@ -229,7 +225,7 @@ public class Awaa implements Importer {
 			String[] documents = new String[observedProperties.size()];
 			for (int i = 0; i < documents.length; i++) {
 				ObservedProperty obsProp = observedProperties.get(i);
-				documents[i] = fetchDocumentFor(externalId, timeStart, obsProp);
+				documents[i] = fetchDocumentFor(awaaId, timeStart, obsProp);
 			}
 			List<Observation> observations = docParser.process(mds, documents);
 			LOGGER.info("Parsed {} observations.", observations.size());
