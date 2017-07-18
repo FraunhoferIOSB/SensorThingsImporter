@@ -187,7 +187,7 @@ public class Awaa implements Importer {
 				targetUrl = targetUrl.replaceAll(search, replace);
 			}
 
-			LOGGER.info("Fetching: {}", targetUrl);
+			LOGGER.debug("Fetching: {}", targetUrl);
 			CloseableHttpClient client = HttpClients.createSystem();
 			HttpGet get = new HttpGet(targetUrl);
 			CloseableHttpResponse response = client.execute(get);
@@ -202,12 +202,12 @@ public class Awaa implements Importer {
 			if (ds.getObservations().toList().isEmpty()) {
 				timeStart = TimeObject.parse(editorStartTime.getValue()).getAsDateTime();
 			} else {
-				timeStart = ds.getObservations().toList().get(0).getPhenomenonTime().getAsDateTime();
+				timeStart = ds.getObservations().toList().get(0).getPhenomenonTime().getAsDateTime().plusSeconds(1);
 			}
 			ObservedProperty obsProp = ds.getObservedProperty();
 			String data = fetchDocumentFor(awaaId, timeStart, obsProp);
 			List<Observation> observations = docParser.process(ds, data);
-			LOGGER.info("Parsed {} observations.", observations.size());
+			LOGGER.info("Generated {} observations for station {}, {}, {}", observations.size(), awaaId, timeStart, obsProp.getName());
 			return observations;
 		}
 
@@ -218,7 +218,7 @@ public class Awaa implements Importer {
 			if (mds.getObservations().toList().isEmpty()) {
 				timeStart = TimeObject.parse(editorStartTime.getValue()).getAsDateTime();
 			} else {
-				timeStart = mds.getObservations().toList().get(0).getPhenomenonTime().getAsDateTime();
+				timeStart = mds.getObservations().toList().get(0).getPhenomenonTime().getAsDateTime().plusSeconds(1);
 			}
 
 			List<ObservedProperty> observedProperties = mds.getObservedProperties().toList();
@@ -228,7 +228,7 @@ public class Awaa implements Importer {
 				documents[i] = fetchDocumentFor(awaaId, timeStart, obsProp);
 			}
 			List<Observation> observations = docParser.process(mds, documents);
-			LOGGER.info("Parsed {} observations.", observations.size());
+			LOGGER.info("Generated {} observations for station {}, {}, {}", observations.size(), awaaId, timeStart, mds.getName());
 			return observations;
 		}
 
