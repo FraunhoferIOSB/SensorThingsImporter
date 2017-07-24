@@ -74,7 +74,7 @@ public class ValidatorNewer implements Validator {
 		Long dsId = ds.getId();
 		Instant latest = datastreamCache.get(dsId);
 		if (latest == null) {
-			Observation firstObs = ds.observations().query().orderBy("phenomenonTime desc").first();
+			Observation firstObs = ds.observations().query().select("@iot.id", "phenomenonTime").orderBy("phenomenonTime desc").first();
 			if (firstObs == null) {
 				latest = Instant.MIN;
 			} else {
@@ -94,7 +94,7 @@ public class ValidatorNewer implements Validator {
 		Long dsId = mds.getId();
 		Instant latest = multiDatastreamCache.get(dsId);
 		if (latest == null) {
-			Observation firstObs = mds.observations().query().orderBy("phenomenonTime desc").first();
+			Observation firstObs = mds.observations().query().select("@iot.id", "phenomenonTime").orderBy("phenomenonTime desc").first();
 			if (firstObs == null) {
 				latest = Instant.MIN;
 			} else {

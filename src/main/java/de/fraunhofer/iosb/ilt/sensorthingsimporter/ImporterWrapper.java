@@ -178,7 +178,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 			LOGGER.error("Failed to parse {}", config);
 			LOGGER.debug("Failed to parse.", exc);
 		} catch (ImportException | ServiceFailureException exc) {
-			LOGGER.trace("Failed to import.", exc);
+			LOGGER.error("Failed to import.", exc);
 		}
 	}
 

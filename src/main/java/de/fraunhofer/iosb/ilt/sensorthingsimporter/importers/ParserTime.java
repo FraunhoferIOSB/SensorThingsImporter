@@ -30,7 +30,7 @@ import java.util.Map;
  *
  * @author scf
  */
-public class TimeParser implements Parser<ZonedDateTime> {
+public class ParserTime implements Parser<ZonedDateTime> {
 
 	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
 	private EditorString editorTimeFormat;

@@ -40,12 +40,12 @@ public class ValidatorByPhenTime implements Validator {
 		try {
 			Datastream ds = obs.getDatastream();
 			if (ds != null) {
-				Observation first = ds.observations().query().filter("phenomenonTime eq " + obs.getPhenomenonTime().toString()).first();
+				Observation first = ds.observations().query().select("@iot.id").filter("phenomenonTime eq " + obs.getPhenomenonTime().toString()).first();
 				return first == null;
 			}
 			MultiDatastream mds = obs.getMultiDatastream();
 			if (mds != null) {
-				Observation first = mds.observations().query().filter("phenomenonTime eq " + obs.getPhenomenonTime().toString()).first();
+				Observation first = mds.observations().query().select("@iot.id").filter("phenomenonTime eq " + obs.getPhenomenonTime().toString()).first();
 				return first == null;
 			}
 			throw new ImportException("Observation has no Datastream of Multidatastream set!");

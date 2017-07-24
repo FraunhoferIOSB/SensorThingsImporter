@@ -58,12 +58,12 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
-public class Awaa implements Importer {
+public class ImporterAwaa implements Importer {
 
 	/**
 	 * The logger for this class.
 	 */
-	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(Awaa.class);
+	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ImporterAwaa.class);
 
 	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
 	private EditorSubclass<SensorThingsService, Object, DocumentParser> editorDocumentParser;

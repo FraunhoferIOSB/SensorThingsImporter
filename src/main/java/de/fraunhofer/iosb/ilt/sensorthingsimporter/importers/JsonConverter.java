@@ -51,7 +51,7 @@ public class JsonConverter implements DocumentParser {
 	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(JsonConverter.class);
 
 	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
-	private EditorClass<SensorThingsService, Object, TimeParser> editorTimeParser;
+	private EditorClass<SensorThingsService, Object, ParserTime> editorTimeParser;
 	private EditorSubclass<SensorThingsService, Object, Parser> editorResultParser;
 	private EditorString editorPathList;
 	private EditorString editorPathPhenTime;
@@ -61,7 +61,7 @@ public class JsonConverter implements DocumentParser {
 	private String[] phenTimePathParts;
 	private String[] resultPathParts;
 	private Parser resultParser;
-	private TimeParser timeParser;
+	private ParserTime timeParser;
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
@@ -81,7 +81,7 @@ public class JsonConverter implements DocumentParser {
 		if (editor == null) {
 			editor = new EditorMap<>();
 
-			editorTimeParser = new EditorClass<>(TimeParser.class, "Time Parser", "The parser to use for parsing times.");
+			editorTimeParser = new EditorClass<>(ParserTime.class, "Time Parser", "The parser to use for parsing times.");
 			editor.addOption("timeParser", editorTimeParser, false);
 
 			editorResultParser = new EditorSubclass<>(Parser.class, "Result Parser", "The parser to use for parsing results.");

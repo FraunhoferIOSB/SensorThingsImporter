@@ -26,5 +26,5 @@ import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
  */
 public interface Parser<T> extends Configurable<SensorThingsService, Object> {
 
-	public T parse(String time);
+	public T parse(String data);
 }
