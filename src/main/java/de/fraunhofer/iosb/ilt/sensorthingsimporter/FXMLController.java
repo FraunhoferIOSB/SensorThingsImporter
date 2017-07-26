@@ -18,6 +18,7 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
@@ -78,7 +79,7 @@ public class FXMLController implements Initializable {
 	@FXML
 	private void actionSave(ActionEvent event) {
 		JsonElement json = configEditor.getConfig();
-		String config = new Gson().toJson(json);
+		String config = new GsonBuilder().setPrettyPrinting().create().toJson(json);
 		fileChooser.setTitle("Save Config");
 		File file = fileChooser.showSaveDialog(paneConfig.getScene().getWindow());
 

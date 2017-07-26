@@ -122,18 +122,18 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 				if (validator.isValid(observation)) {
 					validated++;
 					uploader.addObservation(observation);
-					nextMessage--;
-					if (nextMessage == 0) {
-						inserted = uploader.sendDataArray();
-
-						nextMessage = messageIntervalStart;
-						Calendar now = Calendar.getInstance();
-						double seconds = 1e-3 * (now.getTimeInMillis() - start.getTimeInMillis());
-						double rowsPerSec = inserted / seconds;
-						LOGGER.info("Genereated {}, Validated {}, Inserted {} Observations in {}s: {}/s.", generated, validated, inserted, String.format("%.1f", seconds), String.format("%.1f", rowsPerSec));
-					}
-					maybeSleep();
 				}
+				nextMessage--;
+				if (nextMessage == 0) {
+					inserted = uploader.sendDataArray();
+
+					nextMessage = messageIntervalStart;
+					Calendar now = Calendar.getInstance();
+					double seconds = 1e-3 * (now.getTimeInMillis() - start.getTimeInMillis());
+					double rowsPerSec = inserted / seconds;
+					LOGGER.info("Genereated {}, Validated {}, Inserted {}, Updated {} Observations in {}s: {}/s.", generated, validated, inserted, uploader.getUpdated(), String.format("%.1f", seconds), String.format("%.1f", rowsPerSec));
+				}
+				maybeSleep();
 			}
 		}
 		inserted = uploader.sendDataArray();
@@ -141,7 +141,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 		Calendar now = Calendar.getInstance();
 		double seconds = 1e-3 * (now.getTimeInMillis() - start.getTimeInMillis());
 		double rowsPerSec = inserted / seconds;
-		LOGGER.info("Genereated {}, Validated {}, Inserted {} observations in {}s ({}/s).", generated, validated, inserted, String.format("%.1f", seconds), String.format("%.1f", rowsPerSec));
+		LOGGER.info("Genereated {}, Validated {}, Inserted {}, Updated {} observations in {}s ({}/s).", generated, validated, inserted, uploader.getUpdated(), String.format("%.1f", seconds), String.format("%.1f", rowsPerSec));
 	}
 
 	private void maybeSleep() {

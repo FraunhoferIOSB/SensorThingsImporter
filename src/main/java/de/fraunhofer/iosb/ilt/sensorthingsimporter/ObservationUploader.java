@@ -70,6 +70,7 @@ public class ObservationUploader implements Configurable<SensorThingsService, Ob
 	private DataArrayValue lastDav;
 
 	private int inserted = 0;
+	private int updated = 0;
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
@@ -116,12 +117,18 @@ public class ObservationUploader implements Configurable<SensorThingsService, Ob
 		return inserted;
 	}
 
+	public int getUpdated() {
+		return updated;
+	}
+
 	public void addObservation(Observation obs) throws ServiceFailureException {
-		if (!dataArray && !noAct) {
+		if (obs.getId() != null && !noAct) {
+			service.update(obs);
+			updated++;
+		} else if (!dataArray && !noAct) {
 			service.create(obs);
 			inserted++;
-		}
-		if (dataArray) {
+		} else if (dataArray) {
 			addToDataArray(obs);
 		}
 	}

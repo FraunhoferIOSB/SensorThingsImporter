@@ -19,13 +19,17 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorNull;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
+import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -33,20 +37,49 @@ import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
  */
 public class ValidatorByPhenTime implements Validator {
 
-	private EditorNull<SensorThingsService, Object> editor = new EditorNull<>("Validator", "Validates the observation against the datastream");
+	/**
+	 * The logger for this class.
+	 */
+	private static final Logger LOGGER = LoggerFactory.getLogger(ValidatorByPhenTime.class);
+	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
+	private EditorBoolean<SensorThingsService, Object> editorUpdate;
+
+	private boolean update;
 
 	@Override
 	public boolean isValid(Observation obs) throws ImportException {
 		try {
 			Datastream ds = obs.getDatastream();
 			if (ds != null) {
-				Observation first = ds.observations().query().select("@iot.id").filter("phenomenonTime eq " + obs.getPhenomenonTime().toString()).first();
-				return first == null;
+				Observation first = ds.observations().query().select("@iot.id", "result").filter("phenomenonTime eq " + obs.getPhenomenonTime().toString()).first();
+				if (first == null) {
+					return true;
+				} else {
+					if (!obs.getResult().equals(first.getResult())) {
+						LOGGER.warn("Observation {} with given phenomenonTime {} exists, but result not the same. {} != {}.", first.getId(), obs.getPhenomenonTime(), obs.getResult(), first.getResult());
+						if (update) {
+							obs.setId(first.getId());
+							return true;
+						}
+					}
+					return false;
+				}
 			}
 			MultiDatastream mds = obs.getMultiDatastream();
 			if (mds != null) {
-				Observation first = mds.observations().query().select("@iot.id").filter("phenomenonTime eq " + obs.getPhenomenonTime().toString()).first();
-				return first == null;
+				Observation first = mds.observations().query().select("@iot.id", "result").filter("phenomenonTime eq " + obs.getPhenomenonTime().toString()).first();
+				if (first == null) {
+					return true;
+				} else {
+					if (!obs.getResult().equals(first.getResult())) {
+						LOGGER.warn("Observation {} with given phenomenonTime {} exists, but result not the same. {} != {}.", first.getId(), obs.getPhenomenonTime(), obs.getResult(), first.getResult());
+						if (update) {
+							obs.setId(first.getId());
+							return true;
+						}
+					}
+					return false;
+				}
 			}
 			throw new ImportException("Observation has no Datastream of Multidatastream set!");
 		} catch (ServiceFailureException ex) {
@@ -56,10 +89,18 @@ public class ValidatorByPhenTime implements Validator {
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
+		getConfigEditor(context, edtCtx).setConfig(config, context, edtCtx);
+		update = editorUpdate.getValue();
 	}
 
 	@Override
 	public ConfigEditor<SensorThingsService, Object, ?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+		if (editor == null) {
+			editor = new EditorMap<>();
+
+			editorUpdate = new EditorBoolean<>(false, "Update", "Update results that are different.");
+			editor.addOption("update", editorUpdate, false);
+		}
 		return editor;
 	}
 }

@@ -233,10 +233,12 @@ public class ImporterCsv implements Importer {
 					Observation obs;
 					try {
 						obs = rcCsv.convert(record);
+						if (obs != null) {
+							result.add(obs);
+						}
 					} catch (ImportException ex) {
-						throw new IllegalStateException(ex);
+						LOGGER.error("Failed to import.", ex);
 					}
-					result.add(obs);
 				}
 				rowCount++;
 				return result;

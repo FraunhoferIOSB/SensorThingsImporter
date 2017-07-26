@@ -20,12 +20,15 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.Configurable;
 import de.fraunhofer.iosb.ilt.configurable.EditorFactory;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.DatastreamMapper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.Parser;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.ParserTime;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
@@ -61,6 +64,8 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 	private int colResultTime;
 	private int colValidTime;
 	private DatastreamMapper dsm;
+	private ParserTime timeParser;
+	private Parser resultParser;
 
 	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
 	private EditorSubclass<SensorThingsService, Object, DatastreamMapper> editorDsMapper;
@@ -68,6 +73,8 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 	private EditorInt editorColPhenTime;
 	private EditorInt editorColResultTime;
 	private EditorInt editorColValidTime;
+	private EditorClass<SensorThingsService, Object, ParserTime> editorTimeParser;
+	private EditorSubclass<SensorThingsService, Object, Parser> editorResultParser;
 
 	public RecordConverterCSV() {
 	}
@@ -81,6 +88,9 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 		colPhenTime = editorColPhenTime.getValue();
 		colResultTime = editorColResultTime.getValue();
 		colValidTime = editorColValidTime.getValue();
+
+		timeParser = editorTimeParser.getValue();
+		resultParser = editorResultParser.getValue();
 	}
 
 	@Override
@@ -105,6 +115,11 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 			editorDsMapper = new EditorSubclass<>(DatastreamMapper.class, "datastream", "Maps the record to a datastream.", false, "className");
 			editor.addOption("dsMapper", editorDsMapper, false);
 
+			editorTimeParser = new EditorClass<>(ParserTime.class, "Time Parser", "The parser to use for parsing times.");
+			editor.addOption("timeParser", editorTimeParser, true);
+
+			editorResultParser = new EditorSubclass<>(Parser.class, "Result Parser", "The parser to use for parsing results.");
+			editor.addOption("resultParser", editorResultParser, true);
 		}
 		return editor;
 	}
@@ -136,18 +151,38 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 		if (colsResult.isEmpty()) {
 			throw new IllegalArgumentException("Must have at least one result column.");
 		} else if (colsResult.size() == 1) {
-			String resultString = record.get(colsResult.get(0));
+			int colResult = colsResult.get(0);
+			if (colResult >= record.size()) {
+				return null;
+			}
+			String resultString = record.get(colResult);
 			result = parseResult(resultString);
+			if (result == null) {
+				LOGGER.debug("No result found in column {}.", colsResult.get(0));
+				return null;
+			}
 			Datastream datastream = dsm.getDatastreamFor(record);
 			obs = new Observation(result, datastream);
 			log = new StringBuilder("Result: _").append(result).append("_");
 		} else {
 			List<Object> resultList = new ArrayList<>();
+			boolean allnull = true;
 			for (Integer colResult : colsResult) {
+				if (colResult >= record.size()) {
+					return null;
+				}
 				String resultString = record.get(colResult);
-				resultList.add(parseResult(resultString));
+				Object parsed = parseResult(resultString);
+				if (parsed != null) {
+					allnull = false;
+				}
+				resultList.add(parsed);
 			}
 			result = resultList;
+			if (allnull) {
+				LOGGER.debug("No results found in columns {}.", colsResult);
+				return null;
+			}
 			MultiDatastream mds = dsm.getMultiDatastreamFor(record);
 			obs = new Observation(result, mds);
 			log = new StringBuilder("Result: _").append(result).append("_");
@@ -174,11 +209,25 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 
 	private TimeObject parseTimeObject(String value) throws ImportException {
 		try {
+			if (timeParser != null) {
+				ZonedDateTime zdt = timeParser.parse(value);
+				return new TimeObject(zdt);
+			}
+		} catch (Exception e) {
+			// Not a ZonedDateTime
+		}
+		try {
 			return TimeObject.parse(value);
 		} catch (Exception e) {
 			// Not a timeObject
 		}
-		return new TimeObject(parseTimestamp(value));
+		try {
+			return new TimeObject(parseTimestamp(value));
+		} catch (ImportException e) {
+			// Not anything we know!
+			LOGGER.debug("Failed to parse time.", e);
+			throw new ImportException("Time value " + value + " could not be parsed as a time.");
+		}
 	}
 
 	private ZonedDateTime parseZonedDateTime(String value) throws ImportException {
