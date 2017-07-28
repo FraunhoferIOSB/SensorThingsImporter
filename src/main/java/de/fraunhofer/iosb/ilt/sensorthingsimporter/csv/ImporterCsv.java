@@ -67,10 +67,10 @@ public class ImporterCsv implements Importer {
 
 	private final List<RecordConverterCSV> rcCsvs = new ArrayList<>();
 
-	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
+	private EditorMap<Map<String, Object>> editor;
 	private EditorBoolean editorUseDataArray;
 
-	private EditorList<SensorThingsService, Object, RecordConverterCSV, EditorClass<SensorThingsService, Object, RecordConverterCSV>> editorConverters;
+	private EditorList<RecordConverterCSV, EditorClass<SensorThingsService, Object, RecordConverterCSV>> editorConverters;
 
 	private EditorInt editorRowLimit;
 	private EditorInt editorRowSkip;
@@ -91,16 +91,16 @@ public class ImporterCsv implements Importer {
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
 		service = context;
-		getConfigEditor(service, edtCtx).setConfig(config, service, edtCtx);
+		getConfigEditor(service, edtCtx).setConfig(config);
 	}
 
 	@Override
-	public EditorMap<SensorThingsService, Object, Map<String, Object>> getConfigEditor(SensorThingsService context, Object edtCtx) {
+	public EditorMap<Map<String, Object>> getConfigEditor(final SensorThingsService context, final Object edtCtx) {
 		if (editor == null) {
 			editor = new EditorMap<>();
 
 			EditorFactory<EditorClass<SensorThingsService, Object, RecordConverterCSV>> factory;
-			factory = () -> new EditorClass<>(RecordConverterCSV.class);
+			factory = () -> new EditorClass<>(context, edtCtx, RecordConverterCSV.class);
 			editorConverters = new EditorList(factory, "Converters", "The classes that convert columns into observations.");
 			editor.addOption("recordConvertors", editorConverters, false);
 

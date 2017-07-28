@@ -50,7 +50,7 @@ public class JsonConverter implements DocumentParser {
 	 */
 	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(JsonConverter.class);
 
-	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
+	private EditorMap<Map<String, Object>> editor;
 	private EditorClass<SensorThingsService, Object, ParserTime> editorTimeParser;
 	private EditorSubclass<SensorThingsService, Object, Parser> editorResultParser;
 	private EditorString editorPathList;
@@ -65,7 +65,7 @@ public class JsonConverter implements DocumentParser {
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
-		getConfigEditor(context, edtCtx).setConfig(config, context, edtCtx);
+		getConfigEditor(context, edtCtx).setConfig(config);
 		String listPath = editorPathList.getValue();
 		listPathParts = listPath.split("/");
 		String phenTimePath = editorPathPhenTime.getValue();
@@ -77,14 +77,14 @@ public class JsonConverter implements DocumentParser {
 	}
 
 	@Override
-	public ConfigEditor<SensorThingsService, Object, ?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
 		if (editor == null) {
 			editor = new EditorMap<>();
 
-			editorTimeParser = new EditorClass<>(ParserTime.class, "Time Parser", "The parser to use for parsing times.");
+			editorTimeParser = new EditorClass<>(context, edtCtx, ParserTime.class, "Time Parser", "The parser to use for parsing times.");
 			editor.addOption("timeParser", editorTimeParser, false);
 
-			editorResultParser = new EditorSubclass<>(Parser.class, "Result Parser", "The parser to use for parsing results.");
+			editorResultParser = new EditorSubclass<>(context, edtCtx, Parser.class, "Result Parser", "The parser to use for parsing results.");
 			editor.addOption("resultParser", editorResultParser, false);
 
 			editorPathList = new EditorString("rows", 1, "List Path", "The path in the JSON document that points the the array holding the observations.");

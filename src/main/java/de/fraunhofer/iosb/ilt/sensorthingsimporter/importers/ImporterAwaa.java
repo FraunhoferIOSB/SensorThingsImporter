@@ -65,7 +65,7 @@ public class ImporterAwaa implements Importer {
 	 */
 	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ImporterAwaa.class);
 
-	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
+	private EditorMap<Map<String, Object>> editor;
 	private EditorSubclass<SensorThingsService, Object, DocumentParser> editorDocumentParser;
 	private EditorString editorFetchUrl;
 	private EditorString editorStartTime;
@@ -88,7 +88,7 @@ public class ImporterAwaa implements Importer {
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
 		service = context;
-		getConfigEditor(context, edtCtx).setConfig(config, context, edtCtx);
+		getConfigEditor(context, edtCtx).setConfig(config);
 		timeFormatter = DateTimeFormatter.ofPattern(editorTimeFormat.getValue());
 		if (!editorTimeZone.getValue().isEmpty()) {
 			timeFormatter = timeFormatter.withZone(ZoneId.of(editorTimeZone.getValue()));
@@ -102,11 +102,11 @@ public class ImporterAwaa implements Importer {
 	}
 
 	@Override
-	public ConfigEditor<SensorThingsService, Object, ?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
 		if (editor == null) {
 			editor = new EditorMap<>();
 
-			editorDocumentParser = new EditorSubclass<>(DocumentParser.class, "DocumentParser", "The parser that transforms a document into Observations.");
+			editorDocumentParser = new EditorSubclass<>(context, edtCtx, DocumentParser.class, "DocumentParser", "The parser that transforms a document into Observations.");
 			editor.addOption("documentParser", editorDocumentParser, false);
 
 			editorFetchUrl = new EditorString("http://someHost.com/some/path?station={awaaId}&timefrom={startTime}&timeto={endTime}&what={obsPropName}", 1, "fetchUrl", "The url to fetch data from.");

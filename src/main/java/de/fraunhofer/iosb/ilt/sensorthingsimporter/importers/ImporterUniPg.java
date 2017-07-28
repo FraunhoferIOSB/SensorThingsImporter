@@ -51,7 +51,7 @@ public class ImporterUniPg implements Importer {
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(ImporterUniPg.class);
 
-	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
+	private EditorMap<Map<String, Object>> editor;
 	private EditorSubclass<SensorThingsService, Object, DocumentParser> editorDocumentParser;
 	private EditorString editorFetchUrl;
 	private EditorInt editorDuration;
@@ -68,16 +68,16 @@ public class ImporterUniPg implements Importer {
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
 		service = context;
-		getConfigEditor(context, edtCtx).setConfig(config, context, edtCtx);
+		getConfigEditor(context, edtCtx).setConfig(config);
 		docParser = editorDocumentParser.getValue();
 	}
 
 	@Override
-	public ConfigEditor<SensorThingsService, Object, ?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
 		if (editor == null) {
 			editor = new EditorMap<>();
 
-			editorDocumentParser = new EditorSubclass<>(DocumentParser.class, "DocumentParser", "The parser that transforms a document into Observations.");
+			editorDocumentParser = new EditorSubclass<>(context, edtCtx, DocumentParser.class, "DocumentParser", "The parser that transforms a document into Observations.");
 			editor.addOption("documentParser", editorDocumentParser, false);
 
 			editorFetchUrl = new EditorString("File://Accel_3.lvm", 1, "fetchUrl", "The url to fetch data from.");

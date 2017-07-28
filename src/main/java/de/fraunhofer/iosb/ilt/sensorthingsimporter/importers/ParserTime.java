@@ -32,7 +32,7 @@ import java.util.Map;
  */
 public class ParserTime implements Parser<ZonedDateTime> {
 
-	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
+	private EditorMap<Map<String, Object>> editor;
 	private EditorString editorTimeFormat;
 	private EditorString editorZone;
 
@@ -40,7 +40,7 @@ public class ParserTime implements Parser<ZonedDateTime> {
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
-		getConfigEditor(context, edtCtx).setConfig(config, context, edtCtx);
+		getConfigEditor(context, edtCtx).setConfig(config);
 		formatter = DateTimeFormatter.ofPattern(editorTimeFormat.getValue());
 		if (!editorZone.getValue().isEmpty()) {
 			formatter = formatter.withZone(ZoneId.of(editorZone.getValue()));
@@ -48,7 +48,7 @@ public class ParserTime implements Parser<ZonedDateTime> {
 	}
 
 	@Override
-	public ConfigEditor<SensorThingsService, Object, ?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
 		if (editor == null) {
 			editor = new EditorMap<>();
 

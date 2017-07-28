@@ -67,9 +67,9 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 	private ParserTime timeParser;
 	private Parser resultParser;
 
-	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
+	private EditorMap<Map<String, Object>> editor;
 	private EditorSubclass<SensorThingsService, Object, DatastreamMapper> editorDsMapper;
-	private EditorList<Object, Object, Integer, EditorInt> editorColsResult;
+	private EditorList<Integer, EditorInt> editorColsResult;
 	private EditorInt editorColPhenTime;
 	private EditorInt editorColResultTime;
 	private EditorInt editorColValidTime;
@@ -81,7 +81,7 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
-		getConfigEditor(context, edtCtx).setConfig(config, context, edtCtx);
+		getConfigEditor(context, edtCtx).setConfig(config);
 
 		dsm = editorDsMapper.getValue();
 		colsResult = editorColsResult.getValue();
@@ -94,7 +94,7 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 	}
 
 	@Override
-	public EditorMap<SensorThingsService, Object, Map<String, Object>> getConfigEditor(SensorThingsService context, Object edtCtx) {
+	public EditorMap<Map<String, Object>> getConfigEditor(SensorThingsService context, Object edtCtx) {
 		if (editor == null) {
 			editor = new EditorMap<>();
 
@@ -112,13 +112,13 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 			editorColValidTime = new EditorInt(0, 99, 1, -1, "ValidTime Column", "The column # that holds the validTime (first is 0).");
 			editor.addOption("colValidTime", editorColValidTime, true);
 
-			editorDsMapper = new EditorSubclass<>(DatastreamMapper.class, "datastream", "Maps the record to a datastream.", false, "className");
+			editorDsMapper = new EditorSubclass<>(context, edtCtx, DatastreamMapper.class, "datastream", "Maps the record to a datastream.", false, "className");
 			editor.addOption("dsMapper", editorDsMapper, false);
 
-			editorTimeParser = new EditorClass<>(ParserTime.class, "Time Parser", "The parser to use for parsing times.");
+			editorTimeParser = new EditorClass<>(context, edtCtx, ParserTime.class, "Time Parser", "The parser to use for parsing times.");
 			editor.addOption("timeParser", editorTimeParser, true);
 
-			editorResultParser = new EditorSubclass<>(Parser.class, "Result Parser", "The parser to use for parsing results.");
+			editorResultParser = new EditorSubclass<>(context, edtCtx, Parser.class, "Result Parser", "The parser to use for parsing results.");
 			editor.addOption("resultParser", editorResultParser, true);
 		}
 		return editor;

@@ -54,7 +54,7 @@ public class ObservationUploader implements Configurable<SensorThingsService, Ob
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(ObservationUploader.class);
 
-	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
+	private EditorMap<Map<String, Object>> editor;
 	private EditorString editorService;
 	private EditorSubclass<Object, Object, AuthMethod> editorAuthMethod;
 	private EditorBoolean editorUseDataArray;
@@ -75,7 +75,7 @@ public class ObservationUploader implements Configurable<SensorThingsService, Ob
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
 		service = context;
-		getConfigEditor(service, edtCtx).setConfig(config, service, edtCtx);
+		getConfigEditor(service, edtCtx).setConfig(config);
 		dataArray = editorUseDataArray.getValue();
 		try {
 			service.setEndpoint(new URI(editorService.getValue()));
@@ -90,13 +90,13 @@ public class ObservationUploader implements Configurable<SensorThingsService, Ob
 	}
 
 	@Override
-	public ConfigEditor<SensorThingsService, Object, ?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
 		if (editor == null) {
 			editor = new EditorMap<>();
 			editorService = new EditorString("https://service.somewhere/path/v1.0", 1, "Service URL", "The url of the server.");
 			editor.addOption("serviceUrl", editorService, false);
 
-			editorAuthMethod = new EditorSubclass<>(AuthMethod.class, "Auth Method", "The authentication method the service uses.", false, "className");
+			editorAuthMethod = new EditorSubclass<>(context, edtCtx, AuthMethod.class, "Auth Method", "The authentication method the service uses.", false, "className");
 			editor.addOption("authMethod", editorAuthMethod, true);
 
 			editorUseDataArray = new EditorBoolean(false, "Use DataArrays",

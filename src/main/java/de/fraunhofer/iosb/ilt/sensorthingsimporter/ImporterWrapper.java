@@ -51,7 +51,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(ImporterWrapper.class);
 
-	private EditorMap<Object, Object, Map<String, Object>> editor;
+	private EditorMap<Map<String, Object>> editor;
 	private EditorSubclass<Object, Object, Importer> editorImporter;
 	private EditorSubclass<SensorThingsService, Object, Validator> editorValidator;
 	private EditorClass<SensorThingsService, Object, ObservationUploader> editorUploader;
@@ -71,7 +71,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 	@Override
 	public void configure(JsonElement config, Object context, Object edtCtx) {
 		service = new SensorThingsService();
-		getConfigEditor(service, edtCtx).setConfig(config, service, edtCtx);
+		getConfigEditor(service, edtCtx).setConfig(config);
 		importer = editorImporter.getValue();
 		uploader = editorUploader.getValue();
 		validator = editorValidator.getValue();
@@ -86,17 +86,17 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 	}
 
 	@Override
-	public EditorMap<Object, Object, Map<String, Object>> getConfigEditor(Object context, Object edtCtx) {
+	public EditorMap<Map<String, Object>> getConfigEditor(Object context, Object edtCtx) {
 		if (editor == null) {
 			editor = new EditorMap<>();
 
-			editorImporter = new EditorSubclass(Importer.class, "Importer", "The specific importer to use.", false, "className");
+			editorImporter = new EditorSubclass(service, edtCtx, Importer.class, "Importer", "The specific importer to use.", false, "className");
 			editor.addOption("importer", editorImporter, false);
 
-			editorValidator = new EditorSubclass(Validator.class, "Validator", "The validator to use.", false, "className");
+			editorValidator = new EditorSubclass(service, edtCtx, Validator.class, "Validator", "The validator to use.", false, "className");
 			editor.addOption("validator", editorValidator, true);
 
-			editorUploader = new EditorClass(ObservationUploader.class, "Uploader", "The class to use for uploading the observations to a server.");
+			editorUploader = new EditorClass(service, edtCtx, ObservationUploader.class, "Uploader", "The class to use for uploading the observations to a server.");
 			editor.addOption("uploader", editorUploader, false);
 
 			editorSleepTime = new EditorInt(0, Integer.MAX_VALUE, 1, 0, "Sleep Time", "Sleep for this number of ms after each insert.");

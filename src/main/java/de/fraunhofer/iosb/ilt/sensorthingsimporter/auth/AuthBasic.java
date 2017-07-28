@@ -47,11 +47,11 @@ public class AuthBasic implements AuthMethod {
 
 	@Override
 	public void configure(JsonElement config, Object context, Object edtCtx) {
-		getConfigEditor(context, edtCtx).setConfig(config, context, edtCtx);
+		getConfigEditor(context, edtCtx).setConfig(config);
 	}
 
 	@Override
-	public EditorMap<Object, Object, ?> getConfigEditor(Object context, Object edtCtx) {
+	public EditorMap<?> getConfigEditor(Object context, Object edtCtx) {
 		if (configEditor == null) {
 			configEditor = new EditorMap();
 			editorUsername = new EditorString("username", 1, "Username", "The username to use for authentication.");

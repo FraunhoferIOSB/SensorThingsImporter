@@ -56,7 +56,7 @@ public class DsMapperFixed implements DatastreamMapper {
 			throw new IllegalArgumentException("Context must be a SensorThingsService. We got a " + context.getClass());
 		}
 		service = (SensorThingsService) context;
-		getConfigEditor(service, edtCtx).setConfig(config, service, edtCtx);
+		getConfigEditor(service, edtCtx).setConfig(config);
 	}
 
 	private void init(boolean multi) {

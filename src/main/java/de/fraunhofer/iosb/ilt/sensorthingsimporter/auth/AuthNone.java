@@ -34,8 +34,8 @@ public class AuthNone implements AuthMethod {
 	}
 
 	@Override
-	public ConfigEditor<Object, Object, ?> getConfigEditor(Object context, Object edtCtx) {
-		return new EditorNull<>();
+	public ConfigEditor<?> getConfigEditor(Object context, Object edtCtx) {
+		return new EditorNull();
 	}
 
 	@Override

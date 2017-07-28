@@ -39,7 +39,7 @@ import java.util.Map;
  */
 public class ValidatorNewer implements Validator {
 
-	private EditorNull<SensorThingsService, Object> editor = new EditorNull<>("Validator", "Validates the observation against the datastream");
+	private EditorNull editor = new EditorNull("Validator", "Validates the observation against the datastream");
 	private final Map<Long, Instant> datastreamCache = new HashMap<>();
 	private final Map<Long, Instant> multiDatastreamCache = new HashMap<>();
 
@@ -115,7 +115,7 @@ public class ValidatorNewer implements Validator {
 	}
 
 	@Override
-	public ConfigEditor<SensorThingsService, Object, ?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
 		return editor;
 	}
 

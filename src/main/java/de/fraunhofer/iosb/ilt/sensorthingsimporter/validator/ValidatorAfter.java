@@ -38,7 +38,7 @@ import org.threeten.extra.Minutes;
  */
 public class ValidatorAfter implements Validator {
 
-	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
+	private EditorMap<Map<String, Object>> editor;
 	private EditorInt editorDays;
 	private EditorInt editorMinutes;
 
@@ -58,14 +58,14 @@ public class ValidatorAfter implements Validator {
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
-		getConfigEditor(context, edtCtx).setConfig(config, context, edtCtx);
+		getConfigEditor(context, edtCtx).setConfig(config);
 		Instant now = Instant.now();
 		refTime = now.minus(Days.of(editorDays.getValue()));
 		refTime = refTime.minus(Minutes.of(editorMinutes.getValue()));
 	}
 
 	@Override
-	public ConfigEditor<SensorThingsService, Object, ?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
 		if (editor == null) {
 			editor = new EditorMap<>();
 

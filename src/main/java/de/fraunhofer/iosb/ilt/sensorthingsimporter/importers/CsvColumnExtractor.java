@@ -45,9 +45,9 @@ import org.apache.commons.csv.CSVRecord;
  */
 public class CsvColumnExtractor implements DocumentParser {
 
-	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
-	private EditorList<SensorThingsService, Object, DatastreamMapper, EditorSubclass<SensorThingsService, Object, DatastreamMapper>> editorDsMappers;
-	private EditorList<SensorThingsService, Object, Parser, EditorSubclass<SensorThingsService, Object, Parser>> editorParsers;
+	private EditorMap<Map<String, Object>> editor;
+	private EditorList<DatastreamMapper, EditorSubclass<SensorThingsService, Object, DatastreamMapper>> editorDsMappers;
+	private EditorList<Parser, EditorSubclass<SensorThingsService, Object, Parser>> editorParsers;
 	private EditorInt editorRowSkip;
 	private EditorString editorCharSet;
 	private EditorString editorDelimiter;
@@ -58,26 +58,26 @@ public class CsvColumnExtractor implements DocumentParser {
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
-		getConfigEditor(context, edtCtx).setConfig(config, context, edtCtx);
+		getConfigEditor(context, edtCtx).setConfig(config);
 		parsers = editorParsers.getValue();
 		dsms = editorDsMappers.getValue();
 	}
 
 	@Override
-	public ConfigEditor<SensorThingsService, Object, ?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
 		if (editor == null) {
 			editor = new EditorMap<>();
 
 			EditorFactory<EditorSubclass<SensorThingsService, Object, DatastreamMapper>> factoryDsm;
 			factoryDsm = () -> {
-				return new EditorSubclass<>(DatastreamMapper.class, "Datastream Mapper", "Mapper that returns the Datastream for one column, or a MultiDatastream for all columns.");
+				return new EditorSubclass<>(context, edtCtx, DatastreamMapper.class, "Datastream Mapper", "Mapper that returns the Datastream for one column, or a MultiDatastream for all columns.");
 			};
 			editorDsMappers = new EditorList<>(factoryDsm, "Datastream Mappers", "A Mapper for each column, or a single mapper for a multiDatastream.");
 			editor.addOption("dsMappers", editorDsMappers, false);
 
 			EditorFactory<EditorSubclass<SensorThingsService, Object, Parser>> factoryParser;
 			factoryParser = () -> {
-				return new EditorSubclass<>(Parser.class, "Data Parsers", "A parser to parse string data.");
+				return new EditorSubclass<>(context, edtCtx, Parser.class, "Data Parsers", "A parser to parse string data.");
 			};
 			editorParsers = new EditorList<>(factoryParser, "Data Parsers", "Parsers the parse the columns. 1 for each column, or a single to use the same for all columns.");
 			editor.addOption("parsers", editorParsers, false);

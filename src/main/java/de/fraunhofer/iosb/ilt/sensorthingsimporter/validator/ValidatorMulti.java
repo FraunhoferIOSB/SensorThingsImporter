@@ -34,25 +34,25 @@ import java.util.Map;
  */
 public class ValidatorMulti implements Validator {
 
-	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
-	private EditorList<SensorThingsService, Object, Validator, EditorSubclass<SensorThingsService, Object, Validator>> editorValidators;
+	private EditorMap<Map<String, Object>> editor;
+	private EditorList<Validator, EditorSubclass<SensorThingsService, Object, Validator>> editorValidators;
 
 	public List<Validator> validators;
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
-		getConfigEditor(context, edtCtx).setConfig(config, context, edtCtx);
+		getConfigEditor(context, edtCtx).setConfig(config);
 		validators = editorValidators.getValue();
 	}
 
 	@Override
-	public ConfigEditor<SensorThingsService, Object, ?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
 		if (editor == null) {
 			editor = new EditorMap<>();
 
 			EditorFactory<EditorSubclass<SensorThingsService, Object, Validator>> factory;
 			factory = () -> {
-				return new EditorSubclass<>(Validator.class, "Validators", "The validators to use.");
+				return new EditorSubclass<>(context, edtCtx,Validator.class, "Validators", "The validators to use.");
 			};
 			editorValidators = new EditorList<>(factory, "Validators", "The validators to use.");
 			editor.addOption("validators", editorValidators, false);

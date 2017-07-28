@@ -28,19 +28,20 @@ import java.math.BigDecimal;
  */
 public class ParserStringToBigdecimal implements Parser<BigDecimal> {
 
-	private EditorNull<SensorThingsService, Object> editor = new EditorNull<>("BigDecimal", "Parses strings into BigDecimals.");
+	private EditorNull editor = new EditorNull("BigDecimal", "Parses strings into BigDecimals.");
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
-		getConfigEditor(context, edtCtx).setConfig(config, context, edtCtx);
+		getConfigEditor(context, edtCtx).setConfig(config);
 	}
 
 	@Override
-	public ConfigEditor<SensorThingsService, Object, ?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
 		return editor;
 
 	}
 
+	@Override
 	public BigDecimal parse(String value) {
 		return new BigDecimal(value);
 	}

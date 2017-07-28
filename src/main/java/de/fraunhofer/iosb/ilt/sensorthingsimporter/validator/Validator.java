@@ -48,8 +48,8 @@ public interface Validator extends Configurable<SensorThingsService, Object> {
 		}
 
 		@Override
-		public ConfigEditor<SensorThingsService, Object, ?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-			return new EditorNull<>();
+		public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+			return new EditorNull();
 		}
 
 	}

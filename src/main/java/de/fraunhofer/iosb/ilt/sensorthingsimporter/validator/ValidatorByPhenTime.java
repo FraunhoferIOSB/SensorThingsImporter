@@ -41,8 +41,8 @@ public class ValidatorByPhenTime implements Validator {
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(ValidatorByPhenTime.class);
-	private EditorMap<SensorThingsService, Object, Map<String, Object>> editor;
-	private EditorBoolean<SensorThingsService, Object> editorUpdate;
+	private EditorMap<Map<String, Object>> editor;
+	private EditorBoolean editorUpdate;
 
 	private boolean update;
 
@@ -89,16 +89,16 @@ public class ValidatorByPhenTime implements Validator {
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
-		getConfigEditor(context, edtCtx).setConfig(config, context, edtCtx);
+		getConfigEditor(context, edtCtx).setConfig(config);
 		update = editorUpdate.getValue();
 	}
 
 	@Override
-	public ConfigEditor<SensorThingsService, Object, ?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
 		if (editor == null) {
 			editor = new EditorMap<>();
 
-			editorUpdate = new EditorBoolean<>(false, "Update", "Update results that are different.");
+			editorUpdate = new EditorBoolean(false, "Update", "Update results that are different.");
 			editor.addOption("update", editorUpdate, false);
 		}
 		return editor;

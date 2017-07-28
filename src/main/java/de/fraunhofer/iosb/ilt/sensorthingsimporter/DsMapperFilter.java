@@ -51,7 +51,7 @@ public class DsMapperFilter implements DatastreamMapper {
 	private String filterTemplate;
 	private Matcher matcher;
 
-	private EditorString<Object, Object> editor;
+	private EditorString editor;
 
 	public DsMapperFilter() {
 	}
@@ -62,13 +62,13 @@ public class DsMapperFilter implements DatastreamMapper {
 			throw new IllegalArgumentException("Context must be a SensorThingsService. We got a " + context.getClass());
 		}
 		service = (SensorThingsService) context;
-		getConfigEditor(service, edtCtx).setConfig(config, service, edtCtx);
+		getConfigEditor(service, edtCtx).setConfig(config);
 		filterTemplate = editor.getValue();
 		matcher = placeHolderPattern.matcher(filterTemplate);
 	}
 
 	@Override
-	public EditorString<Object, Object> getConfigEditor(Object context, Object edtCtx) {
+	public EditorString getConfigEditor(Object context, Object edtCtx) {
 		if (editor == null) {
 			editor = new EditorString("Thing/properties/id eq {1}", 3, "Filter",
 					"A filter that will be added to the query for the datastream."
