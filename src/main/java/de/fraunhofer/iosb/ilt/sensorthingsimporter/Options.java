@@ -15,12 +15,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options.Option;
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options.OptionSingle;
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options.OptionToggle;
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options.ParameterString;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.Option;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.OptionSingle;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.OptionToggle;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.ParameterString;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;

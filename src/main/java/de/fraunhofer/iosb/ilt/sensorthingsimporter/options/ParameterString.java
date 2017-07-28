@@ -15,34 +15,34 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.Options;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.options;
 
 /**
  *
  * @author scf
  */
-public class ParameterInt implements Parameter<Integer> {
+public class ParameterString implements Parameter<String> {
 
 	private final String name;
-	private Integer value;
+	private String value;
 
 	/**
 	 * @param name The name of the parameter used in the help.
 	 * @param value The default value.
 	 */
-	public ParameterInt(String name, Integer value) {
+	public ParameterString(String name, String value) {
 		this.name = name;
 		this.value = value;
 	}
 
 	@Override
-	public Integer parse(String arg) {
-		value = Integer.parseInt(arg);
+	public String parse(String arg) {
+		value = arg;
 		return value;
 	}
 
 	@Override
-	public Integer getValue() {
+	public String getValue() {
 		return value;
 	}
 
@@ -50,4 +50,5 @@ public class ParameterInt implements Parameter<Integer> {
 	public String getName() {
 		return name;
 	}
+
 }

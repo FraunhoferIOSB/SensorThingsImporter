@@ -15,18 +15,39 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.Options;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.options;
 
 /**
  *
  * @author scf
- * @param <T> The class of the returned value.
  */
-public interface Parameter<T> {
+public class ParameterLong implements Parameter<Long> {
 
-	public T parse(String arg);
+	private final String name;
+	private Long value;
 
-	public T getValue();
+	/**
+	 * @param name The name of the parameter used in the help.
+	 * @param value The default value.
+	 */
+	public ParameterLong(String name, Long value) {
+		this.name = name;
+		this.value = value;
+	}
 
-	public String getName();
+	@Override
+	public Long parse(String arg) {
+		value = Long.parseLong(arg);
+		return value;
+	}
+
+	@Override
+	public Long getValue() {
+		return value;
+	}
+
+	@Override
+	public String getName() {
+		return name;
+	}
 }

@@ -17,9 +17,8 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options.Option;
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options.Parameter;
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.Options;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.Option;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.Parameter;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import java.io.IOException;
 import java.net.MalformedURLException;

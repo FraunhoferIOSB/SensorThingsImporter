@@ -25,7 +25,6 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.Options;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.Validator;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;

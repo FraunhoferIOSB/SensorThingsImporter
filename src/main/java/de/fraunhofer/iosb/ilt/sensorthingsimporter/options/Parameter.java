@@ -15,40 +15,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.Options;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.options;
 
 /**
  *
  * @author scf
+ * @param <T> The class of the returned value.
  */
-public class ParameterString implements Parameter<String> {
+public interface Parameter<T> {
 
-	private final String name;
-	private String value;
+	public T parse(String arg);
 
-	/**
-	 * @param name The name of the parameter used in the help.
-	 * @param value The default value.
-	 */
-	public ParameterString(String name, String value) {
-		this.name = name;
-		this.value = value;
-	}
+	public T getValue();
 
-	@Override
-	public String parse(String arg) {
-		value = arg;
-		return value;
-	}
-
-	@Override
-	public String getValue() {
-		return value;
-	}
-
-	@Override
-	public String getName() {
-		return name;
-	}
-
+	public String getName();
 }

@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.Options;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.options;
 
 import java.util.Arrays;
 import java.util.List;
