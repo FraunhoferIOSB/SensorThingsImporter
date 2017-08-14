@@ -150,7 +150,7 @@ public class ImporterAwaa implements Importer {
 		public ObsListIter() throws ImportException {
 			try {
 				Query<Datastream> dsQuery = service.datastreams().query()
-						.filter("Thing/properties/awaaId gt 0")
+						.filter("Thing/properties/awaaId gt 0 and not endswith(name, ']')")
 						.top(1000)
 						.expand("ObservedProperty($select=id,name),Thing($select=id,name,properties),Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
 				EntityList<Datastream> dsList = dsQuery.list();
@@ -158,7 +158,7 @@ public class ImporterAwaa implements Importer {
 				datastreams = dsList.fullIterator();
 
 				Query<MultiDatastream> mdsQuery = service.multiDatastreams().query()
-						.filter("Thing/properties/awaaId gt 0")
+						.filter("Thing/properties/awaaId gt 0 and not endswith(name, ']')")
 						.top(1000)
 						.expand("ObservedProperties($select=id,name),Thing($select=id,name,properties),Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
 				EntityList<MultiDatastream> mdsList = mdsQuery.list();
