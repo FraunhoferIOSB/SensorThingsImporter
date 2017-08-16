@@ -19,57 +19,36 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorNull;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Map;
+import java.math.BigDecimal;
 
 /**
  *
  * @author scf
  */
-public class ParserTime implements Parser<ZonedDateTime> {
+public class ParserBigdecimal implements Parser<BigDecimal> {
 
-	private EditorMap<Map<String, Object>> editor;
-	private EditorString editorTimeFormat;
-	private EditorString editorZone;
-
-	DateTimeFormatter formatter;
+	private EditorNull editor = new EditorNull("BigDecimal", "Parses strings into BigDecimals.");
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
 		getConfigEditor(context, edtCtx).setConfig(config);
-		formatter = DateTimeFormatter.ofPattern(editorTimeFormat.getValue());
-		if (!editorZone.getValue().isEmpty()) {
-			formatter = formatter.withZone(ZoneId.of(editorZone.getValue()));
-		}
 	}
 
 	@Override
 	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-		if (editor == null) {
-			editor = new EditorMap<>();
-
-			editorTimeFormat = new EditorString("yyyy-MM-dd HH:mm:ssX", 1, "Format", "The format to use when parsing the time.");
-			editor.addOption("format", editorTimeFormat, false);
-
-			editorZone = new EditorString("", 1, "Zone", "The timezone to use when the parsed time did not contain a timezone.");
-			editor.addOption("zone", editorZone, true);
-		}
 		return editor;
 
 	}
 
 	@Override
-	public ZonedDateTime parse(String time) {
-		return ZonedDateTime.from(formatter.parse(time));
+	public BigDecimal parse(JsonNode value) {
+		return new BigDecimal(value.asText());
 	}
 
 	@Override
-	public ZonedDateTime parse(JsonNode time) {
-		return ZonedDateTime.from(formatter.parse(time.asText()));
+	public BigDecimal parse(String value) {
+		return new BigDecimal(value);
 	}
 }

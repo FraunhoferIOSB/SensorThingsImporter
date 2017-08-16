@@ -14,20 +14,24 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import de.fraunhofer.iosb.ilt.configurable.Configurable;
+import de.fraunhofer.iosb.ilt.sta.model.Datastream;
+import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
+import java.time.Instant;
 
 /**
  *
  * @author scf
- * @param <T> The type of the result.
  */
-public interface Parser<T> extends Configurable<SensorThingsService, Object> {
+public interface TimeGen extends Configurable<SensorThingsService, Object> {
 
-	public T parse(JsonNode data);
+	public Instant getInstant();
 
-	public T parse(String data);
+	public Instant getInstant(Datastream ds);
+
+	public Instant getInstant(MultiDatastream mds);
+
 }

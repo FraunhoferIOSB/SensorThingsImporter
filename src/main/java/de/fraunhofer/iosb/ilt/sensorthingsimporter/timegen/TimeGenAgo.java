@@ -14,38 +14,48 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorEnum;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.sta.model.Datastream;
+import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
 /**
  *
  * @author scf
  */
-public class ParserTime implements Parser<ZonedDateTime> {
+public class TimeGenAgo implements TimeGen {
 
 	private EditorMap<Map<String, Object>> editor;
-	private EditorString editorTimeFormat;
-	private EditorString editorZone;
+	private EditorInt editorAmount;
+	private EditorEnum<ChronoUnit> editorUnit;
 
-	DateTimeFormatter formatter;
+	@Override
+	public Instant getInstant() {
+		return Instant.now().minus(editorUnit.getValue().getDuration().multipliedBy(editorAmount.getValue()));
+	}
+
+	@Override
+	public Instant getInstant(Datastream ds) {
+		return Instant.now().minus(editorUnit.getValue().getDuration().multipliedBy(editorAmount.getValue()));
+	}
+
+	@Override
+	public Instant getInstant(MultiDatastream mds) {
+		return Instant.now().minus(editorUnit.getValue().getDuration().multipliedBy(editorAmount.getValue()));
+	}
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
 		getConfigEditor(context, edtCtx).setConfig(config);
-		formatter = DateTimeFormatter.ofPattern(editorTimeFormat.getValue());
-		if (!editorZone.getValue().isEmpty()) {
-			formatter = formatter.withZone(ZoneId.of(editorZone.getValue()));
-		}
 	}
 
 	@Override
@@ -53,23 +63,13 @@ public class ParserTime implements Parser<ZonedDateTime> {
 		if (editor == null) {
 			editor = new EditorMap<>();
 
-			editorTimeFormat = new EditorString("yyyy-MM-dd HH:mm:ssX", 1, "Format", "The format to use when parsing the time.");
-			editor.addOption("format", editorTimeFormat, false);
+			editorUnit = new EditorEnum(ChronoUnit.class, ChronoUnit.DAYS, "Unit", "The unit.");
+			editor.addOption("unit", editorUnit, false);
 
-			editorZone = new EditorString("", 1, "Zone", "The timezone to use when the parsed time did not contain a timezone.");
-			editor.addOption("zone", editorZone, true);
+			editorAmount = new EditorInt(0, 999999, 1, 1, "amount", "The amount of steps to go into the past");
+			editor.addOption("amount", editorAmount, false);
 		}
 		return editor;
-
 	}
 
-	@Override
-	public ZonedDateTime parse(String time) {
-		return ZonedDateTime.from(formatter.parse(time));
-	}
-
-	@Override
-	public ZonedDateTime parse(JsonNode time) {
-		return ZonedDateTime.from(formatter.parse(time.asText()));
-	}
 }

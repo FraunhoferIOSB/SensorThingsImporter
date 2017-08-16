@@ -14,38 +14,54 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.sta.model.Datastream;
+import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
-import java.time.ZoneId;
+import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 /**
  *
  * @author scf
  */
-public class ParserTime implements Parser<ZonedDateTime> {
+public class TimeGenNewer implements TimeGen {
 
 	private EditorMap<Map<String, Object>> editor;
-	private EditorString editorTimeFormat;
-	private EditorString editorZone;
+	private EditorString editorStartTime;
 
-	DateTimeFormatter formatter;
+	@Override
+	public Instant getInstant() {
+		return ZonedDateTime.parse(editorStartTime.getValue()).toInstant();
+	}
+
+	@Override
+	public Instant getInstant(Datastream ds) {
+		if (ds.getObservations().toList().isEmpty()) {
+			return ZonedDateTime.parse(editorStartTime.getValue()).toInstant();
+		} else {
+			return ds.getObservations().toList().get(0).getPhenomenonTime().getAsDateTime().plusSeconds(1).toInstant();
+		}
+	}
+
+	@Override
+	public Instant getInstant(MultiDatastream mds) {
+		if (mds.getObservations().toList().isEmpty()) {
+			return ZonedDateTime.parse(editorStartTime.getValue()).toInstant();
+		} else {
+			return mds.getObservations().toList().get(0).getPhenomenonTime().getAsDateTime().plusSeconds(1).toInstant();
+		}
+	}
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
 		getConfigEditor(context, edtCtx).setConfig(config);
-		formatter = DateTimeFormatter.ofPattern(editorTimeFormat.getValue());
-		if (!editorZone.getValue().isEmpty()) {
-			formatter = formatter.withZone(ZoneId.of(editorZone.getValue()));
-		}
 	}
 
 	@Override
@@ -53,23 +69,10 @@ public class ParserTime implements Parser<ZonedDateTime> {
 		if (editor == null) {
 			editor = new EditorMap<>();
 
-			editorTimeFormat = new EditorString("yyyy-MM-dd HH:mm:ssX", 1, "Format", "The format to use when parsing the time.");
-			editor.addOption("format", editorTimeFormat, false);
-
-			editorZone = new EditorString("", 1, "Zone", "The timezone to use when the parsed time did not contain a timezone.");
-			editor.addOption("zone", editorZone, true);
+			editorStartTime = new EditorString("2017-01-01T00:00:00Z", 1, "StartTime", "The starting time, if the datastream has no observations yet.");
+			editor.addOption("startTime", editorStartTime, true);
 		}
 		return editor;
-
 	}
 
-	@Override
-	public ZonedDateTime parse(String time) {
-		return ZonedDateTime.from(formatter.parse(time));
-	}
-
-	@Override
-	public ZonedDateTime parse(JsonNode time) {
-		return ZonedDateTime.from(formatter.parse(time.asText()));
-	}
 }

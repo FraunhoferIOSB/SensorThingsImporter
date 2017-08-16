@@ -16,6 +16,7 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorNull;
@@ -26,7 +27,7 @@ import java.math.BigDecimal;
  *
  * @author scf
  */
-public class ParserStringToBigdecimal implements Parser<BigDecimal> {
+public class ParserNumber implements Parser<Number> {
 
 	private EditorNull editor = new EditorNull("BigDecimal", "Parses strings into BigDecimals.");
 
@@ -39,6 +40,14 @@ public class ParserStringToBigdecimal implements Parser<BigDecimal> {
 	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
 		return editor;
 
+	}
+
+	@Override
+	public Number parse(JsonNode value) {
+		if (value.isNumber()) {
+			return value.numberValue();
+		}
+		return new BigDecimal(value.asText());
 	}
 
 	@Override

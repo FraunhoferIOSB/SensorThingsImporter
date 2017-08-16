@@ -27,12 +27,12 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen.TimeGen;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.ObservedProperty;
-import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
 import de.fraunhofer.iosb.ilt.sta.model.ext.EntityList;
 import de.fraunhofer.iosb.ilt.sta.query.Query;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
@@ -68,7 +68,7 @@ public class ImporterAwaa implements Importer {
 	private EditorMap<Map<String, Object>> editor;
 	private EditorSubclass<SensorThingsService, Object, DocumentParser> editorDocumentParser;
 	private EditorString editorFetchUrl;
-	private EditorString editorStartTime;
+	private EditorSubclass<SensorThingsService, Object, TimeGen> editorStartTime;
 	private EditorString editorTranslator;
 	private EditorString editorTimeFormat;
 	private EditorString editorTimeZone;
@@ -77,6 +77,7 @@ public class ImporterAwaa implements Importer {
 	private SensorThingsService service;
 	private DateTimeFormatter timeFormatter;
 	private Translator translator;
+	private TimeGen startTime;
 	private DocumentParser docParser;
 	private boolean verbose;
 
@@ -99,6 +100,7 @@ public class ImporterAwaa implements Importer {
 			throw new IllegalArgumentException(exc);
 		}
 		docParser = editorDocumentParser.getValue();
+		startTime = editorStartTime.getValue();
 	}
 
 	@Override
@@ -112,7 +114,7 @@ public class ImporterAwaa implements Importer {
 			editorFetchUrl = new EditorString("http://someHost.com/some/path?station={awaaId}&timefrom={startTime}&timeto={endTime}&what={obsPropName}", 1, "fetchUrl", "The url to fetch data from.");
 			editor.addOption("fetchUrl", editorFetchUrl, false);
 
-			editorStartTime = new EditorString("2017-01-01T00:00:00Z", 1, "StartTime", "The starting time, if the datastream has no observations yet.");
+			editorStartTime = new EditorSubclass(context, edtCtx, TimeGen.class, "Start time", "When to start");
 			editor.addOption("startTime", editorStartTime, true);
 
 			editorTranslator = new EditorString("{\"from\":\"to\"}", 10, "Translations", "A map that translates input values to url values.");
@@ -198,12 +200,9 @@ public class ImporterAwaa implements Importer {
 		private List<Observation> computeForDatastreams() throws IOException, ServiceFailureException, ImportException {
 			Datastream ds = datastreams.next();
 			Object awaaId = ds.getThing().getProperties().get("awaaId");
-			ZonedDateTime timeStart;
-			if (ds.getObservations().toList().isEmpty()) {
-				timeStart = TimeObject.parse(editorStartTime.getValue()).getAsDateTime();
-			} else {
-				timeStart = ds.getObservations().toList().get(0).getPhenomenonTime().getAsDateTime().plusSeconds(1);
-			}
+
+			ZonedDateTime timeStart = startTime.getInstant(ds).atZone(timeFormatter.getZone());
+
 			ObservedProperty obsProp = ds.getObservedProperty();
 			String data = fetchDocumentFor(awaaId, timeStart, obsProp);
 			List<Observation> observations = docParser.process(ds, data);
@@ -214,12 +213,8 @@ public class ImporterAwaa implements Importer {
 		private List<Observation> computeForMultiDatastreams() throws IOException, ServiceFailureException, ImportException {
 			MultiDatastream mds = multiDatastreams.next();
 			Object awaaId = mds.getThing().getProperties().get("awaaId");
-			ZonedDateTime timeStart;
-			if (mds.getObservations().toList().isEmpty()) {
-				timeStart = TimeObject.parse(editorStartTime.getValue()).getAsDateTime();
-			} else {
-				timeStart = mds.getObservations().toList().get(0).getPhenomenonTime().getAsDateTime().plusSeconds(1);
-			}
+
+			ZonedDateTime timeStart = startTime.getInstant(mds).atZone(timeFormatter.getZone());
 
 			List<ObservedProperty> observedProperties = mds.getObservedProperties().toList();
 			String[] documents = new String[observedProperties.size()];

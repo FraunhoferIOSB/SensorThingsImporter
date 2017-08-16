@@ -16,6 +16,7 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonElement;
@@ -105,6 +106,7 @@ public class JsonConverter implements DocumentParser {
 	public List<Observation> process(Datastream ds, String input) throws ImportException {
 		try {
 			ObjectMapper mapper = new ObjectMapper();
+			mapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
 			JsonNode json = mapper.readTree(input);
 
 			JsonNode listJson = walk(json, listPathParts);
@@ -115,7 +117,7 @@ public class JsonConverter implements DocumentParser {
 			List<Observation> observationList = new ArrayList<>();
 			for (JsonNode element : listJson) {
 				ZonedDateTime phenTime = timeParser.parse(walk(element, phenTimePathParts).asText());
-				Object result = resultParser.parse(walk(element, resultPathParts).asText());
+				Object result = resultParser.parse(walk(element, resultPathParts));
 				Observation obs = new Observation(result, ds);
 				obs.setPhenomenonTime(new TimeObject(phenTime));
 				observationList.add(obs);
