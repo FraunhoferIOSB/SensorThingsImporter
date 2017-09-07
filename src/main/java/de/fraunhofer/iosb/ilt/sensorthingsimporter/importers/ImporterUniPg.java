@@ -28,14 +28,18 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
-import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.threeten.extra.Interval;
@@ -53,7 +57,8 @@ public class ImporterUniPg implements Importer {
 
 	private EditorMap<Map<String, Object>> editor;
 	private EditorSubclass<SensorThingsService, Object, DocumentParser> editorDocumentParser;
-	private EditorString editorFetchUrl;
+	private EditorString editorDataPath;
+	private EditorString editorFileIdRegex;
 	private EditorInt editorDuration;
 
 	private SensorThingsService service;
@@ -80,10 +85,13 @@ public class ImporterUniPg implements Importer {
 			editorDocumentParser = new EditorSubclass<>(context, edtCtx, DocumentParser.class, "DocumentParser", "The parser that transforms a document into Observations.");
 			editor.addOption("documentParser", editorDocumentParser, false);
 
-			editorFetchUrl = new EditorString("File://Accel_3.lvm", 1, "fetchUrl", "The url to fetch data from.");
-			editor.addOption("fetchUrl", editorFetchUrl, false);
+			editorFileIdRegex = new EditorString("", 1, "FileIdRegex", "A regular expression extracting an ID from the filename. Must contain 1");
+			editor.addOption("fileIdRegex", editorFileIdRegex, false);
 
-			editorDuration = new EditorInt(0, 99999, 1, 30 * 60, "PhenomenonTimeDuration", "Seconds between start and end phenomenonTime.");
+			editorDataPath = new EditorString("./importFiles", 1, "dataPath", "The path to find the data files, must be a directory.");
+			editor.addOption("dataPath", editorDataPath, false);
+
+			editorDuration = new EditorInt(0, 99999, 1, 30 * 60, "PhenomenonTimeDuration", "Seconds between start and end phenomenonTime, in seconds.");
 			editor.addOption("duration", editorDuration, true);
 		}
 		return editor;
@@ -102,41 +110,74 @@ public class ImporterUniPg implements Importer {
 
 	private class ObsListIter extends AbstractIterator<List<Observation>> {
 
-		boolean done = false;
+		Iterator<Map.Entry<Long, File>> filesIterator;
+		Instant previousEndTime;
 
 		public ObsListIter() throws ImportException {
+			Map<Long, File> filesMap = fetchFiles();
+			filesIterator = filesMap.entrySet().iterator();
 		}
 
-		private String fetchDocument() throws IOException {
-			String targetUrl = editorFetchUrl.getValue();
-			LOGGER.debug("Fetching: {}", targetUrl);
-			URL url = new URL(targetUrl);
-			BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
-			String inputLine;
-			StringBuilder data = new StringBuilder();
-			while ((inputLine = in.readLine()) != null) {
-				data.append(inputLine).append('\n');
+		private Map<Long, File> fetchFiles() throws ImportException {
+			String targetPath = editorDataPath.getValue();
+			File filesPath = new File(targetPath);
+			LOGGER.info("Loading files from: {}", filesPath.getAbsolutePath());
+			if (!filesPath.isDirectory()) {
+				throw new ImportException("Path must be a directory.");
 			}
-			in.close();
-			return data.toString();
+			File[] dataFiles = filesPath.listFiles();
+
+			Pattern idPattern = Pattern.compile(editorFileIdRegex.getValue());
+			Map<Long, File> dataFilesMap = new TreeMap<>();
+			for (File dataFile : dataFiles) {
+				String fileName = dataFile.getName();
+				Matcher idMatcher = idPattern.matcher(fileName);
+				if (!idMatcher.find()) {
+					LOGGER.error("File name {} does not match pattern {}", fileName, editorFileIdRegex.getValue());
+					continue;
+				}
+				String idString = idMatcher.group(1);
+				long fileId = Long.parseLong(idString);
+				dataFilesMap.put(fileId, dataFile);
+			}
+
+			return dataFilesMap;
 		}
 
 		private List<Observation> compute() throws IOException, ImportException {
-			String data = fetchDocument();
+			Map.Entry<Long, File> entry = filesIterator.next();
+			long fileId = entry.getKey();
+			File dataFile = entry.getValue();
+
+			Instant endTime = Instant.ofEpochMilli(dataFile.lastModified());
+			if (previousEndTime == null) {
+				previousEndTime = endTime;
+				LOGGER.info("Skipping file {}, it is the first, so we have no start time.", dataFile.getName());
+				return new ArrayList<>();
+			}
+			Instant startTime = previousEndTime;
+			previousEndTime = endTime;
+
+			LOGGER.info("Reading file id: {} name: {}, from {}, to {}", fileId, dataFile.getName(), startTime, endTime);
+			String data = FileUtils.readFileToString(dataFile, "UTF-8");
+
 			List<Observation> observations = docParser.process(null, data);
 			LOGGER.info("Generated {} observations.", observations.size());
-			TimeObject phenTime = new TimeObject(Interval.of(Instant.parse("2016-01-01T15:00:00Z"), Instant.parse("2016-01-01T15:30:00Z")));
+			TimeObject phenTime = new TimeObject(Interval.of(startTime, endTime));
+
+			Map<String, Object> parameters = new HashMap<>();
+			parameters.put("importFileId", fileId);
 			for (Observation obs : observations) {
 				obs.setPhenomenonTime(phenTime);
+				obs.setParameters(parameters);
 			}
 			return observations;
 		}
 
 		@Override
 		protected List<Observation> computeNext() {
-			if (!done) {
+			if (filesIterator.hasNext()) {
 				try {
-					done = true;
 					return compute();
 				} catch (ImportException | IOException exc) {
 					LOGGER.error("Failed", exc);

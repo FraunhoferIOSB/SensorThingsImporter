@@ -26,6 +26,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
@@ -109,15 +110,15 @@ public class JsonConverter implements DocumentParser {
 			mapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
 			JsonNode json = mapper.readTree(input);
 
-			JsonNode listJson = walk(json, listPathParts);
+			JsonNode listJson = JsonUtils.walk(json, listPathParts);
 			if (!listJson.isArray()) {
 				throw new ImportException("List path did not lead to an array.");
 			}
 
 			List<Observation> observationList = new ArrayList<>();
 			for (JsonNode element : listJson) {
-				ZonedDateTime phenTime = timeParser.parse(walk(element, phenTimePathParts).asText());
-				Object result = resultParser.parse(walk(element, resultPathParts));
+				ZonedDateTime phenTime = timeParser.parse(JsonUtils.walk(element, phenTimePathParts).asText());
+				Object result = resultParser.parse(JsonUtils.walk(element, resultPathParts));
 				Observation obs = new Observation(result, ds);
 				obs.setPhenomenonTime(new TimeObject(phenTime));
 				observationList.add(obs);
@@ -139,15 +140,15 @@ public class JsonConverter implements DocumentParser {
 			for (String input : inputs) {
 				JsonNode json = mapper.readTree(input);
 
-				JsonNode listJson = walk(json, listPathParts);
+				JsonNode listJson = JsonUtils.walk(json, listPathParts);
 				if (!listJson.isArray()) {
 					throw new ImportException("List path did not lead to an array.");
 				}
 
 				Map<ZonedDateTime, Observation> updatedMap = new HashMap<>();
 				for (JsonNode element : listJson) {
-					ZonedDateTime phenTime = timeParser.parse(walk(element, phenTimePathParts).asText());
-					Object result = resultParser.parse(walk(element, resultPathParts).asText());
+					ZonedDateTime phenTime = timeParser.parse(JsonUtils.walk(element, phenTimePathParts).asText());
+					Object result = resultParser.parse(JsonUtils.walk(element, resultPathParts).asText());
 					if (resultIndex == 0) {
 						Object[] resultArr = new Object[inputs.length];
 						resultArr[resultIndex] = result;
@@ -173,28 +174,4 @@ public class JsonConverter implements DocumentParser {
 		}
 	}
 
-	public static JsonNode walk(final JsonNode node, final String[] pathParts) {
-		JsonNode curNode = node;
-		for (String pathPart : pathParts) {
-			if (pathPart.isEmpty()) {
-				continue;
-			}
-			if (curNode.isArray()) {
-				try {
-					int arrIndex = Integer.parseInt(pathPart);
-					curNode = curNode.path(arrIndex);
-				} catch (NumberFormatException exc) {
-					LOGGER.warn("Array must be traversed with index. Could not parse {} to integer.", pathPart);
-				}
-			} else {
-				curNode = curNode.path(pathPart);
-			}
-		}
-		return curNode;
-	}
-
-	public static JsonNode walk(final JsonNode node, final String path) {
-		final String[] pathParts = path.split("/");
-		return walk(node, pathParts);
-	}
 }
