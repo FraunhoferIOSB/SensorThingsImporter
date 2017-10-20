@@ -32,8 +32,10 @@ import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -42,6 +44,7 @@ import java.util.Map;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -167,11 +170,22 @@ public class ImporterCsv implements Importer {
 		CSVParser parser;
 		try {
 			if (inUrl != null) {
-				CloseableHttpClient client = HttpClients.createSystem();
-				HttpGet get = new HttpGet(inUrl);
-				CloseableHttpResponse response = client.execute(get);
-				String data = EntityUtils.toString(response.getEntity(), charset);
-				parser = CSVParser.parse(data, format);
+				if (inUrl.getScheme().startsWith("http")) {
+					CloseableHttpClient client = HttpClients.createSystem();
+					HttpGet get = new HttpGet(inUrl);
+					CloseableHttpResponse response = client.execute(get);
+					String data = EntityUtils.toString(response.getEntity(), charset);
+					parser = CSVParser.parse(data, format);
+				} else if (inUrl.getScheme().startsWith("ftp")) {
+					URLConnection connection = inUrl.toURL().openConnection();
+					try (InputStream stream = connection.getInputStream()) {
+						String data = IOUtils.toString(stream, "UTF-8");
+						parser = CSVParser.parse(data, format);
+					}
+				} else {
+					LOGGER.error("Unsupported scheme: {}.", inUrl.getScheme());
+					throw new ImportException("Unsupported scheme: " + inUrl.getScheme());
+				}
 			} else if (inFile != null) {
 				parser = CSVParser.parse(inFile, Charset.forName(charset), format);
 			} else {

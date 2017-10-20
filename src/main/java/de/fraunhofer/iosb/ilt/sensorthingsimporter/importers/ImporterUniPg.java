@@ -170,8 +170,17 @@ public class ImporterUniPg implements Importer {
 			for (Observation obs : observations) {
 				obs.setPhenomenonTime(phenTime);
 				obs.setParameters(parameters);
+				parameters.put("resultCount", getResultCount(obs));
 			}
 			return observations;
+		}
+
+		private int getResultCount(Observation obs) {
+			Object result = obs.getResult();
+			if (result instanceof List) {
+				return ((List) result).size();
+			}
+			return 1;
 		}
 
 		@Override
