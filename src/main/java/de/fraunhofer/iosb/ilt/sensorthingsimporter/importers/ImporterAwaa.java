@@ -152,17 +152,17 @@ public class ImporterAwaa implements Importer {
 		public ObsListIter() throws ImportException {
 			try {
 				Query<Datastream> dsQuery = service.datastreams().query()
-						.filter("Thing/properties/awaaId gt 0 and not endswith(name, ']')")
+						.filter("Thing/properties/awaaId gt 0 and ObservedProperty/properties/awaaId gt 0 and not endswith(name, ']')")
 						.top(1000)
-						.expand("ObservedProperty($select=id,name),Thing($select=id,name,properties),Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
+						.expand("ObservedProperty($select=id,name,properties),Thing($select=id,name,properties),Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
 				EntityList<Datastream> dsList = dsQuery.list();
 				LOGGER.info("Datastrams: {}", dsList.size());
 				datastreams = dsList.fullIterator();
 
 				Query<MultiDatastream> mdsQuery = service.multiDatastreams().query()
-						.filter("Thing/properties/awaaId gt 0 and not endswith(name, ']')")
+						.filter("Thing/properties/awaaId gt 0 and ObservedProperty/properties/awaaId gt 0 and not endswith(name, ']')")
 						.top(1000)
-						.expand("ObservedProperties($select=id,name),Thing($select=id,name,properties),Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
+						.expand("ObservedProperties($select=id,name,properties),Thing($select=id,name,properties),Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
 				EntityList<MultiDatastream> mdsList = mdsQuery.list();
 				LOGGER.info("MultiDatastreams: {}", mdsList.size());
 				multiDatastreams = mdsList.fullIterator();
@@ -180,6 +180,7 @@ public class ImporterAwaa implements Importer {
 			replaces.put("awaaId", translator.translate(awaaId.toString()));
 			replaces.put("startTime", timeStart.format(timeFormatter));
 			replaces.put("endTime", timeEnd.format(timeFormatter));
+			replaces.put("obsPropId", translator.translate(String.valueOf(obsProp.getProperties().get("awaaId"))));
 			replaces.put("obsPropName", translator.translate(obsProp.getName()));
 
 			String targetUrl = editorFetchUrl.getValue();
