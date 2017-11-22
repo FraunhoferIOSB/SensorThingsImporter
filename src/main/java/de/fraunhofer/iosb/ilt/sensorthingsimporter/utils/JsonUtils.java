@@ -55,4 +55,26 @@ public class JsonUtils {
 		final String[] pathParts = path.split("/");
 		return walk(node, pathParts);
 	}
+
+	public static int toInt(Object o) {
+		if (o == null) {
+			throw new IllegalArgumentException("Parameter must be non-null");
+		}
+		return toInt(o, 0);
+	}
+
+	public static int toInt(Object o, int deflt) {
+		if (o == null) {
+			return deflt;
+		}
+		if (o instanceof Integer) {
+			Integer integer = (Integer) o;
+			return integer;
+		}
+		if (o instanceof Number) {
+			Number number = (Number) o;
+			return number.intValue();
+		}
+		return Integer.parseInt(o.toString());
+	}
 }

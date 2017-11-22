@@ -39,7 +39,6 @@ public class ParserNumber implements Parser<Number> {
 	@Override
 	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
 		return editor;
-
 	}
 
 	@Override
