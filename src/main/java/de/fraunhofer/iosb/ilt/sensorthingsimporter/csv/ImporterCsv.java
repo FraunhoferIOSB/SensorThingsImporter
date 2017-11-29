@@ -92,6 +92,11 @@ public class ImporterCsv implements Importer {
 	}
 
 	@Override
+	public void setNoAct(boolean noAct) {
+		// Nothing to set.
+	}
+
+	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
 		service = context;
 		getConfigEditor(service, edtCtx).setConfig(config);

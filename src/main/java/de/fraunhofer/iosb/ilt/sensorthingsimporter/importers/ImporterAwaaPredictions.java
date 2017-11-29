@@ -16,9 +16,9 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ComparisonChain;
@@ -37,10 +37,10 @@ import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.Location;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.model.Thing;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.ObservedProperty;
 import de.fraunhofer.iosb.ilt.sta.model.Sensor;
+import de.fraunhofer.iosb.ilt.sta.model.Thing;
 import de.fraunhofer.iosb.ilt.sta.model.ext.EntityList;
 import de.fraunhofer.iosb.ilt.sta.model.ext.UnitOfMeasurement;
 import de.fraunhofer.iosb.ilt.sta.query.Query;
@@ -107,11 +107,17 @@ public class ImporterAwaaPredictions implements Importer {
 	private ParserNumber numberParser = new ParserNumber();
 	private Translator translator;
 	private boolean verbose;
+	private boolean noAct = false;
 	private boolean fullImport = true;
 
 	@Override
 	public void setVerbose(boolean verbose) {
 		this.verbose = verbose;
+	}
+
+	@Override
+	public void setNoAct(boolean noAct) {
+		this.noAct = noAct;
 	}
 
 	@Override
@@ -267,8 +273,9 @@ public class ImporterAwaaPredictions implements Importer {
 		private final SortedMap<Integer, Run> runs;
 		private ObservedProperty opWaterLevel;
 		private Sensor sensorWaterModel;
-		private final Iterator<Datastream> datastreams;
+		private Iterator<Datastream> datastreams;
 		private final Iterator<MultiDatastream> multiDatastreams;
+		private boolean hasMore;
 
 		public ObsListIter() throws ImportException, URISyntaxException {
 			runs = initRuns();
@@ -315,7 +322,11 @@ public class ImporterAwaaPredictions implements Importer {
 				throw new ImportException(exc);
 			}
 
-			// old
+			datastreams = generateDatastreamIterator();
+			multiDatastreams = null;
+		}
+
+		private Iterator<Datastream> generateDatastreamIterator() {
 			try {
 				Query<Datastream> dsQuery = service.datastreams().query()
 						.filter("properties/type eq 'forecast'"
@@ -328,13 +339,12 @@ public class ImporterAwaaPredictions implements Importer {
 								+ "Thing($select=id,name,properties),"
 								+ "Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
 				EntityList<Datastream> dsList = dsQuery.list();
-				LOGGER.info("Datastrams: {}", dsList.size());
-				datastreams = dsList.fullIterator();
-
-				multiDatastreams = null;
+				LOGGER.info("Datastreams: {}", dsList.size());
+				hasMore = false;
+				return dsList.fullIterator();
 			} catch (ServiceFailureException exc) {
 				LOGGER.error("Failed.", exc);
-				throw new ImportException(exc);
+				throw new RuntimeException(exc);
 			}
 		}
 
@@ -540,7 +550,6 @@ public class ImporterAwaaPredictions implements Importer {
 		private void checkLocationOfRiver(River river, SortedMap<Integer, RiverSection> sections) throws ServiceFailureException {
 			EntityList<Location> locations = river.thing.locations().query().list();
 			if (locations.size() > 0) {
-				LOGGER.info("River {} already has a location.", river);
 				return;
 			}
 			LOGGER.info("Creating Location for river {}.", river);
@@ -568,6 +577,7 @@ public class ImporterAwaaPredictions implements Importer {
 			for (Integer availableRun : runs.keySet()) {
 				if (availableRun > lastRun) {
 					nextRun = availableRun;
+					hasMore = true;
 					break;
 				}
 			}
@@ -579,12 +589,13 @@ public class ImporterAwaaPredictions implements Importer {
 			List<Observation> observations = importObservations(dsOnlyId.withOnlyId(), nextRun, riverAwaaId, sectionAwaaId);
 			LOGGER.info("Generated {} observations for river {}, section {}, run {}", observations.size(), riverAwaaId, sectionAwaaId, nextRun);
 
-			// Update the property lastRunId, both in the local cache and on the server.
-			Map<String, Object> properties = ds.getProperties();
-			properties.put("lastRunId", nextRun);
-			dsOnlyId.setProperties(properties);
-			service.update(dsOnlyId);
-
+			if (!noAct) {
+				// Update the property lastRunId, both in the local cache and on the server.
+				Map<String, Object> properties = ds.getProperties();
+				properties.put("lastRunId", nextRun);
+				dsOnlyId.setProperties(properties);
+				service.update(dsOnlyId);
+			}
 			return observations;
 		}
 
@@ -600,6 +611,10 @@ public class ImporterAwaaPredictions implements Importer {
 				} catch (Exception exc) {
 					LOGGER.error("Failed", exc);
 				}
+			}
+			if (hasMore) {
+				datastreams = generateDatastreamIterator();
+				return Collections.EMPTY_LIST;
 			}
 			while (multiDatastreams != null && multiDatastreams.hasNext()) {
 				try {

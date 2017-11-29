@@ -19,19 +19,26 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
 import com.google.common.collect.AbstractIterator;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.DsMapperFilter;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
+import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
+import de.fraunhofer.iosb.ilt.sta.model.ext.EntityList;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -60,10 +67,14 @@ public class ImporterUniPg implements Importer {
 	private EditorString editorDataPath;
 	private EditorString editorFileIdRegex;
 	private EditorInt editorDuration;
+	private EditorClass<Object, Object, DsMapperFilter> editorCheckDataStream;
+	private EditorBoolean editorSkipLast;
 
 	private SensorThingsService service;
 	private DocumentParser docParser;
 	private boolean verbose;
+	private DsMapperFilter checkDataStream;
+	private boolean skipLast;
 
 	@Override
 	public void setVerbose(boolean verbose) {
@@ -71,10 +82,17 @@ public class ImporterUniPg implements Importer {
 	}
 
 	@Override
+	public void setNoAct(boolean noAct) {
+		// Nothing to set.
+	}
+
+	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
 		service = context;
 		getConfigEditor(context, edtCtx).setConfig(config);
 		docParser = editorDocumentParser.getValue();
+		checkDataStream = editorCheckDataStream.getValue();
+		skipLast = editorSkipLast.getValue();
 	}
 
 	@Override
@@ -93,6 +111,12 @@ public class ImporterUniPg implements Importer {
 
 			editorDuration = new EditorInt(0, 99999, 1, 30 * 60, "PhenomenonTimeDuration", "Seconds between start and end phenomenonTime, in seconds.");
 			editor.addOption("duration", editorDuration, true);
+
+			editorCheckDataStream = new EditorClass<>(context, edtCtx, DsMapperFilter.class, "Check Datastream", "The Datastream to check the observations of, if the file is already imported.");
+			editor.addOption("checkDs", editorCheckDataStream, true);
+
+			editorSkipLast = new EditorBoolean(false, "Skip Last File", "Skip the last file?");
+			editor.addOption("skipLast", editorSkipLast, true);
 		}
 		return editor;
 	}
@@ -105,6 +129,19 @@ public class ImporterUniPg implements Importer {
 		} catch (ImportException exc) {
 			LOGGER.error("Failed", exc);
 			throw new IllegalStateException("Failed to handle csv file.", exc);
+		}
+	}
+
+	private boolean alreadyImported(long fileId) throws ImportException {
+		if (checkDataStream == null) {
+			return false;
+		}
+		try {
+			Datastream ds = checkDataStream.getDatastreamFor(null);
+			EntityList<Observation> list = ds.observations().query().filter("parameters/importFileId eq " + fileId).select("@iot.id").list();
+			return list.size() > 0;
+		} catch (ServiceFailureException exc) {
+			throw new ImportException(exc);
 		}
 	}
 
@@ -128,7 +165,7 @@ public class ImporterUniPg implements Importer {
 			File[] dataFiles = filesPath.listFiles();
 
 			Pattern idPattern = Pattern.compile(editorFileIdRegex.getValue());
-			Map<Long, File> dataFilesMap = new TreeMap<>();
+			TreeMap<Long, File> dataFilesMap = new TreeMap<>();
 			for (File dataFile : dataFiles) {
 				String fileName = dataFile.getName();
 				Matcher idMatcher = idPattern.matcher(fileName);
@@ -140,7 +177,11 @@ public class ImporterUniPg implements Importer {
 				long fileId = Long.parseLong(idString);
 				dataFilesMap.put(fileId, dataFile);
 			}
-
+			if (skipLast) {
+				Long lastKey = dataFilesMap.lastKey();
+				dataFilesMap.remove(lastKey);
+				LOGGER.info("Remove last file from list: {}.", lastKey);
+			}
 			return dataFilesMap;
 		}
 
@@ -148,6 +189,10 @@ public class ImporterUniPg implements Importer {
 			Map.Entry<Long, File> entry = filesIterator.next();
 			long fileId = entry.getKey();
 			File dataFile = entry.getValue();
+
+			if (alreadyImported(fileId)) {
+				return Collections.EMPTY_LIST;
+			}
 
 			Instant endTime = Instant.ofEpochMilli(dataFile.lastModified());
 			if (previousEndTime == null) {

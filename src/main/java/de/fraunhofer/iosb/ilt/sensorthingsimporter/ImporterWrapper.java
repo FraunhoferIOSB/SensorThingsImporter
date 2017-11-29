@@ -176,6 +176,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 			JsonElement json = new JsonParser().parse(config);
 			configure(json, null, null);
 			importer.setVerbose(noAct);
+			importer.setNoAct(noAct);
 			uploader.setNoAct(noAct);
 			doImport();
 		} catch (JsonSyntaxException exc) {

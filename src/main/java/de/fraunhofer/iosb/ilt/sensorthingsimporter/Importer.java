@@ -35,4 +35,6 @@ public interface Importer extends Configurable<SensorThingsService, Object>, Ite
 	 * output.
 	 */
 	public void setVerbose(boolean verbose);
+
+	public void setNoAct(boolean noAct);
 }

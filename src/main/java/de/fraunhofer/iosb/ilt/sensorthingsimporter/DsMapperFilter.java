@@ -101,7 +101,7 @@ public class DsMapperFilter implements DatastreamMapper {
 		}
 	}
 
-	public Datastream getDatastreamFor(String filter) throws ServiceFailureException {
+	private Datastream getDatastreamFor(String filter) throws ServiceFailureException {
 		Datastream ds = datastreamCache.get(filter);
 		if (ds != null) {
 			return ds;
@@ -118,7 +118,7 @@ public class DsMapperFilter implements DatastreamMapper {
 		return ds;
 	}
 
-	public MultiDatastream getMultiDatastreamFor(String filter) throws ServiceFailureException {
+	private MultiDatastream getMultiDatastreamFor(String filter) throws ServiceFailureException {
 		MultiDatastream mds = multiDatastreamCache.get(filter);
 		if (mds != null) {
 			return mds;
