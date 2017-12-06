@@ -37,7 +37,6 @@ import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -69,12 +68,14 @@ public class ImporterUniPg implements Importer {
 	private EditorInt editorDuration;
 	private EditorClass<Object, Object, DsMapperFilter> editorCheckDataStream;
 	private EditorBoolean editorSkipLast;
+	private EditorInt editorSleep;
 
 	private SensorThingsService service;
 	private DocumentParser docParser;
 	private boolean verbose;
 	private DsMapperFilter checkDataStream;
 	private boolean skipLast;
+	private long sleepTime = 0;
 
 	@Override
 	public void setVerbose(boolean verbose) {
@@ -93,6 +94,7 @@ public class ImporterUniPg implements Importer {
 		docParser = editorDocumentParser.getValue();
 		checkDataStream = editorCheckDataStream.getValue();
 		skipLast = editorSkipLast.getValue();
+		sleepTime = 1000 * editorSleep.getValue();
 	}
 
 	@Override
@@ -117,6 +119,9 @@ public class ImporterUniPg implements Importer {
 
 			editorSkipLast = new EditorBoolean(false, "Skip Last File", "Skip the last file?");
 			editor.addOption("skipLast", editorSkipLast, true);
+
+			editorSleep = new EditorInt(0, 99999, 1, 0, "Sleep", "Sleep this many seconds after every imported file.");
+			editor.addOption("sleep", editorSleep, true);
 		}
 		return editor;
 	}
@@ -198,10 +203,18 @@ public class ImporterUniPg implements Importer {
 			if (previousEndTime == null) {
 				previousEndTime = endTime;
 				LOGGER.info("Skipping file {}, it is the first, so we have no start time.", dataFile.getName());
-				return new ArrayList<>();
+				return Collections.EMPTY_LIST;
 			}
 			Instant startTime = previousEndTime;
 			previousEndTime = endTime;
+
+			if (sleepTime > 0) {
+				try {
+					Thread.sleep(sleepTime);
+				} catch (InterruptedException ex) {
+					LOGGER.warn("Rude wakeup.", ex);
+				}
+			}
 
 			LOGGER.info("Reading file id: {} name: {}, from {}, to {}", fileId, dataFile.getName(), startTime, endTime);
 			String data = FileUtils.readFileToString(dataFile, "UTF-8");
