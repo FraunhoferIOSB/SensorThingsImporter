@@ -67,6 +67,7 @@ public class ImporterUniPg implements Importer {
 	private EditorString editorFileIdRegex;
 	private EditorInt editorDuration;
 	private EditorClass<Object, Object, DsMapperFilter> editorCheckDataStream;
+	private EditorBoolean editorFastCheck;
 	private EditorBoolean editorSkipLast;
 	private EditorInt editorSleep;
 
@@ -74,6 +75,8 @@ public class ImporterUniPg implements Importer {
 	private DocumentParser docParser;
 	private boolean verbose;
 	private DsMapperFilter checkDataStream;
+	private boolean fastcheck;
+	private Integer fastCheckLastId;
 	private boolean skipLast;
 	private long sleepTime = 0;
 
@@ -93,6 +96,7 @@ public class ImporterUniPg implements Importer {
 		getConfigEditor(context, edtCtx).setConfig(config);
 		docParser = editorDocumentParser.getValue();
 		checkDataStream = editorCheckDataStream.getValue();
+		fastcheck = editorFastCheck.getValue();
 		skipLast = editorSkipLast.getValue();
 		sleepTime = 1000 * editorSleep.getValue();
 	}
@@ -116,6 +120,9 @@ public class ImporterUniPg implements Importer {
 
 			editorCheckDataStream = new EditorClass<>(context, edtCtx, DsMapperFilter.class, "Check Datastream", "The Datastream to check the observations of, if the file is already imported.");
 			editor.addOption("checkDs", editorCheckDataStream, true);
+
+			editorFastCheck = new EditorBoolean(true, "Fast Check", "Do not check for each file if it is imported, only request the highest file nr and use that.");
+			editor.addOption("fastCheck", editorFastCheck, true);
 
 			editorSkipLast = new EditorBoolean(false, "Skip Last File", "Skip the last file?");
 			editor.addOption("skipLast", editorSkipLast, true);
@@ -142,6 +149,19 @@ public class ImporterUniPg implements Importer {
 			return false;
 		}
 		try {
+			if (fastcheck) {
+				if (fastCheckLastId == null) {
+					Datastream ds = checkDataStream.getDatastreamFor(null);
+					Observation last = ds.observations().query().orderBy("(parameters/importFileId add 0) desc").select("parameters").first();
+					if (last == null) {
+						fastCheckLastId = Integer.MIN_VALUE;
+						return false;
+					}
+					fastCheckLastId = Integer.parseInt(last.getParameters().get("importFileId").toString());
+				}
+				return fileId <= fastCheckLastId;
+			}
+
 			Datastream ds = checkDataStream.getDatastreamFor(null);
 			EntityList<Observation> list = ds.observations().query().filter("parameters/importFileId eq " + fileId).select("@iot.id").list();
 			return list.size() > 0;
@@ -195,10 +215,6 @@ public class ImporterUniPg implements Importer {
 			long fileId = entry.getKey();
 			File dataFile = entry.getValue();
 
-			if (alreadyImported(fileId)) {
-				return Collections.EMPTY_LIST;
-			}
-
 			Instant endTime = Instant.ofEpochMilli(dataFile.lastModified());
 			if (previousEndTime == null) {
 				previousEndTime = endTime;
@@ -207,6 +223,10 @@ public class ImporterUniPg implements Importer {
 			}
 			Instant startTime = previousEndTime;
 			previousEndTime = endTime;
+
+			if (alreadyImported(fileId)) {
+				return Collections.EMPTY_LIST;
+			}
 
 			if (sleepTime > 0) {
 				try {
