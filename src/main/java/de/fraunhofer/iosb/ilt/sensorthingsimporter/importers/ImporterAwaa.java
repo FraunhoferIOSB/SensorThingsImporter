@@ -68,6 +68,8 @@ public class ImporterAwaa implements Importer {
 	private EditorMap<Map<String, Object>> editor;
 	private EditorSubclass<SensorThingsService, Object, DocumentParser> editorDocumentParser;
 	private EditorString editorFetchUrl;
+	private EditorString editorDatastreamFilter;
+	private EditorString editorMultiDatastreamFilter;
 	private EditorSubclass<SensorThingsService, Object, TimeGen> editorStartTime;
 	private EditorString editorTranslator;
 	private EditorString editorTimeFormat;
@@ -133,6 +135,16 @@ public class ImporterAwaa implements Importer {
 
 			editorMaxHours = new EditorInt(1, 99999, 1, 24, "Max Hours", "The maximum number of hours to fetch observations for.");
 			editor.addOption("maxHours", editorMaxHours, true);
+
+			editorDatastreamFilter = new EditorString(
+					"Thing/properties/type eq 'station' and Thing/properties/awaaId gt 0 and ObservedProperty/properties/awaaId gt 0 and not endswith(name, ']')",
+					1, "Datastream Filter", "The filter to use in the query to find Datastreams.");
+			editor.addOption("datastreamFilter", editorDatastreamFilter, false);
+
+			editorMultiDatastreamFilter = new EditorString(
+					"Thing/properties/type eq 'station' and Thing/properties/awaaId gt 0 and ObservedProperty/properties/awaaId gt 0 and not endswith(name, ']')",
+					1, "MultiDatastream Filter", "The filter to use in the query to find MultiDatastreams.");
+			editor.addOption("multiDatastreamFilter", editorMultiDatastreamFilter, false);
 		}
 		return editor;
 
@@ -157,7 +169,7 @@ public class ImporterAwaa implements Importer {
 		public ObsListIter() throws ImportException {
 			try {
 				Query<Datastream> dsQuery = service.datastreams().query()
-						.filter("Thing/properties/awaaId gt 0 and ObservedProperty/properties/awaaId gt 0 and not endswith(name, ']')")
+						.filter(editorDatastreamFilter.getValue())
 						.top(1000)
 						.expand("ObservedProperty($select=id,name,properties),Thing($select=id,name,properties),Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
 				EntityList<Datastream> dsList = dsQuery.list();
@@ -165,7 +177,7 @@ public class ImporterAwaa implements Importer {
 				datastreams = dsList.fullIterator();
 
 				Query<MultiDatastream> mdsQuery = service.multiDatastreams().query()
-						.filter("Thing/properties/awaaId gt 0 and ObservedProperty/properties/awaaId gt 0 and not endswith(name, ']')")
+						.filter(editorMultiDatastreamFilter.getValue())
 						.top(1000)
 						.expand("ObservedProperties($select=id,name,properties),Thing($select=id,name,properties),Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
 				EntityList<MultiDatastream> mdsList = mdsQuery.list();
