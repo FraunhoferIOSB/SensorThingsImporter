@@ -25,6 +25,7 @@ import com.google.common.collect.ComparisonChain;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
@@ -100,6 +101,7 @@ public class ImporterAwaaPredictions implements Importer {
 	private EditorString editorUrlSections;
 	private EditorString editorUrlLevels;
 	private EditorString editorTranslator;
+	private EditorInt editorSleep;
 	private EditorSubclass<Object, Object, ParserZonedDateTime> editorTimeParser;
 
 	private SensorThingsService service;
@@ -109,6 +111,7 @@ public class ImporterAwaaPredictions implements Importer {
 	private boolean verbose;
 	private boolean noAct = false;
 	private boolean fullImport = true;
+	private long sleepTime;
 
 	@Override
 	public void setVerbose(boolean verbose) {
@@ -125,6 +128,7 @@ public class ImporterAwaaPredictions implements Importer {
 		service = context;
 		getConfigEditor(context, edtCtx).setConfig(config);
 		timeParser = editorTimeParser.getValue();
+		sleepTime = 1000 * editorSleep.getValue();
 		try {
 			translator = new Translator(editorTranslator.getValue());
 		} catch (IOException exc) {
@@ -157,6 +161,9 @@ public class ImporterAwaaPredictions implements Importer {
 
 			editorTimeParser = new EditorSubclass(null, null, ParserZonedDateTime.class, "Time Parser", "The parser that converts times.");
 			editor.addOption("timeParser", editorTimeParser, false);
+
+			editorSleep = new EditorInt(0, 99999, 1, 1, "Sleep", "The number of seconds to sleep after every imported run-section.");
+			editor.addOption("sleepTime", editorSleep, true);
 		}
 		return editor;
 	}
@@ -585,6 +592,14 @@ public class ImporterAwaaPredictions implements Importer {
 				// Nothing to do for this datastream.
 				return Collections.EMPTY_LIST;
 			}
+			if (sleepTime > 0) {
+				try {
+					Thread.sleep(sleepTime);
+				} catch (InterruptedException ex) {
+					LOGGER.error("Rude wakeop!", ex);
+				}
+			}
+
 			Datastream dsOnlyId = ds.withOnlyId();
 			List<Observation> observations = importObservations(dsOnlyId.withOnlyId(), nextRun, riverAwaaId, sectionAwaaId);
 			LOGGER.info("Generated {} observations for river {}, section {}, run {}", observations.size(), riverAwaaId, sectionAwaaId, nextRun);
