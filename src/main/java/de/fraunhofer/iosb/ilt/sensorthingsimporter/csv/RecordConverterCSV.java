@@ -35,6 +35,7 @@ import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
 import de.fraunhofer.iosb.ilt.sta.model.ext.DataArrayValue;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
+import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -252,14 +253,19 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 
 	private Object parseResult(String resultString) {
 		try {
+			return Integer.parseInt(resultString);
+		} catch (NumberFormatException e) {
+			LOGGER.trace("Not an Integer.");
+		}
+		try {
 			return Long.parseLong(resultString);
 		} catch (NumberFormatException e) {
 			LOGGER.trace("Not a long.");
 		}
 		try {
-			return Double.parseDouble(resultString);
+			return new BigDecimal(resultString);
 		} catch (NumberFormatException e) {
-			LOGGER.trace("Not a double.");
+			LOGGER.trace("Not a BigDecimal.");
 		}
 		if (resultString.isEmpty()) {
 			return null;
