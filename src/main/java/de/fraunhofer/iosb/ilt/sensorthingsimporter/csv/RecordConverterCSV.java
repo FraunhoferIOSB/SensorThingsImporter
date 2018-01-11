@@ -270,7 +270,9 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 		if (resultString.isEmpty()) {
 			return null;
 		}
-
+		if ("null".equalsIgnoreCase(resultString)) {
+			return null;
+		}
 		if (resultString.endsWith("%")) {
 			Object testResult = parseResult(resultString.substring(0, resultString.length() - 1));
 			if (testResult instanceof Double || testResult instanceof Long) {
