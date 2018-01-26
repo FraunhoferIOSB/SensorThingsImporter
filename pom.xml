@@ -48,18 +48,9 @@
 
 	<repositories>
 		<repository>
-			<id>bintray</id>
-			<url>https://jcenter.bintray.com</url>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-			<snapshots>
-				<enabled>true</enabled>
-			</snapshots>
-		</repository>
-		<repository>
-			<id>jitpack.io</id>
-			<url>https://jitpack.io</url>
+			<id>bintray-fraunhoferiosb-Maven</id>
+			<name>bintray</name>
+			<url>http://dl.bintray.com/fraunhoferiosb/Maven</url>
 		</repository>
 	</repositories>
 
@@ -67,7 +58,7 @@
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>Configurable</artifactId>
-			<version>0.5</version>
+			<version>0.6</version>
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
