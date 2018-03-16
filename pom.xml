@@ -14,6 +14,12 @@
 		<mainClass>de.fraunhofer.iosb.ilt.sensorthingsimporter.MainApp</mainClass>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
+
+		<commons-csv.version>1.4</commons-csv.version>
+		<commons-io.version>2.5</commons-io.version>
+		<configurable.version>0.7</configurable.version>
+		<logback.version>1.1.8</logback.version>
+		<FROST-Client.version>0.15</FROST-Client.version>
 	</properties>
 
 	<organization>
@@ -48,18 +54,14 @@
 
 	<repositories>
 		<repository>
-			<id>bintray</id>
-			<url>https://jcenter.bintray.com</url>
+			<id>bintray-fraunhoferiosb-Maven</id>
+			<url>https://dl.bintray.com/fraunhoferiosb/Maven</url>
 			<releases>
 				<enabled>true</enabled>
 			</releases>
 			<snapshots>
-				<enabled>true</enabled>
+				<enabled>false</enabled>
 			</snapshots>
-		</repository>
-		<repository>
-			<id>jitpack.io</id>
-			<url>https://jitpack.io</url>
 		</repository>
 	</repositories>
 
@@ -67,27 +69,27 @@
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>Configurable</artifactId>
-			<version>0.5</version>
+			<version>${configurable.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
-			<artifactId>SensorThingsClient</artifactId>
-			<version>0.14</version>
+			<artifactId>FROST-Client</artifactId>
+			<version>${FROST-Client.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
-			<version>1.1.8</version>
+			<version>${logback.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-csv</artifactId>
-			<version>1.4</version>
+			<version>${commons-csv.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
-			<version>2.5</version>
+			<version>${commons-io.version}</version>
 		</dependency>
 	</dependencies>
 </project>
