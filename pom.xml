@@ -4,7 +4,7 @@
 
 	<groupId>de.fraunhofer.iosb.ilt</groupId>
 	<artifactId>SensorThingsImporter</artifactId>
-	<version>0.13</version>
+	<version>0.14</version>
 	<packaging>jar</packaging>
 
 	<name>SensorThingsImporter</name>
@@ -19,7 +19,7 @@
 		<commons-io.version>2.5</commons-io.version>
 		<configurable.version>0.7</configurable.version>
 		<logback.version>1.1.8</logback.version>
-		<FROST-Client.version>0.15</FROST-Client.version>
+		<FROST-Client.version>0.18-SNAPSHOT</FROST-Client.version>
 	</properties>
 
 	<organization>
