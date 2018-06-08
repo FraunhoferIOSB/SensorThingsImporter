@@ -69,7 +69,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.geojson.GeoJsonObject;
 import org.geojson.LngLatAlt;
 import org.geojson.Point;
 import org.slf4j.LoggerFactory;
@@ -80,15 +79,6 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 /**
- * <pre>
- * Runs (WS_Runs.php)
- * -> Rivers for a Run (WS_Rivers.php?idrunmike=1080)
- * -> Sections for a Run & River (WS_RiverSections.php?idrunmike=1080&idriver=6)
- * -> Predictions for a Run & River & Section (WS_SectionLevels.php?idrunmike=1050&idriver=6&idsection=495)
- * River (Thing; properties/awaaId)
- * Section (Thing; properties/riverId properties/awaaId)
- * Prediction (Observation; parameters/runId)
- * </pre>
  *
  * @author scf
  */
@@ -255,7 +245,7 @@ public class ImporterFmiForecasts implements Importer {
 				LOGGER.warn("No location for station {} ({}).", station.getId(), station.getName());
 				return Collections.emptyList();
 			}
-			GeoJsonObject geoObj = location.getLocation();
+			Object geoObj = location.getLocation();
 			String lat, lon;
 			if (geoObj instanceof Point) {
 				Point point = (Point) geoObj;
