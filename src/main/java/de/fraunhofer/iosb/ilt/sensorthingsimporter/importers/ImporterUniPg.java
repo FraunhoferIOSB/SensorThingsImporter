@@ -29,6 +29,7 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.DsMapperFilter;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.sta.Utils;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
@@ -37,6 +38,7 @@ import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -56,6 +58,8 @@ import org.threeten.extra.Interval;
  */
 public class ImporterUniPg implements Importer {
 
+	public static final String TAG_IMPORT_FILE_ID = "importFileId";
+	public static final String TAG_IMPORT_FILE_BASE = "importFileBase";
 	/**
 	 * The logger for this class.
 	 */
@@ -79,6 +83,7 @@ public class ImporterUniPg implements Importer {
 	private Integer fastCheckLastId;
 	private boolean skipLast;
 	private long sleepTime = 0;
+	private int phenDurationDefault = 30;
 
 	@Override
 	public void setVerbose(boolean verbose) {
@@ -144,7 +149,7 @@ public class ImporterUniPg implements Importer {
 		}
 	}
 
-	private boolean alreadyImported(long fileId) throws ImportException {
+	private boolean alreadyImported(String fileBase, long fileId) throws ImportException {
 		if (checkDataStream == null) {
 			return false;
 		}
@@ -152,18 +157,26 @@ public class ImporterUniPg implements Importer {
 			if (fastcheck) {
 				if (fastCheckLastId == null) {
 					Datastream ds = checkDataStream.getDatastreamFor(null);
-					Observation last = ds.observations().query().orderBy("(parameters/importFileId add 0) desc").select("parameters").first();
+					Observation last = ds.observations()
+							.query()
+							.filter("parameters/" + TAG_IMPORT_FILE_BASE + " eq '" + Utils.escapeForStringConstant(fileBase) + "'")
+							.orderBy("(parameters/" + TAG_IMPORT_FILE_ID + " add 0) desc")
+							.select("parameters")
+							.first();
 					if (last == null) {
 						fastCheckLastId = Integer.MIN_VALUE;
 						return false;
 					}
-					fastCheckLastId = Integer.parseInt(last.getParameters().get("importFileId").toString());
+					fastCheckLastId = Integer.parseInt(last.getParameters().get(TAG_IMPORT_FILE_ID).toString());
 				}
 				return fileId <= fastCheckLastId;
 			}
 
 			Datastream ds = checkDataStream.getDatastreamFor(null);
-			EntityList<Observation> list = ds.observations().query().filter("parameters/importFileId eq " + fileId).select("@iot.id").list();
+			EntityList<Observation> list = ds.observations()
+					.query()
+					.filter("parameters/" + TAG_IMPORT_FILE_ID + " eq " + fileId + " and parameters/" + TAG_IMPORT_FILE_BASE + " eq '" + Utils.escapeForStringConstant(fileBase) + "'")
+					.select("@iot.id").list();
 			return list.size() > 0;
 		} catch (ServiceFailureException exc) {
 			throw new ImportException(exc);
@@ -172,15 +185,17 @@ public class ImporterUniPg implements Importer {
 
 	private class ObsListIter extends AbstractIterator<List<Observation>> {
 
+		Iterator<Map.Entry<String, TreeMap<Long, File>>> baseIterator;
 		Iterator<Map.Entry<Long, File>> filesIterator;
 		Instant previousEndTime;
+		String currentBase;
 
 		public ObsListIter() throws ImportException {
-			Map<Long, File> filesMap = fetchFiles();
-			filesIterator = filesMap.entrySet().iterator();
+			TreeMap<String, TreeMap<Long, File>> filesMap = fetchFiles();
+			baseIterator = filesMap.entrySet().iterator();
 		}
 
-		private Map<Long, File> fetchFiles() throws ImportException {
+		private TreeMap<String, TreeMap<Long, File>> fetchFiles() throws ImportException {
 			String targetPath = editorDataPath.getValue();
 			File filesPath = new File(targetPath);
 			LOGGER.info("Loading files from: {}", filesPath.getAbsolutePath());
@@ -190,7 +205,7 @@ public class ImporterUniPg implements Importer {
 			File[] dataFiles = filesPath.listFiles();
 
 			Pattern idPattern = Pattern.compile(editorFileIdRegex.getValue());
-			TreeMap<Long, File> dataFilesMap = new TreeMap<>();
+			TreeMap<String, TreeMap<Long, File>> dataFilesMap = new TreeMap<>();
 			for (File dataFile : dataFiles) {
 				String fileName = dataFile.getName();
 				Matcher idMatcher = idPattern.matcher(fileName);
@@ -198,14 +213,23 @@ public class ImporterUniPg implements Importer {
 					LOGGER.error("File name {} does not match pattern {}", fileName, editorFileIdRegex.getValue());
 					continue;
 				}
-				String idString = idMatcher.group(1);
+				String fileBase = idMatcher.group(1);
+				String idString = idMatcher.group(2);
 				long fileId = Long.parseLong(idString);
-				dataFilesMap.put(fileId, dataFile);
+				TreeMap<Long, File> idMap = dataFilesMap.get(fileBase);
+				if (idMap == null) {
+					idMap = new TreeMap<>();
+					dataFilesMap.put(fileBase, idMap);
+				}
+				idMap.put(fileId, dataFile);
 			}
 			if (skipLast) {
-				Long lastKey = dataFilesMap.lastKey();
-				dataFilesMap.remove(lastKey);
-				LOGGER.info("Remove last file from list: {}.", lastKey);
+				for (Map.Entry<String, TreeMap<Long, File>> baseEntry : dataFilesMap.entrySet()) {
+					TreeMap<Long, File> idMap = baseEntry.getValue();
+					Long lastKey = idMap.lastKey();
+					idMap.remove(lastKey);
+					LOGGER.info("Remove last file from list:{} - {}.", baseEntry.getKey(), lastKey);
+				}
 			}
 			return dataFilesMap;
 		}
@@ -217,14 +241,13 @@ public class ImporterUniPg implements Importer {
 
 			Instant endTime = Instant.ofEpochMilli(dataFile.lastModified());
 			if (previousEndTime == null) {
-				previousEndTime = endTime;
-				LOGGER.info("Skipping file {}, it is the first, so we have no start time.", dataFile.getName());
-				return Collections.EMPTY_LIST;
+				previousEndTime = endTime.minus(phenDurationDefault, ChronoUnit.MINUTES);
+				LOGGER.info("Assuming start time for file {}, as it is the first, so we have no start time.", dataFile.getName());
 			}
 			Instant startTime = previousEndTime;
 			previousEndTime = endTime;
 
-			if (alreadyImported(fileId)) {
+			if (alreadyImported(currentBase, fileId)) {
 				return Collections.EMPTY_LIST;
 			}
 
@@ -236,7 +259,7 @@ public class ImporterUniPg implements Importer {
 				}
 			}
 
-			LOGGER.info("Reading file id: {} name: {}, from {}, to {}", fileId, dataFile.getName(), startTime, endTime);
+			LOGGER.info("Reading file id: {}, base: {}, name: {}, from {}, to {}", fileId, currentBase, dataFile.getName(), startTime, endTime);
 			String data = FileUtils.readFileToString(dataFile, "UTF-8");
 
 			List<Observation> observations = docParser.process(null, data);
@@ -244,7 +267,8 @@ public class ImporterUniPg implements Importer {
 			TimeObject phenTime = new TimeObject(Interval.of(startTime, endTime));
 
 			Map<String, Object> parameters = new HashMap<>();
-			parameters.put("importFileId", fileId);
+			parameters.put(TAG_IMPORT_FILE_ID, fileId);
+			parameters.put(TAG_IMPORT_FILE_BASE, currentBase);
 			for (Observation obs : observations) {
 				obs.setPhenomenonTime(phenTime);
 				obs.setParameters(parameters);
@@ -263,6 +287,15 @@ public class ImporterUniPg implements Importer {
 
 		@Override
 		protected List<Observation> computeNext() {
+			if (filesIterator == null || !filesIterator.hasNext()) {
+				if (baseIterator.hasNext()) {
+					Map.Entry<String, TreeMap<Long, File>> nextBaseEntry = baseIterator.next();
+					filesIterator = nextBaseEntry.getValue().entrySet().iterator();
+					currentBase = nextBaseEntry.getKey();
+				} else {
+					return endOfData();
+				}
+			}
 			if (filesIterator.hasNext()) {
 				try {
 					return compute();

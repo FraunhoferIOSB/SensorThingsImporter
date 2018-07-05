@@ -18,9 +18,9 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
 import com.google.gson.JsonElement;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.AbstractConfigurable;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
@@ -28,8 +28,8 @@ import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
-import java.math.BigDecimal;
-import java.util.Map;
+import java.util.Arrays;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,54 +37,72 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
-public class ValidatorByParameter implements Validator {
+public class ValidatorByParameter extends AbstractConfigurable<SensorThingsService, Object> implements Validator {
 
 	/**
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(ValidatorByParameter.class);
-	private EditorMap<Map<String, Object>> editor;
-	private EditorBoolean editorUpdate;
-	private EditorString editorParamPath;
 
+	@ConfigurableField(
+			label = "parameters",
+			description = "The parameters to check. Comma separated, no spaces.",
+			editor = EditorString.class)
+	@EditorString.EdOptsString(dflt = "importFileId,importFileBase")
 	private String parameter;
+
+	@ConfigurableField(
+			label = "Update",
+			description = "Update existing observations.",
+			editor = EditorBoolean.class)
+	@EditorBoolean.EdOptsBool()
 	private boolean update;
 
-	private boolean resultCompare(Object one, Object two) {
-		if (one.equals(two)) {
-			return true;
-		}
-		try {
-			if (one instanceof BigDecimal) {
-				return ((BigDecimal) one).equals(new BigDecimal(two.toString()));
+	private List<String> parameters;
+
+	@Override
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
+		super.configure(config, context, edtCtx);
+		String[] split = parameter.split(",");
+		parameters = Arrays.asList(split);
+	}
+
+	private String buildFilter(Observation obs) {
+		StringBuilder filter = new StringBuilder();
+		boolean first = true;
+		for (String param : parameters) {
+			if (first) {
+				first = false;
+			} else {
+				filter.append(" and ");
 			}
-			if (two instanceof BigDecimal) {
-				return ((BigDecimal) two).equals(new BigDecimal(one.toString()));
+			Object paramValueRaw = obs.getParameters().get(param);
+			String paramUrlValue;
+			if (paramValueRaw instanceof Number) {
+				paramUrlValue = paramValueRaw.toString();
+			} else {
+				paramUrlValue = "'" + paramValueRaw.toString() + "'";
 			}
-		} catch (NumberFormatException e) {
-			LOGGER.trace("Not both bigdecimal.", e);
-			// not both bigDecimal.
+			filter.append("Parameters/").append(param).append(" eq ").append(paramUrlValue);
 		}
-		return false;
+		return filter.toString();
 	}
 
 	@Override
 	public boolean isValid(Observation obs) throws ImportException {
-		Object paramValueRaw = obs.getParameters().get(parameter);
-		String paramUrlValue;
-		if (paramValueRaw instanceof Number) {
-			paramUrlValue = paramValueRaw.toString();
-		} else {
-			paramUrlValue = "'" + paramValueRaw.toString() + "'";
-		}
+		String filter = buildFilter(obs);
 		try {
 			Datastream ds = obs.getDatastream();
 			if (ds != null) {
-				Observation first = ds.observations().query().select("@iot.id", "Parameters").filter("Parameters/" + parameter + " eq " + paramUrlValue).first();
+				Observation first = ds.observations()
+						.query()
+						.select("@iot.id", "Parameters")
+						.filter(filter)
+						.first();
 				if (first == null) {
 					return true;
 				} else {
-					LOGGER.warn("Observation {} with given Parameter {} = {} exists.", first.getId(), parameter, paramUrlValue);
+					LOGGER.warn("Observation {} with given Parameters {} = {} exists.", first.getId(), parameters, obs.getParameters());
 					if (update) {
 						obs.setId(first.getId());
 						return true;
@@ -94,11 +112,15 @@ public class ValidatorByParameter implements Validator {
 			}
 			MultiDatastream mds = obs.getMultiDatastream();
 			if (mds != null) {
-				Observation first = mds.observations().query().select("@iot.id", "Parameters").filter("Parameters/" + parameter + " eq " + paramUrlValue).first();
+				Observation first = mds.observations()
+						.query()
+						.select("@iot.id", "Parameters")
+						.filter(filter)
+						.first();
 				if (first == null) {
 					return true;
 				} else {
-					LOGGER.warn("Observation {} with given Parameter {} = {} exists.", first.getId(), parameter, paramUrlValue);
+					LOGGER.warn("Observation {} with given Parameter {} = {} exists.", first.getId(), parameters, obs.getParameters());
 					if (update) {
 						obs.setId(first.getId());
 						return true;
@@ -112,24 +134,32 @@ public class ValidatorByParameter implements Validator {
 		}
 	}
 
-	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
-		getConfigEditor(context, edtCtx).setConfig(config);
-		update = editorUpdate.getValue();
-		parameter = editorParamPath.getValue();
+	/**
+	 * @return the parameter
+	 */
+	public String getParameter() {
+		return parameter;
 	}
 
-	@Override
-	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-		if (editor == null) {
-			editor = new EditorMap<>();
-
-			editorParamPath = new EditorString("importFileId", 1, "parameter", "The parameter to check.");
-			editor.addOption("parameter", editorParamPath, false);
-
-			editorUpdate = new EditorBoolean(false, "Update", "Update existing observations.");
-			editor.addOption("update", editorUpdate, true);
-		}
-		return editor;
+	/**
+	 * @param parameter the parameter to set
+	 */
+	public void setParameter(String parameter) {
+		this.parameter = parameter;
 	}
+
+	/**
+	 * @return the update
+	 */
+	public boolean isUpdate() {
+		return update;
+	}
+
+	/**
+	 * @param update the update to set
+	 */
+	public void setUpdate(boolean update) {
+		this.update = update;
+	}
+
 }

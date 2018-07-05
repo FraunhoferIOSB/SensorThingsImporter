@@ -17,7 +17,7 @@
 
 		<commons-csv.version>1.4</commons-csv.version>
 		<commons-io.version>2.5</commons-io.version>
-		<configurable.version>0.7</configurable.version>
+		<configurable.version>0.9</configurable.version>
 		<logback.version>1.1.8</logback.version>
 		<FROST-Client.version>0.18-SNAPSHOT</FROST-Client.version>
 	</properties>
