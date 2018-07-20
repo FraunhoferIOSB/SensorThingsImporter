@@ -17,7 +17,7 @@
 
 		<commons-csv.version>1.4</commons-csv.version>
 		<commons-io.version>2.5</commons-io.version>
-		<configurable.version>0.9</configurable.version>
+		<configurable.version>0.10-SNAPSHOT</configurable.version>
 		<logback.version>1.1.8</logback.version>
 		<FROST-Client.version>0.18-SNAPSHOT</FROST-Client.version>
 	</properties>
@@ -90,6 +90,11 @@
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
 			<version>${commons-io.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-dbcp2</artifactId>
+			<version>2.4.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.postgresql</groupId>
