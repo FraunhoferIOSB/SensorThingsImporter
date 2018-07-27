@@ -682,6 +682,8 @@ public class ImporterSistemaPostgresDb extends AbstractConfigurable<SensorThings
 					.query()
 					.filter("properties/" + TAG_SISTEMA_PRODUCTS + " gt 0")
 					.expand("Observations($orderby=phenomenonTime desc;$top=1)")
+					.top(1000)
+					.orderBy("id asc")
 					.list()
 					.fullIterator();
 		}
@@ -691,6 +693,8 @@ public class ImporterSistemaPostgresDb extends AbstractConfigurable<SensorThings
 					.query()
 					.filter("length(properties/" + TAG_SISTEMA_PRODUCTS + ") gt 0")
 					.expand("Observations($orderby=phenomenonTime desc;$top=1)")
+					.top(1000)
+					.orderBy("id asc")
 					.list()
 					.fullIterator();
 		}
