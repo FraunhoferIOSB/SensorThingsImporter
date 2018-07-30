@@ -30,6 +30,7 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen.TimeGen;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
+import de.fraunhofer.iosb.ilt.sta.model.Id;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.ObservedProperty;
@@ -42,10 +43,13 @@ import java.nio.charset.Charset;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -70,6 +74,8 @@ public class ImporterAwaa implements Importer {
 	private EditorString editorFetchUrl;
 	private EditorString editorDatastreamFilter;
 	private EditorString editorMultiDatastreamFilter;
+	private EditorString editorDatastreamExclude;
+	private EditorString editorMultiDatastreamExclude;
 	private EditorSubclass<SensorThingsService, Object, TimeGen> editorStartTime;
 	private EditorString editorTranslator;
 	private EditorString editorTimeFormat;
@@ -82,6 +88,8 @@ public class ImporterAwaa implements Importer {
 	private TimeGen startTime;
 	private DocumentParser docParser;
 	private boolean verbose;
+	private Set<Id> dsExclude = new HashSet<>();
+	private Set<Id> mdsExclude = new HashSet<>();
 
 	@Override
 	public void setVerbose(boolean verbose) {
@@ -141,10 +149,20 @@ public class ImporterAwaa implements Importer {
 					1, "Datastream Filter", "The filter to use in the query to find Datastreams.");
 			editor.addOption("datastreamFilter", editorDatastreamFilter, false);
 
+			editorDatastreamExclude = new EditorString(
+					"",
+					1, "Datastream Exclude", "Filter for Datastreams to explicitly exclude from the import.");
+			editor.addOption("datastreamExclude", editorDatastreamExclude, true);
+
 			editorMultiDatastreamFilter = new EditorString(
 					"Thing/properties/type eq 'station' and Thing/properties/awaaId gt 0 and ObservedProperty/properties/awaaId gt 0 and not endswith(name, ']')",
 					1, "MultiDatastream Filter", "The filter to use in the query to find MultiDatastreams.");
 			editor.addOption("multiDatastreamFilter", editorMultiDatastreamFilter, false);
+
+			editorMultiDatastreamExclude = new EditorString(
+					"",
+					1, "MultiDatastream Exclude", "Filter for MultiDatastreams to explicitly exclude from the import.");
+			editor.addOption("multiDatastreamExclude", editorMultiDatastreamExclude, true);
 		}
 		return editor;
 
@@ -168,22 +186,51 @@ public class ImporterAwaa implements Importer {
 
 		public ObsListIter() throws ImportException {
 			try {
-				Query<Datastream> dsQuery = service.datastreams().query()
-						.filter(editorDatastreamFilter.getValue())
-						.top(1000)
-						.expand("ObservedProperty($select=id,name,properties),Thing($select=id,name,properties),Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
-				EntityList<Datastream> dsList = dsQuery.list();
-				LOGGER.info("Datastrams: {}", dsList.size());
-				datastreams = dsList.fullIterator();
+				{
+					Query<Datastream> dsQuery = service.datastreams().query()
+							.filter(editorDatastreamFilter.getValue())
+							.top(1000)
+							.expand("ObservedProperty($select=id,name,properties),Thing($select=id,name,properties),Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
+					EntityList<Datastream> dsList = dsQuery.list();
+					LOGGER.info("Datastrams: {}", dsList.size());
+					datastreams = dsList.fullIterator();
+				}
 
-				Query<MultiDatastream> mdsQuery = service.multiDatastreams().query()
-						.filter(editorMultiDatastreamFilter.getValue())
-						.top(1000)
-						.expand("ObservedProperties($select=id,name,properties),Thing($select=id,name,properties),Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
-				EntityList<MultiDatastream> mdsList = mdsQuery.list();
-				LOGGER.info("MultiDatastreams: {}", mdsList.size());
-				multiDatastreams = mdsList.fullIterator();
+				{
+					Query<MultiDatastream> mdsQuery = service.multiDatastreams().query()
+							.filter(editorMultiDatastreamFilter.getValue())
+							.top(1000)
+							.expand("ObservedProperties($select=id,name,properties),Thing($select=id,name,properties),Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
+					EntityList<MultiDatastream> mdsList = mdsQuery.list();
+					LOGGER.info("MultiDatastreams: {}", mdsList.size());
+					multiDatastreams = mdsList.fullIterator();
+				}
 
+				String dsExcludeFilter = editorDatastreamExclude.getValue();
+				if (!dsExcludeFilter.isEmpty()) {
+					Query<Datastream> dsQuery = service.datastreams().query()
+							.filter(dsExcludeFilter)
+							.top(1000);
+					EntityList<Datastream> dsList = dsQuery.list();
+					LOGGER.info("Excluding {} Datastreams", dsList.size());
+					for (Iterator<Datastream> it = dsList.fullIterator(); it.hasNext();) {
+						Datastream ds = it.next();
+						dsExclude.add(ds.getId());
+					}
+				}
+
+				String mdsExcludeFilter = editorMultiDatastreamExclude.getValue();
+				if (!mdsExcludeFilter.isEmpty()) {
+					Query<MultiDatastream> dsQuery = service.multiDatastreams().query()
+							.filter(mdsExcludeFilter)
+							.top(1000);
+					EntityList<MultiDatastream> dsList = dsQuery.list();
+					LOGGER.info("Excluding {} MultiDatastreams", dsList.size());
+					for (Iterator<MultiDatastream> it = dsList.fullIterator(); it.hasNext();) {
+						MultiDatastream mds = it.next();
+						mdsExclude.add(mds.getId());
+					}
+				}
 			} catch (ServiceFailureException exc) {
 				LOGGER.error("Failed.", exc);
 				throw new ImportException(exc);
@@ -217,6 +264,10 @@ public class ImporterAwaa implements Importer {
 
 		private List<Observation> computeForDatastreams() throws IOException, ServiceFailureException, ImportException {
 			Datastream ds = datastreams.next();
+			if (dsExclude.contains(ds.getId())) {
+				LOGGER.info("Skipping Datastream {} {}", ds.getId(), ds.getName());
+				return Collections.EMPTY_LIST;
+			}
 			Object awaaId = ds.getThing().getProperties().get("awaaId");
 
 			ZonedDateTime timeStart = startTime.getInstant(ds).atZone(timeFormatter.getZone());
@@ -230,6 +281,10 @@ public class ImporterAwaa implements Importer {
 
 		private List<Observation> computeForMultiDatastreams() throws IOException, ServiceFailureException, ImportException {
 			MultiDatastream mds = multiDatastreams.next();
+			if (mdsExclude.contains(mds.getId())) {
+				LOGGER.info("Skipping MultiDatastream {} {}", mds.getId(), mds.getName());
+				return Collections.EMPTY_LIST;
+			}
 			Object awaaId = mds.getThing().getProperties().get("awaaId");
 
 			ZonedDateTime timeStart = startTime.getInstant(mds).atZone(timeFormatter.getZone());

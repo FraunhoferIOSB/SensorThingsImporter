@@ -16,7 +16,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,6 +33,7 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.SensorThingsUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.SensorThingsUtils.AggregationLevels;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.Location;
@@ -47,10 +47,8 @@ import de.fraunhofer.iosb.ilt.sta.model.ext.UnitOfMeasurement;
 import de.fraunhofer.iosb.ilt.sta.query.Query;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -61,8 +59,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -108,6 +104,7 @@ public class ImporterAwaaPredictions implements Importer {
 	private ParserZonedDateTime timeParser;
 	private ParserNumber numberParser = new ParserNumber();
 	private Translator translator;
+
 	private boolean verbose;
 	private boolean noAct = false;
 	private boolean fullImport = true;
@@ -642,57 +639,4 @@ public class ImporterAwaaPredictions implements Importer {
 		}
 	}
 
-	private static class Translator {
-
-		private Map<String, String> replaces;
-
-		public Translator(String json) throws IOException {
-			ObjectMapper mapper = new ObjectMapper();
-			replaces = mapper.readValue(json, new TypeReference<Map<String, String>>() {
-			});
-		}
-
-		public String translate(String input) {
-			String result = replaces.get(input);
-			if (result == null) {
-				return input;
-			}
-			return result;
-		}
-
-		public void put(String input, String output) {
-			replaces.put(input, output);
-		}
-
-		public String replaceIn(String source, boolean urlEncode) {
-			Pattern pattern = Pattern.compile(Pattern.quote("{") + "([^}]+)}");
-			Matcher matcher = pattern.matcher(source);
-			StringBuilder result = new StringBuilder();
-			int lastEnd = 0;
-			while (matcher.find()) {
-				int end = matcher.end();
-				int start = matcher.start();
-				result.append(source.substring(lastEnd, start));
-				String key = matcher.group(1);
-				String value = replaces.get(key);
-				if (value == null) {
-					LOGGER.error("No replacement for {}", key);
-				}
-				if (urlEncode) {
-					try {
-						result.append(URLEncoder.encode(value, "UTF-8"));
-					} catch (UnsupportedEncodingException ex) {
-						LOGGER.error("UTF-8 not supported??", ex);
-					}
-				} else {
-					result.append(value);
-				}
-				lastEnd = end;
-			}
-			if (lastEnd < source.length()) {
-				result.append(source.substring(lastEnd, source.length()));
-			}
-			return result.toString();
-		}
-	}
 }

@@ -20,6 +20,7 @@ import com.google.common.base.Strings;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.Utils;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
+import de.fraunhofer.iosb.ilt.sta.model.Id;
 import de.fraunhofer.iosb.ilt.sta.model.Location;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
@@ -37,7 +38,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.geojson.GeoJsonObject;
-import org.geojson.Point;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,6 +76,23 @@ public class SensorThingsUtils {
 	public static final List<Observation> observations = new ArrayList<>();
 
 	public static final Map<String, Integer> obsPropIds = new HashMap<>();
+
+	public static Sensor findOrCreateSensor(SensorThingsService service, String name, String description) throws ServiceFailureException {
+		EntityList<Sensor> sensorList = service.sensors().query().filter("name eq '" + name + "'").list();
+		if (sensorList.size() > 1) {
+			throw new IllegalStateException("More than one sensor with name " + name);
+		}
+		Sensor sensor;
+		if (sensorList.size() == 1) {
+			sensor = sensorList.iterator().next();
+		} else {
+			LOGGER.info("Creating Sensor {}.", name);
+			sensor = new Sensor(name, description, "text", "Properties not known");
+			service.create(sensor);
+		}
+		sensors.add(sensor);
+		return sensor;
+	}
 
 	public static ObservedProperty findOrCreateOp(SensorThingsService service, String name, URI def, String description, Map<String, Object> properties) throws ServiceFailureException {
 		return findOrCreateOp(service, name, def, description, properties, "", false);
@@ -153,10 +170,13 @@ public class SensorThingsUtils {
 			for (ObservedProperty tempOp : ops) {
 				uoms.add(uom);
 			}
+			Map<String, Object> aggProps = new HashMap<>();
+			aggProps.put("aggregateFor", "/Datastreams(" + ds.getId().getUrl() + ")");
 			for (AggregationLevels level : aggregates) {
 				String mdsName = dsName + " " + level.postfix;
 				String mdsDesc = dsDescription + " " + level.description;
-				findOrCreateMultiDatastream(service, mdsName, mdsDesc, uoms, t, ops, s);
+				MultiDatastream mds = findOrCreateMultiDatastream(service, mdsName, mdsDesc, uoms, t, ops, s, aggProps);
+				aggProps.put("aggregateFor", "/MultiDatastreams(" + mds.getId().getUrl() + ")");
 			}
 		}
 		return ds;
@@ -187,7 +207,22 @@ public class SensorThingsUtils {
 		return ds;
 	}
 
-	public static MultiDatastream findOrCreateMultiDatastream(SensorThingsService service, String name, String desc, List<UnitOfMeasurement> uoms, Thing t, List<ObservedProperty> ops, Sensor s) throws ServiceFailureException {
+	public static MultiDatastream findOrCreateMultiDatastream(SensorThingsService service, String name, String desc, List<UnitOfMeasurement> uoms, Thing t, List<ObservedProperty> ops, Sensor s, Map<String, Object> props, AggregationLevels... aggregates) throws ServiceFailureException {
+		MultiDatastream mds = findOrCreateMultiDatastream(service, name, desc, uoms, t, ops, s, props);
+		Id lastId = mds.getId();
+		if (aggregates.length > 0) {
+			for (AggregationLevels level : aggregates) {
+				Map<String, Object> aggProps = new HashMap<>();
+				aggProps.put("aggregateFor", "/MultiDatastreams(" + lastId.getUrl() + ")");
+				String mdsName = mds.getName() + " " + level.postfix;
+				String mdsDesc = mds.getDescription() + " " + level.description;
+				lastId = findOrCreateMultiDatastream(service, mdsName, mdsDesc, uoms, t, ops, s, aggProps).getId();
+			}
+		}
+		return mds;
+	}
+
+	public static MultiDatastream findOrCreateMultiDatastream(SensorThingsService service, String name, String desc, List<UnitOfMeasurement> uoms, Thing t, List<ObservedProperty> ops, Sensor s, Map<String, Object> props) throws ServiceFailureException {
 		EntityList<MultiDatastream> mdsList = service.multiDatastreams().query().filter("name eq '" + Utils.escapeForStringConstant(name) + "'").list();
 		if (mdsList.size() > 1) {
 			throw new IllegalStateException("More than one multidatastream with name " + name);
@@ -206,6 +241,7 @@ public class SensorThingsUtils {
 					desc,
 					dataTypes,
 					uoms);
+			mds.setProperties(props);
 			mds.setThing(t);
 			mds.setSensor(s);
 			mds.getObservedProperties().addAll(ops);
@@ -213,30 +249,6 @@ public class SensorThingsUtils {
 		}
 		multiDatastreams.add(mds);
 		return mds;
-	}
-
-	public static void createDatastreams(SensorThingsService service, String dsName, String dsDescription, Map<String, Object> properties, Thing t, ObservedProperty op, UnitOfMeasurement uom, Sensor s, AggregationLevels... aggregates) throws ServiceFailureException, IOException {
-		findOrCreateDatastream(
-				service,
-				dsName,
-				dsDescription,
-				properties,
-				uom, t, op, s);
-
-		if (aggregates.length > 0) {
-			List<ObservedProperty> ops = new ArrayList<>();
-			ops.add(op);
-			ops.addAll(aggregateProperties.get(op));
-			List<UnitOfMeasurement> uoms = new ArrayList<>();
-			for (ObservedProperty tempOp : ops) {
-				uoms.add(uom);
-			}
-			for (AggregationLevels level : aggregates) {
-				String mdsName = dsName + " " + level.postfix;
-				String mdsDesc = dsDescription + " " + level.description;
-				findOrCreateMultiDatastream(service, mdsName, mdsDesc, uoms, t, ops, s);
-			}
-		}
 	}
 
 	public static Location findOrCreateLocation(SensorThingsService service, String name, String description, GeoJsonObject geoJson) throws ServiceFailureException {
