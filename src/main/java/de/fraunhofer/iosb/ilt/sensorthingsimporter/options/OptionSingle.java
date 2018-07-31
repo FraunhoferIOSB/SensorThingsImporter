@@ -17,6 +17,8 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.options;
 
+import com.google.common.base.Strings;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options;
 import java.util.Arrays;
 import java.util.List;
 
@@ -25,7 +27,7 @@ import java.util.List;
  *
  * @param <T>
  */
-public class OptionSingle<T> extends OptionBase {
+public class OptionSingle<T> extends OptionBase<OptionSingle<T>> {
 
 	public Parameter<T> parameter;
 
@@ -34,6 +36,11 @@ public class OptionSingle<T> extends OptionBase {
 	 */
 	public OptionSingle(String... keys) {
 		super(keys);
+	}
+
+	@Override
+	public OptionSingle<T> getThis() {
+		return this;
 	}
 
 	public OptionSingle<T> setParam(Parameter<T> param) {
@@ -60,6 +67,15 @@ public class OptionSingle<T> extends OptionBase {
 		setSet(true);
 	}
 
+	@Override
+	public OptionSingle<T> readFromEnvironment(String name) {
+		String envValue = Options.getEnv(name, "");
+		if (!Strings.isNullOrEmpty(envValue)) {
+			parameter.parse(envValue);
+		}
+		return this;
+	}
+
 	public T getValue() {
 		return parameter.getValue();
 	}
@@ -70,6 +86,7 @@ public class OptionSingle<T> extends OptionBase {
 		return this;
 	}
 
+	@Override
 	public List<Parameter> getParameters() {
 		return Arrays.asList(new Parameter[]{parameter});
 	}

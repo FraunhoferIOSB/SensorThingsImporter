@@ -57,4 +57,19 @@ public interface Option {
 		return new ArrayList<>();
 	}
 
+	/**
+	 * The name of the environment variable that can be used to set this option.
+	 *
+	 * @return the environmentName
+	 */
+	public String getEnvironmentName();
+
+	/**
+	 * The name of the environment variable that can be used to set this option.
+	 *
+	 * @param environmentName the environmentName to set
+	 * @return this
+	 */
+	public Option setEnvironmentName(String environmentName);
+
 }

@@ -24,8 +24,9 @@ import java.util.List;
 /**
  *
  * @author scf
+ * @param <T> The class overriding this abstract class.
  */
-public abstract class OptionBase implements Option {
+public abstract class OptionBase<T extends OptionBase> implements Option {
 
 	/**
 	 * A List because order is important.
@@ -33,6 +34,10 @@ public abstract class OptionBase implements Option {
 	private List<String> keys = new ArrayList<>();
 	private boolean set = false;
 	private String[] description = {""};
+	/**
+	 * The name of the environment variable that can be used to set this option.
+	 */
+	private String environmentName;
 
 	/**
 	 *
@@ -43,6 +48,10 @@ public abstract class OptionBase implements Option {
 			this.keys.add(key.toLowerCase());
 		}
 	}
+
+	public abstract T getThis();
+
+	public abstract T readFromEnvironment(String name);
 
 	@Override
 	public boolean matches(String arg) {
@@ -90,9 +99,32 @@ public abstract class OptionBase implements Option {
 	 * @param description the description to set
 	 * @return this
 	 */
-	public OptionBase setDescription(String... description) {
+	public T setDescription(String... description) {
 		this.description = description;
-		return this;
+		return getThis();
+	}
+
+	/**
+	 * The name of the environment variable that can be used to set this option.
+	 *
+	 * @return the environmentName
+	 */
+	@Override
+	public String getEnvironmentName() {
+		return environmentName;
+	}
+
+	/**
+	 * The name of the environment variable that can be used to set this option.
+	 *
+	 * @param environmentName the environmentName to set
+	 * @return this
+	 */
+	@Override
+	public T setEnvironmentName(String environmentName) {
+		this.environmentName = environmentName;
+		readFromEnvironment(environmentName);
+		return getThis();
 	}
 
 	/**
@@ -105,9 +137,11 @@ public abstract class OptionBase implements Option {
 
 	/**
 	 * @param set the set to set
+	 * @return this
 	 */
-	protected void setSet(boolean set) {
+	protected T setSet(boolean set) {
 		this.set = set;
+		return getThis();
 	}
 
 }

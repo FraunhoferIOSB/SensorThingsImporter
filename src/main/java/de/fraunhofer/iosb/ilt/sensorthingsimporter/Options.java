@@ -17,6 +17,7 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
+import com.google.common.base.Strings;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.Option;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.OptionSingle;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.OptionToggle;
@@ -53,15 +54,22 @@ public class Options {
 
 	private final OptionToggle noAct;
 	private final OptionSingle<String> fileName;
+	private final OptionToggle useScheduler;
 
 	public Options() {
 		noAct = addOption(
 				new OptionToggle("-noact", "-n")
+						.setEnvironmentName("noAct")
 						.setDescription("Read the file and give output, but do not actually post observations."));
 		fileName = addOption(
 				new OptionSingle<String>("-config", "-c")
 						.setParam(new ParameterString("file path", ""))
+						.setEnvironmentName("configFile")
 						.setDescription("The path to the config json file."));
+		useScheduler = addOption(
+				new OptionToggle("-scheduler", "-s")
+						.setEnvironmentName("useScheduler")
+						.setDescription("Use the scheduler to start imports. The config file must be a scheduler config in this case."));
 	}
 
 	public List<Option> getOptions() {
@@ -118,4 +126,27 @@ public class Options {
 		return fileName;
 	}
 
+	public OptionToggle getUseScheduler() {
+		return useScheduler;
+	}
+
+	public static boolean getEnv(String name, boolean dflt) {
+		String value = System.getenv(name);
+		if (Strings.isNullOrEmpty(value)) {
+			LOGGER.info("Parameter {} not set, using default value: {}", name, dflt);
+			return dflt;
+		}
+		LOGGER.info("Parameter {} set with value: {}", name, value);
+		return Boolean.parseBoolean(value);
+	}
+
+	public static String getEnv(String name, String dflt) {
+		String value = System.getenv(name);
+		if (Strings.isNullOrEmpty(value)) {
+			LOGGER.info("Parameter {} not set, using default value: {}", name, dflt);
+			return dflt;
+		}
+		LOGGER.info("Parameter {} set with value: {}", name, value);
+		return value;
+	}
 }

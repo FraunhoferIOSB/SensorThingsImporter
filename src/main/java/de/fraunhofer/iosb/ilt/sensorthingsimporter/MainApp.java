@@ -19,6 +19,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.Option;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.Parameter;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler.ImporterScheduler;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -26,6 +27,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.quartz.SchedulerException;
 
 /**
  *
@@ -37,20 +39,28 @@ public class MainApp {
 	 * @param args the command line arguments
 	 * @throws IOException
 	 * @throws URISyntaxException
+	 * @throws java.net.MalformedURLException
 	 * @throws ServiceFailureException
+	 * @throws org.quartz.SchedulerException
 	 */
-	public static void main(String[] args) throws URISyntaxException, IOException, MalformedURLException, ServiceFailureException {
+	public static void main(String[] args) throws URISyntaxException, IOException, MalformedURLException, ServiceFailureException, SchedulerException {
 		List<String> arguments = new ArrayList<>(Arrays.asList(args));
 		if (arguments.isEmpty()) {
 			showHelp();
 			ImporterGui.main(args);
 		} else if (arguments.contains("--help") || arguments.contains("-help") || arguments.contains("-h")) {
 			showHelp();
-			System.exit(0);
 		} else {
-			ImporterWrapper.importCmdLine(arguments);
+			Options options = new Options().parseArguments(arguments);
+			if (options.getUseScheduler().isSet()) {
+				ImporterScheduler scheduler = new ImporterScheduler();
+				scheduler.loadOptions(options);
+				scheduler.start();
+			} else {
+				ImporterWrapper wrapper = new ImporterWrapper();
+				wrapper.doImport(options);
+			}
 		}
-		System.exit(0);
 	}
 
 	public static void showHelp() {
@@ -67,6 +77,7 @@ public class MainApp {
 			for (String descLine : option.getDescription()) {
 				text.append("    ").append(descLine).append("\n");
 			}
+			text.append("    envionment variable: ").append(option.getEnvironmentName()).append("\n");
 			System.out.println(text.toString());
 		}
 	}

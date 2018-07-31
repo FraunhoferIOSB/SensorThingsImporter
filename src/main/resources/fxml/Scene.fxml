@@ -17,6 +17,7 @@
             <GridPane BorderPane.alignment="CENTER">
               <columnConstraints>
                 <ColumnConstraints hgrow="ALWAYS" minWidth="10.0" prefWidth="100.0" />
+                  <ColumnConstraints hgrow="NEVER" minWidth="10.0" prefWidth="100.0" />
                 <ColumnConstraints hgrow="NEVER" minWidth="10.0" />
                   <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
               </columnConstraints>
@@ -24,8 +25,9 @@
                 <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
               </rowConstraints>
                <children>
-                  <Button fx:id="buttonLoad" mnemonicParsing="false" onAction="#actionLoad" text="Load" GridPane.columnIndex="1" GridPane.hgrow="NEVER" />
-                  <Button fx:id="buttonSave" mnemonicParsing="false" onAction="#actionSave" text="Save" GridPane.columnIndex="2" GridPane.hgrow="NEVER" />
+                  <Button fx:id="buttonLoad" mnemonicParsing="false" onAction="#actionLoad" text="Load" GridPane.columnIndex="2" GridPane.hgrow="NEVER" />
+                  <Button fx:id="buttonSave" mnemonicParsing="false" onAction="#actionSave" text="Save" GridPane.columnIndex="3" GridPane.hgrow="NEVER" />
+                  <CheckBox fx:id="toggleScheduler" mnemonicParsing="false" onAction="#actionScheduler" text="Scheduler" GridPane.columnIndex="1" />
                </children>
             </GridPane>
          </top>

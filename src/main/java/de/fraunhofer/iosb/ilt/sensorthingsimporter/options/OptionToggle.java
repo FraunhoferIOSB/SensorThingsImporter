@@ -17,6 +17,7 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.options;
 
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options;
 import java.util.List;
 
 /**
@@ -24,10 +25,15 @@ import java.util.List;
  *
  * @author scf
  */
-public class OptionToggle extends OptionBase {
+public class OptionToggle extends OptionBase<OptionToggle> {
 
 	public OptionToggle(String... keys) {
 		super(keys);
+	}
+
+	@Override
+	public OptionToggle getThis() {
+		return this;
 	}
 
 	@Override
@@ -38,6 +44,11 @@ public class OptionToggle extends OptionBase {
 			throw new IllegalStateException("First argument does not mach any key!");
 		}
 		setSet(true);
+	}
+
+	@Override
+	public OptionToggle readFromEnvironment(String name) {
+		return setSet(Options.getEnv(name, false));
 	}
 
 	@Override

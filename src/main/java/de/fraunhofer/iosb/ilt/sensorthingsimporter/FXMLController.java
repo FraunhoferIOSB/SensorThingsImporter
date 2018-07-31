@@ -22,10 +22,10 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler.ImporterScheduler;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.util.Map;
 import java.util.ResourceBundle;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -36,6 +36,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ScrollPane;
 import javafx.stage.FileChooser;
 import org.apache.commons.io.FileUtils;
+import org.quartz.SchedulerException;
 import org.slf4j.LoggerFactory;
 
 public class FXMLController implements Initializable {
@@ -54,19 +55,51 @@ public class FXMLController implements Initializable {
 	private Button buttonImport;
 	@FXML
 	private CheckBox toggleNoAct;
+	@FXML
+	private CheckBox toggleScheduler;
 
 	private ImporterWrapper wrapper;
-	private EditorMap<Map<String, Object>> configEditor;
+	private ImporterScheduler scheduler;
+
+	private EditorMap<?> configEditorImport;
+	private EditorMap<?> configEditorSchedule;
 	private FileChooser fileChooser = new FileChooser();
 
 	@FXML
 	private void actionLoad(ActionEvent event) {
-		fileChooser.setTitle("Load Config");
-		File file = fileChooser.showOpenDialog(paneConfig.getScene().getWindow());
+		if (toggleScheduler.isSelected()) {
+			loadScheduler();
+		} else {
+			loadImporter();
+		}
+	}
+
+	private void loadImporter() {
+		JsonElement json = loadFromFile("Load Importer");
+		if (json == null) {
+			return;
+		}
+		wrapper.configure(json, null, null);
+	}
+
+	private void loadScheduler() {
+		JsonElement json = loadFromFile("Load Scheduler");
+		if (json == null) {
+			return;
+		}
+		scheduler.configure(json, null, null);
+	}
+
+	private JsonElement loadFromFile(String title) {
 		try {
+			fileChooser.setTitle(title);
+			File file = fileChooser.showOpenDialog(paneConfig.getScene().getWindow());
+			if (file == null) {
+				return null;
+			}
 			String config = FileUtils.readFileToString(file, "UTF-8");
 			JsonElement json = new JsonParser().parse(config);
-			wrapper.configure(json, null, null);
+			return json;
 		} catch (IOException ex) {
 			LOGGER.error("Failed to read file", ex);
 			Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -74,13 +107,31 @@ public class FXMLController implements Initializable {
 			alert.setContentText(ex.getLocalizedMessage());
 			alert.showAndWait();
 		}
+		return null;
 	}
 
 	@FXML
 	private void actionSave(ActionEvent event) {
-		JsonElement json = configEditor.getConfig();
+		if (toggleScheduler.isSelected()) {
+			saveScheduler();
+		} else {
+			saveImporter();
+		}
+	}
+
+	private void saveImporter() {
+		JsonElement json = configEditorImport.getConfig();
+		saveToFile(json, "Save Importer");
+	}
+
+	private void saveScheduler() {
+		JsonElement json = configEditorSchedule.getConfig();
+		saveToFile(json, "Save Schedule");
+	}
+
+	private void saveToFile(JsonElement json, String title) {
 		String config = new GsonBuilder().setPrettyPrinting().create().toJson(json);
-		fileChooser.setTitle("Save Config");
+		fileChooser.setTitle(title);
 		File file = fileChooser.showSaveDialog(paneConfig.getScene().getWindow());
 
 		try {
@@ -96,15 +147,44 @@ public class FXMLController implements Initializable {
 
 	@FXML
 	private void actionImport(ActionEvent event) {
-		JsonElement json = configEditor.getConfig();
-		String config = new Gson().toJson(json);
-		ImporterWrapper.importConfig(config, toggleNoAct.isSelected());
+		if (toggleScheduler.isSelected()) {
+			scheduler.setNoAct(toggleNoAct.isSelected());
+			JsonElement json = configEditorSchedule.getConfig();
+			String config = new Gson().toJson(json);
+			scheduler.setConfig(config);
+			try {
+				scheduler.start();
+			} catch (SchedulerException ex) {
+				LOGGER.error("Exception starting scheduler", ex);
+			}
+		} else {
+			JsonElement json = configEditorImport.getConfig();
+			String config = new Gson().toJson(json);
+			ImporterWrapper.importConfig(config, toggleNoAct.isSelected());
+		}
+	}
+
+	@FXML
+	private void actionScheduler(ActionEvent event) {
+		replaceEditor();
+	}
+
+	private void replaceEditor() {
+		if (toggleScheduler.isSelected()) {
+			paneConfig.setContent(configEditorSchedule.getGuiFactoryFx().getNode());
+		} else {
+			paneConfig.setContent(configEditorImport.getGuiFactoryFx().getNode());
+		}
 	}
 
 	@Override
 	public void initialize(URL url, ResourceBundle rb) {
 		wrapper = new ImporterWrapper();
-		configEditor = wrapper.getConfigEditor(null, null);
-		paneConfig.setContent(configEditor.getGuiFactoryFx().getNode());
+		configEditorImport = wrapper.getConfigEditor(null, null);
+
+		scheduler = new ImporterScheduler();
+		configEditorSchedule = scheduler.getConfigEditor(null, null);
+
+		replaceEditor();
 	}
 }
