@@ -12,7 +12,7 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<mainClass>de.fraunhofer.iosb.ilt.sensorthingsimporter.MainApp</mainClass>
-        <docker-image-name>fraunhoferiosb/frost-importer</docker-image-name>
+    <docker-image-name>fraunhoferiosb/frost-importer</docker-image-name>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
 
@@ -59,45 +59,6 @@
 				<groupId>com.spotify</groupId>
 				<artifactId>dockerfile-maven-plugin</artifactId>
 				<version>${dockerfile-maven-plugin.version}</version>
-				<executions>
-					<execution>
-						<id>build-and-tag-latest</id>
-						<phase>none</phase>
-						<goals>
-							<goal>build</goal>
-						</goals>
-					</execution>
-					<execution>
-						<id>tag-version</id>
-						<phase>none</phase>
-						<goals>
-							<goal>tag</goal>
-						</goals>
-						<configuration>
-							<tag>${project.version}</tag>
-						</configuration>
-					</execution>
-					<execution>
-						<id>push-latest</id>
-						<phase>none</phase>
-						<goals>
-							<goal>push</goal>
-						</goals>
-						<configuration>
-							<tag>latest</tag>
-						</configuration>
-					</execution>
-					<execution>
-						<id>push-version</id>
-						<phase>none</phase>
-						<goals>
-							<goal>push</goal>
-						</goals>
-						<configuration>
-							<tag>${project.version}</tag>
-						</configuration>
-					</execution>
-				</executions>
 				<configuration>
 					<repository>${docker-image-name}</repository>
 					<buildArgs>
