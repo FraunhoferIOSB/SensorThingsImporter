@@ -16,7 +16,9 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler;
 
+import com.google.common.base.Strings;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImporterWrapper;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options;
 import java.io.File;
 import java.io.IOException;
 import org.apache.commons.io.FileUtils;
@@ -59,8 +61,17 @@ public class ImporterJob implements Job {
 
 	public static String loadFile(String fileName) throws IOException {
 		File file = new File(fileName);
-		String config = FileUtils.readFileToString(file, "UTF-8");
-		return config;
+		if (file.exists()) {
+			String config = FileUtils.readFileToString(file, "UTF-8");
+			return config;
+		} else {
+			String config = Options.getEnv(fileName, "");
+			if (!Strings.isNullOrEmpty(config)) {
+				return config;
+			}
+		}
+		LOGGER.error("Could not load configuration from {}. Not a file, nor an environment variable.", fileName);
+		return null;
 	}
 
 }

@@ -47,6 +47,7 @@ public class MainApp {
 		List<String> arguments = new ArrayList<>(Arrays.asList(args));
 		if (arguments.isEmpty()) {
 			showHelp();
+			System.out.println("Trying to start the configuration GUI...");
 			ImporterGui.main(args);
 		} else if (arguments.contains("--help") || arguments.contains("-help") || arguments.contains("-h")) {
 			showHelp();
