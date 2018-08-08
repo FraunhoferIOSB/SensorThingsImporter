@@ -9,10 +9,7 @@ variables:
 
 before_script:
   - curl -sSL https://get.docker.com/ | sh
-  - apt-get update \
-    && apt-get install --no-install-recommends -y openjfx \
-    && apt-get clean \
-    && rm -f /var/lib/apt/lists/*_dists_*
+  - apt-get update && apt-get install --no-install-recommends -y openjfx && apt-get clean && rm -f /var/lib/apt/lists/*_dists_*
   - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
 
 build-master:
