@@ -4,7 +4,7 @@ services:
   - docker:dind
 
 variables:
-  MAVEN_CLI_OPTS: "--batch-mode"
+  MAVEN_CLI_OPTS: "--batch-mode -Ddockerfile.username=gitlab-ci-token -Ddockerfile.password=$CI_BUILD_TOKEN"
   MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
 
 before_script:
@@ -16,8 +16,8 @@ build-master:
   stage: build
   script:
     - mvn $MAVEN_CLI_OPTS install
-    - mvn dockerfile:build -Ddocker-image-name="$CI_REGISTRY_IMAGE"
-    - mvn dockerfile:push -Ddocker-image-name="$CI_REGISTRY_IMAGE"
+    - mvn $MAVEN_CLI_OPTS dockerfile:build -Ddocker-image-name="$CI_REGISTRY_IMAGE"
+    - mvn $MAVEN_CLI_OPTS dockerfile:push -Ddocker-image-name="$CI_REGISTRY_IMAGE"
   only:
     - master
   tags:
@@ -27,8 +27,8 @@ build:
   stage: build
   script:
     - mvn $MAVEN_CLI_OPTS compile
-    - mvn dockerfile:build -Ddocker-image-name="$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
-    - mvn dockerfile:push -Ddocker-image-name="$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
+    - mvn $MAVEN_CLI_OPTS dockerfile:build -Ddocker-image-name="$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
+    - mvn $MAVEN_CLI_OPTS dockerfile:push -Ddocker-image-name="$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
   except:
     - master
   tags:
