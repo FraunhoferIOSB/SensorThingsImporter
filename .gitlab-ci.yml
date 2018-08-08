@@ -1,4 +1,4 @@
-image: maven:latest
+image: jeekajoo/maven-dind
 
 services:
   - docker:dind
