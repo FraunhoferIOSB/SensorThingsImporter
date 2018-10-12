@@ -202,7 +202,7 @@ public class ImporterFmiForecasts implements Importer {
 
 			Query<Thing> stationQuery = service.things().query()
 					.filter("properties/type eq 'station'"
-							+ " and properties/awaaId gt 0")
+							+ " and properties/addForecasts eq true")
 					.select("id", "name", "description", "properties")
 					.top(1000)
 					.expand("Locations($select=encodingType,location)"
