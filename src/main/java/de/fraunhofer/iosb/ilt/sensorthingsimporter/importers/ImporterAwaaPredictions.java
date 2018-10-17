@@ -221,9 +221,7 @@ public class ImporterAwaaPredictions implements Importer {
 		public double lat;
 		public double lon;
 		public double distance;
-		public double treshold1;
-		public double treshold2;
-		public double treshold3;
+		public List<Double> thresholds = new ArrayList<>();
 		public Thing thing;
 
 		public RiverSection(int id, String name, River river) {
@@ -314,7 +312,7 @@ public class ImporterAwaaPredictions implements Importer {
 					}
 					LOGGER.info("Model: {}", sensorWaterModel.getId());
 
-					Run run = runs.get(runs.lastKey());
+					Run run = runs.get(runs.firstKey());
 					SortedMap<Integer, River> rivers = importRivers(run);
 					for (River river : rivers.values()) {
 						SortedMap<Integer, RiverSection> sections = importRiverSections(run, river);
@@ -429,9 +427,9 @@ public class ImporterAwaaPredictions implements Importer {
 				section.distance = Double.valueOf(JsonUtils.walk(element, "KM").asText());
 				section.lat = Double.valueOf(JsonUtils.walk(element, "LAT").asText());
 				section.lon = Double.valueOf(JsonUtils.walk(element, "LON").asText());
-				section.treshold1 = Double.valueOf(JsonUtils.walk(element, "ALLARME1").asText());
-				section.treshold2 = Double.valueOf(JsonUtils.walk(element, "ALLARME2").asText());
-				section.treshold3 = Double.valueOf(JsonUtils.walk(element, "ALLARME3").asText());
+				section.thresholds.add(Double.valueOf(JsonUtils.walk(element, "ALLARME1").asText()));
+				section.thresholds.add(Double.valueOf(JsonUtils.walk(element, "ALLARME2").asText()));
+				section.thresholds.add(Double.valueOf(JsonUtils.walk(element, "ALLARME3").asText()));
 			}
 			for (RiverSection section : sectionMap.values()) {
 				try {
@@ -518,9 +516,6 @@ public class ImporterAwaaPredictions implements Importer {
 				thingProps.put("awaaId", section.id);
 				thingProps.put("riverAwaaId", section.river.id);
 				thingProps.put("distance", section.distance);
-				thingProps.put("treshold1", section.treshold1);
-				thingProps.put("treshold2", section.treshold2);
-				thingProps.put("treshold3", section.treshold3);
 				thing = new Thing(section.name, "River section " + section.name, thingProps);
 				service.create(thing);
 
@@ -536,6 +531,7 @@ public class ImporterAwaaPredictions implements Importer {
 
 			Map<String, Object> dsProps = new HashMap<>();
 			dsProps.put("type", "forecast");
+			dsProps.put("thresholds", section.thresholds);
 			UnitOfMeasurement uom = new UnitOfMeasurement("metre", "m", "ucum:m");
 			Datastream ds = SensorThingsUtils.findOrCreateDatastream(
 					service,

@@ -190,6 +190,9 @@ public class SensorThingsUtils {
 		Datastream ds;
 		if (datastreamList.size() == 1) {
 			ds = datastreamList.iterator().next();
+			if (properties != null && addAllToMap(ds.getProperties(), properties)) {
+				service.update(ds);
+			}
 		} else {
 			LOGGER.info("Creating Datastream {}.", name);
 			ds = new Datastream(
@@ -270,5 +273,32 @@ public class SensorThingsUtils {
 		}
 		locations.add(location);
 		return location;
+	}
+
+	/**
+	 *
+	 * @param target
+	 * @param source
+	 * @return true if the target map was changed.
+	 */
+	public static boolean addAllToMap(Map<String, Object> target, Map<String, Object> source) {
+		if (source == null) {
+			return false;
+		}
+		if (target == null) {
+			LOGGER.error("Target map is null!");
+			return false;
+		}
+		boolean changed = false;
+		for (Map.Entry<String, Object> entry : source.entrySet()) {
+			String key = entry.getKey();
+			Object value = entry.getValue();
+			if (!value.equals(target.get(key))) {
+				LOGGER.debug("Added {} to properties, with value {}.", key, value);
+				target.put(key, value);
+				changed = true;
+			}
+		}
+		return changed;
 	}
 }
