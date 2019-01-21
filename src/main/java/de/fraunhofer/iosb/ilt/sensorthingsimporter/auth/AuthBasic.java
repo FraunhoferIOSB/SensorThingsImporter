@@ -21,7 +21,6 @@ import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
-import java.net.MalformedURLException;
 import java.net.URL;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -64,19 +63,15 @@ public class AuthBasic implements AuthMethod {
 
 	@Override
 	public void setAuth(SensorThingsService service) {
-		try {
-			CredentialsProvider credsProvider = new BasicCredentialsProvider();
-			URL url = service.getEndpoint().toURL();
-			credsProvider.setCredentials(
-					new AuthScope(url.getHost(), url.getPort()),
-					new UsernamePasswordCredentials(editorUsername.getValue(), editorPassword.getValue()));
-			CloseableHttpClient httpclient = HttpClients.custom()
-					.setDefaultCredentialsProvider(credsProvider)
-					.build();
-			service.setClient(httpclient);
-		} catch (MalformedURLException ex) {
-			LOGGER.error("Failed to initialise basic auth.", ex);
-		}
+		CredentialsProvider credsProvider = new BasicCredentialsProvider();
+		URL url = service.getEndpoint();
+		credsProvider.setCredentials(
+				new AuthScope(url.getHost(), url.getPort()),
+				new UsernamePasswordCredentials(editorUsername.getValue(), editorPassword.getValue()));
+		CloseableHttpClient httpclient = HttpClients.custom()
+				.setDefaultCredentialsProvider(credsProvider)
+				.build();
+		service.setClient(httpclient);
 	}
 
 }

@@ -32,6 +32,7 @@ import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.ext.DataArrayDocument;
 import de.fraunhofer.iosb.ilt.sta.model.ext.DataArrayValue;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
@@ -83,7 +84,7 @@ public class ObservationUploader implements Configurable<SensorThingsService, Ob
 			if (authMethod != null) {
 				authMethod.setAuth(service);
 			}
-		} catch (URISyntaxException ex) {
+		} catch (MalformedURLException | URISyntaxException ex) {
 			LOGGER.error("Failed to create service.", ex);
 			throw new IllegalArgumentException("Failed to create service.", ex);
 		}

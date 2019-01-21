@@ -53,16 +53,19 @@ public class ValidatorByPhenTime implements Validator {
 		}
 		try {
 			if (one instanceof Long && two instanceof Integer) {
-				return ((Long) one).equals(new Long((Integer) two));
+				return one.equals(new Long((Integer) two));
 			}
 			if (two instanceof Long && one instanceof Integer) {
-				return ((Long) two).equals(new Long((Integer) one));
+				return two.equals(new Long((Integer) one));
+			}
+			if (one instanceof BigDecimal && two instanceof BigDecimal) {
+				return (one).equals(two);
 			}
 			if (one instanceof BigDecimal) {
-				return ((BigDecimal) one).equals(new BigDecimal(two.toString()));
+				return ((Comparable<BigDecimal>) one).compareTo(new BigDecimal(two.toString())) == 0;
 			}
 			if (two instanceof BigDecimal) {
-				return ((BigDecimal) two).equals(new BigDecimal(one.toString()));
+				return ((Comparable<BigDecimal>) two).compareTo(new BigDecimal(one.toString())) == 0;
 			}
 		} catch (NumberFormatException e) {
 			LOGGER.trace("Not both bigdecimal.", e);
@@ -81,7 +84,7 @@ public class ValidatorByPhenTime implements Validator {
 					return true;
 				} else {
 					if (!resultCompare(obs.getResult(), first.getResult())) {
-						LOGGER.warn("Observation {} with given phenomenonTime {} exists, but result not the same. {} != {}.", first.getId(), obs.getPhenomenonTime(), obs.getResult(), first.getResult());
+						LOGGER.warn("Observation {} with given phenomenonTime {} exists, but result not the same. {} {} != {} {}.", first.getId(), obs.getPhenomenonTime(), obs.getResult().getClass().getName(), obs.getResult(), first.getResult(), first.getResult().getClass().getName());
 						if (update) {
 							obs.setId(first.getId());
 							return true;
