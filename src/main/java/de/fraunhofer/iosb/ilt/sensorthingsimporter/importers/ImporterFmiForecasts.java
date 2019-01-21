@@ -199,14 +199,13 @@ public class ImporterFmiForecasts implements Importer {
 		}
 
 		private Iterator<Thing> generateStationIterator() throws ServiceFailureException {
-
 			Query<Thing> stationQuery = service.things().query()
 					.filter("properties/type eq 'station'"
 							+ " and properties/addForecasts eq true")
 					.select("id", "name", "description", "properties")
 					.top(1000)
 					.expand("Locations($select=encodingType,location)"
-							+ ",Datastreams($select=id,name,unitOfMeasurement;$filter=length(ObservedProperty/properties/fmiId) gt 0;$expand=ObservedProperty($select=id,name,properties))");
+							+ ",Datastreams($select=id,name,unitOfMeasurement;$filter=properties/type eq 'forecast' and length(ObservedProperty/properties/fmiId) gt 0;$expand=ObservedProperty($select=id,name,properties))");
 			EntityList<Thing> stationList = stationQuery.list();
 			LOGGER.info("Stations: {}", stationList.size());
 			return stationList.fullIterator();
