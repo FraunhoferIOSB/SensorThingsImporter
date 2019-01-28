@@ -59,7 +59,8 @@ public class ValidatorByPhenTime implements Validator {
 				return two.equals(new Long((Integer) one));
 			}
 			if (one instanceof BigDecimal && two instanceof BigDecimal) {
-				return (one).equals(two);
+				// Would have returned true above if equal
+				return false;
 			}
 			if (one instanceof BigDecimal) {
 				return ((Comparable<BigDecimal>) one).compareTo(new BigDecimal(two.toString())) == 0;
