@@ -19,6 +19,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
@@ -27,8 +28,6 @@ import de.fraunhofer.iosb.ilt.sta.query.Query;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,11 +44,9 @@ public class DsMapperFilter implements DatastreamMapper {
 	private static final Logger LOGGER = LoggerFactory.getLogger(DsMapperFilter.class);
 	private final Map<String, Datastream> datastreamCache = new HashMap<>();
 	private final Map<String, MultiDatastream> multiDatastreamCache = new HashMap<>();
-	private final Pattern placeHolderPattern = Pattern.compile("\\{([0-9]+)\\}");
 
 	private SensorThingsService service;
 	private String filterTemplate;
-	private Matcher matcher;
 
 	private EditorString editor;
 
@@ -64,7 +61,6 @@ public class DsMapperFilter implements DatastreamMapper {
 		service = (SensorThingsService) context;
 		getConfigEditor(service, edtCtx).setConfig(config);
 		filterTemplate = editor.getValue();
-		matcher = placeHolderPattern.matcher(filterTemplate);
 	}
 
 	@Override
@@ -80,7 +76,7 @@ public class DsMapperFilter implements DatastreamMapper {
 	@Override
 	public Datastream getDatastreamFor(CSVRecord record) {
 		try {
-			String filter = fillTemplate(record);
+			String filter = Translator.fillTemplate(filterTemplate, record);
 			Datastream ds = getDatastreamFor(filter);
 			return ds;
 		} catch (ServiceFailureException ex) {
@@ -92,7 +88,7 @@ public class DsMapperFilter implements DatastreamMapper {
 	@Override
 	public MultiDatastream getMultiDatastreamFor(CSVRecord record) {
 		try {
-			String filter = fillTemplate(record);
+			String filter = Translator.fillTemplate(filterTemplate, record);
 			MultiDatastream ds = getMultiDatastreamFor(filter);
 			return ds;
 		} catch (ServiceFailureException ex) {
@@ -109,7 +105,7 @@ public class DsMapperFilter implements DatastreamMapper {
 		Query<Datastream> query = service.datastreams().query().filter(filter);
 		EntityList<Datastream> streams = query.list();
 		if (streams.size() != 1) {
-			LOGGER.error("Found incorrect number of datastreams: {}", streams.size());
+			LOGGER.error("Found incorrect number of datastreams: {} for filter: {}", streams.size(), filter);
 			throw new IllegalArgumentException("Found incorrect number of datastreams: " + streams.size());
 		}
 		ds = streams.iterator().next();
@@ -133,21 +129,6 @@ public class DsMapperFilter implements DatastreamMapper {
 		LOGGER.info("Found multiDatastreams {} for query {}.", mds.getId(), filter);
 		multiDatastreamCache.put(filter, mds);
 		return mds;
-	}
-
-	private String fillTemplate(CSVRecord record) {
-		matcher.reset();
-		StringBuilder filter = new StringBuilder();
-		int pos = 0;
-		while (matcher.find()) {
-			int start = matcher.start();
-			filter.append(filterTemplate.substring(pos, start));
-			int colNr = Integer.parseInt(matcher.group(1));
-			filter.append(record.get(colNr));
-			pos = matcher.end();
-		}
-		filter.append(filterTemplate.substring(pos));
-		return filter.toString();
 	}
 
 }

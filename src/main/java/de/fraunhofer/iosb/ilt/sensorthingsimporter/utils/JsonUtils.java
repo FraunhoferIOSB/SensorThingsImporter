@@ -16,7 +16,13 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,10 +32,16 @@ import org.slf4j.LoggerFactory;
  */
 public class JsonUtils {
 
+	public static TypeReference TYPE_MAP_STRING_OBJECT = new TypeReference<Map<String, Object>>() {
+		// Empty on purpose.
+	};
+
 	/**
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(JsonUtils.class);
+
+	private static ObjectMapper mapper;
 
 	public static JsonNode walk(final JsonNode node, final String[] pathParts) {
 		JsonNode curNode = node;
@@ -76,5 +88,23 @@ public class JsonUtils {
 			return number.intValue();
 		}
 		return Integer.parseInt(o.toString());
+	}
+
+	public static ObjectMapper getMapper() {
+		if (mapper == null) {
+			mapper = new ObjectMapper();
+			mapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
+		}
+		return mapper;
+	}
+
+	public static Map<String, Object> jsonToMap(String json) {
+		try {
+			return getMapper().readValue(json, TYPE_MAP_STRING_OBJECT);
+		} catch (IOException ex) {
+			LOGGER.warn("Failed to parse json to Map: {}", ex.getMessage());
+			LOGGER.debug("Exception: ", ex);
+			return new HashMap<>();
+		}
 	}
 }

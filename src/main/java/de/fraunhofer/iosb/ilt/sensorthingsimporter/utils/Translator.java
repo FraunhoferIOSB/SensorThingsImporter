@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +39,8 @@ public class Translator {
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(Translator.class);
-	private Map<String, String> replaces;
+	private static final Pattern PLACE_HOLDER_PATTERN = Pattern.compile("\\{([0-9]+)\\}");
+	private final Map<String, String> replaces;
 
 	public Translator() {
 		replaces = new HashMap<>();
@@ -91,6 +93,22 @@ public class Translator {
 			result.append(source.substring(lastEnd, source.length()));
 		}
 		return result.toString();
+	}
+
+	public static String fillTemplate(String template, CSVRecord record) {
+		Matcher matcher = PLACE_HOLDER_PATTERN.matcher(template);
+		matcher.reset();
+		StringBuilder filter = new StringBuilder();
+		int pos = 0;
+		while (matcher.find()) {
+			int start = matcher.start();
+			filter.append(template.substring(pos, start));
+			int colNr = Integer.parseInt(matcher.group(1));
+			filter.append(record.get(colNr));
+			pos = matcher.end();
+		}
+		filter.append(template.substring(pos));
+		return filter.toString();
 	}
 
 }

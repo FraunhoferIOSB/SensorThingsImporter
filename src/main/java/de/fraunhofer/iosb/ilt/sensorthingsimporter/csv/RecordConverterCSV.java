@@ -20,15 +20,19 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.Configurable;
 import de.fraunhofer.iosb.ilt.configurable.EditorFactory;
+import de.fraunhofer.iosb.ilt.configurable.Utils;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.DatastreamMapper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.Parser;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.ParserTime;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
@@ -67,6 +71,7 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 	private DatastreamMapper dsm;
 	private ParserTime timeParser;
 	private Parser resultParser;
+	private String parametersTemplate;
 
 	private EditorMap<Map<String, Object>> editor;
 	private EditorSubclass<SensorThingsService, Object, DatastreamMapper> editorDsMapper;
@@ -76,6 +81,7 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 	private EditorInt editorColValidTime;
 	private EditorClass<SensorThingsService, Object, ParserTime> editorTimeParser;
 	private EditorSubclass<SensorThingsService, Object, Parser> editorResultParser;
+	private EditorString editorParameters;
 
 	public RecordConverterCSV() {
 	}
@@ -92,6 +98,7 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 
 		timeParser = editorTimeParser.getValue();
 		resultParser = editorResultParser.getValue();
+		parametersTemplate = editorParameters.getValue();
 	}
 
 	@Override
@@ -121,6 +128,9 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 
 			editorResultParser = new EditorSubclass<>(context, edtCtx, Parser.class, "Result Parser", "The parser to use for parsing results.");
 			editor.addOption("resultParser", editorResultParser, true);
+
+			editorParameters = new EditorString("", 4, "parameters Template", "Template used to generate Observation/parameters");
+			editor.addOption("parametersTemplate", editorParameters, true);
 		}
 		return editor;
 	}
@@ -200,6 +210,10 @@ public class RecordConverterCSV implements Configurable<SensorThingsService, Obj
 		if (colValidTime >= 0) {
 			obs.setValidTime(Interval.parse(record.get(colValidTime)));
 			log.append(", validTime: ").append(obs.getValidTime());
+		}
+		if (!Utils.isNullOrEmpty(parametersTemplate)) {
+			String filledTemplate = Translator.fillTemplate(parametersTemplate, record);
+			obs.setParameters(JsonUtils.jsonToMap(filledTemplate));
 		}
 		if (verbose) {
 			LOGGER.info(log.toString());
