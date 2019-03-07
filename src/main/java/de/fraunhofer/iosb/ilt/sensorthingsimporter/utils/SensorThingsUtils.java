@@ -32,6 +32,7 @@ import de.fraunhofer.iosb.ilt.sta.model.ext.UnitOfMeasurement;
 import de.fraunhofer.iosb.ilt.sta.query.Query;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -293,12 +294,40 @@ public class SensorThingsUtils {
 		for (Map.Entry<String, Object> entry : source.entrySet()) {
 			String key = entry.getKey();
 			Object value = entry.getValue();
-			if (!value.equals(target.get(key))) {
-				LOGGER.debug("Added {} to properties, with value {}.", key, value);
+			if (!equals(value, target.get(key))) {
+				LOGGER.info("Updated property {}, with value {}.", key, value);
 				target.put(key, value);
 				changed = true;
 			}
 		}
 		return changed;
+	}
+
+	public static boolean equals(Object o1, Object o2) {
+		if (o1 instanceof List && o2 instanceof List) {
+			return equals((List) o1, (List) o2);
+		}
+		if (o1 instanceof BigDecimal && o2 instanceof BigDecimal) {
+			return o1.equals(o2);
+		}
+		if (o1 instanceof BigDecimal && o2 instanceof Number) {
+			return o1.equals(new BigDecimal(o2.toString()));
+		}
+		if (o2 instanceof BigDecimal && o1 instanceof Number) {
+			return o2.equals(new BigDecimal(o1.toString()));
+		}
+		return o1.equals(o2);
+	}
+
+	public static boolean equals(List o1, List o2) {
+		if (o1.size() != o2.size()) {
+			return false;
+		}
+		for (int i = 0; i < o1.size(); i++) {
+			if (!equals(o1.get(i), o2.get(i))) {
+				return false;
+			}
+		}
+		return true;
 	}
 }
