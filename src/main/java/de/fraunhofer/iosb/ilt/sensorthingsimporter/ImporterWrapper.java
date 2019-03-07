@@ -70,9 +70,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 
 	@Override
 	public void configure(JsonElement config, Object context, Object edtCtx) {
-		if (service == null) {
-			service = new SensorThingsService();
-		}
+		service = new SensorThingsService();
 		getConfigEditor(service, edtCtx).setConfig(config);
 		importer = editorImporter.getValue();
 		uploader = editorUploader.getValue();

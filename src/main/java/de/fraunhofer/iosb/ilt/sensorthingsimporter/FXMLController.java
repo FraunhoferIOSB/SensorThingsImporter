@@ -79,6 +79,9 @@ public class FXMLController implements Initializable {
 		if (json == null) {
 			return;
 		}
+		wrapper = new ImporterWrapper();
+		configEditorImport = wrapper.getConfigEditor(null, null);
+		replaceEditor();
 		wrapper.configure(json, null, null);
 	}
 
@@ -87,6 +90,9 @@ public class FXMLController implements Initializable {
 		if (json == null) {
 			return;
 		}
+		scheduler = new ImporterScheduler();
+		configEditorSchedule = scheduler.getConfigEditor(null, null);
+		replaceEditor();
 		scheduler.configure(json, null, null);
 	}
 
