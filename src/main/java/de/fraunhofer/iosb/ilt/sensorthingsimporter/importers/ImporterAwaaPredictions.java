@@ -22,9 +22,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ComparisonChain;
 import com.google.gson.JsonElement;
+import de.fraunhofer.iosb.ilt.configurable.AbstractConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorLong;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
@@ -33,7 +37,9 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.SensorThingsUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.SensorThingsUtils.AggregationLevels;
+import static de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.SensorThingsUtils.addAllToMap;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.Location;
@@ -47,9 +53,9 @@ import de.fraunhofer.iosb.ilt.sta.model.ext.UnitOfMeasurement;
 import de.fraunhofer.iosb.ilt.sta.query.Query;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -59,11 +65,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
 import org.geojson.LineString;
 import org.geojson.LngLatAlt;
 import org.geojson.Point;
@@ -83,32 +84,68 @@ import org.threeten.extra.Interval;
  *
  * @author scf
  */
-public class ImporterAwaaPredictions implements Importer {
+public class ImporterAwaaPredictions extends AbstractConfigurable<SensorThingsService, Object> implements Importer {
 
 	/**
 	 * The logger for this class.
 	 */
 	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ImporterAwaaPredictions.class);
 
-	private EditorMap<Map<String, Object>> editor;
-	private EditorBoolean editorFullImport;
-	private EditorString editorUrlRuns;
-	private EditorString editorUrlRivers;
-	private EditorString editorUrlSections;
-	private EditorString editorUrlLevels;
-	private EditorString editorTranslator;
-	private EditorInt editorSleep;
-	private EditorSubclass<Object, Object, ParserZonedDateTime> editorTimeParser;
+	@ConfigurableField(
+			label = "Full Import", description = "Import all rivers and sections every time.",
+			optional = true,
+			editor = EditorBoolean.class)
+	@EditorBoolean.EdOptsBool(dflt = true)
+	private boolean fullImport;
 
-	private SensorThingsService service;
+	@ConfigurableField(label = "Runs Index", description = "The url to fetch the runs list from.", editor = EditorString.class)
+	@EditorString.EdOptsString()
+	private String runsUrl;
+
+	@ConfigurableField(label = "Rivers Index", description = "The url to fetch the rivers from.", editor = EditorString.class)
+	@EditorString.EdOptsString()
+	private String riversUrl;
+
+	@ConfigurableField(label = "Sections Index", description = "The url to fetch the river sections from.", editor = EditorString.class)
+	@EditorString.EdOptsString()
+	private String sectionsUrl;
+
+	@ConfigurableField(label = "Levels Index", description = "The url to fetch the water levels from.", editor = EditorString.class)
+	@EditorString.EdOptsString()
+	private String levelsUrl;
+
+	@ConfigurableField(
+			label = "Translations", description = "A map that translates input values to url values.",
+			editor = EditorString.class)
+	@EditorString.EdOptsString(dflt = "{\"from\":\"to\"}", lines = 5)
+	private String translations;
+
+	@ConfigurableField(
+			label = "Time Parser", description = "The parser that converts times.",
+			editor = EditorSubclass.class)
+	@EditorSubclass.EdOptsSubclass(iface = ParserZonedDateTime.class)
 	private ParserZonedDateTime timeParser;
-	private ParserNumber numberParser = new ParserNumber();
+
+	@ConfigurableField(
+			label = "Sleep", description = "The number of seconds to sleep after every imported run-section.",
+			editor = EditorInt.class, optional = true)
+	@EditorInt.EdOptsInt(dflt = 1, min = 0, max = 99999, step = 1)
+	private int sleepTime;
+
+	@ConfigurableField(
+			label = "Validate # Runs",
+			description = "If non-zero, instead of importing new data, the last # imported runs are re-imported.\n"
+			+ "Make sure you use a Validator with this option.",
+			editor = EditorInt.class, optional = true)
+	@EditorInt.EdOptsInt(dflt = 0, min = 0, max = 99999, step = 1)
+	private int runsToValidate;
+
 	private Translator translator;
+	private SensorThingsService service;
+	private ParserNumber numberParser = new ParserNumber();
 
 	private boolean verbose;
 	private boolean noAct = false;
-	private boolean fullImport = true;
-	private long sleepTime;
 
 	@Override
 	public void setVerbose(boolean verbose) {
@@ -123,46 +160,9 @@ public class ImporterAwaaPredictions implements Importer {
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
 		service = context;
-		getConfigEditor(context, edtCtx).setConfig(config);
-		timeParser = editorTimeParser.getValue();
-		sleepTime = 1000 * editorSleep.getValue();
-		try {
-			translator = new Translator(editorTranslator.getValue());
-		} catch (IOException exc) {
-			throw new IllegalArgumentException(exc);
-		}
-	}
-
-	@Override
-	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-		if (editor == null) {
-			editor = new EditorMap<>();
-
-			editorFullImport = new EditorBoolean(fullImport, "Full Import", "Import all rivers and sections every time.");
-			editor.addOption("fullImport", editorFullImport, true);
-
-			editorUrlRuns = new EditorString("", 1, "Runs Index", "The url to fetch the runs list from.");
-			editor.addOption("runsUrl", editorUrlRuns, false);
-
-			editorUrlRivers = new EditorString("", 1, "Rivers Index", "The url to fetch the rivers from.");
-			editor.addOption("riversUrl", editorUrlRivers, false);
-
-			editorUrlSections = new EditorString("", 1, "Sections Index", "The url to fetch the river sections from.");
-			editor.addOption("sectionsUrl", editorUrlSections, false);
-
-			editorUrlLevels = new EditorString("", 1, "Levels Index", "The url to fetch the water levels from.");
-			editor.addOption("levelsUrl", editorUrlLevels, false);
-
-			editorTranslator = new EditorString("{\"from\":\"to\"}", 10, "Translations", "A map that translates input values to url values.");
-			editor.addOption("translations", editorTranslator, true);
-
-			editorTimeParser = new EditorSubclass(null, null, ParserZonedDateTime.class, "Time Parser", "The parser that converts times.");
-			editor.addOption("timeParser", editorTimeParser, false);
-
-			editorSleep = new EditorInt(0, 99999, 1, 1, "Sleep", "The number of seconds to sleep after every imported run-section.");
-			editor.addOption("sleepTime", editorSleep, true);
-		}
-		return editor;
+		super.configure(config, context, edtCtx);
+		translator = new Translator();
+		translator.setMappings(translations);
 	}
 
 	@Override
@@ -221,7 +221,7 @@ public class ImporterAwaaPredictions implements Importer {
 		public double lat;
 		public double lon;
 		public double distance;
-		public List<Double> thresholds = new ArrayList<>();
+		public List<BigDecimal> thresholds = new ArrayList<>();
 		public Thing thing;
 
 		public RiverSection(int id, String name, River river) {
@@ -244,20 +244,6 @@ public class ImporterAwaaPredictions implements Importer {
 
 	}
 
-	private static String fetchFromUrl(String targetUrl) throws ImportException {
-		try {
-			LOGGER.debug("Fetching: {}", targetUrl);
-			CloseableHttpClient client = HttpClients.createSystem();
-			HttpGet get = new HttpGet(targetUrl);
-			CloseableHttpResponse response = client.execute(get);
-			String data = EntityUtils.toString(response.getEntity(), Charset.forName("UTF-8"));
-			return data;
-		} catch (IOException ex) {
-			LOGGER.error("Failed to fetch url " + targetUrl, ex);
-			throw new ImportException("Failed to fetch url " + targetUrl, ex);
-		}
-	}
-
 	private static JsonNode convertJson(String json) throws ImportException {
 		try {
 			ObjectMapper mapper = new ObjectMapper();
@@ -273,6 +259,7 @@ public class ImporterAwaaPredictions implements Importer {
 	private class ObsListIter extends AbstractIterator<List<Observation>> {
 
 		private final SortedMap<Integer, Run> runs;
+		private final List<Integer> runIds = new ArrayList<>();
 		private ObservedProperty opWaterLevel;
 		private Sensor sensorWaterModel;
 		private Iterator<Datastream> datastreams;
@@ -281,9 +268,10 @@ public class ImporterAwaaPredictions implements Importer {
 
 		public ObsListIter() throws ImportException, URISyntaxException {
 			runs = initRuns();
+			runIds.addAll(runs.keySet());
 			try {
 				// Figure out which runs need importing.
-				if (editorFullImport.getValue()) {
+				if (fullImport) {
 					Map<String, Object> opProps = new HashMap<>();
 					opProps.put("awaaId", 6);
 					opWaterLevel = SensorThingsUtils.findOrCreateOp(
@@ -312,7 +300,7 @@ public class ImporterAwaaPredictions implements Importer {
 					}
 					LOGGER.info("Model: {}", sensorWaterModel.getId());
 
-					Run run = runs.get(runs.firstKey());
+					Run run = runs.get(runs.lastKey());
 					SortedMap<Integer, River> rivers = importRivers(run);
 					for (River river : rivers.values()) {
 						SortedMap<Integer, RiverSection> sections = importRiverSections(run, river);
@@ -336,10 +324,15 @@ public class ImporterAwaaPredictions implements Importer {
 								+ " and Thing/properties/type eq 'riverSection'"
 								+ " and ObservedProperty/properties/awaaId gt 0"
 								+ " and not endswith(name, ']')")
-						.top(1000)
-						.expand("ObservedProperty($select=id,name,properties),"
-								+ "Thing($select=id,name,properties),"
-								+ "Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime)");
+						.top(1000);
+				if (runsToValidate == 0) {
+					dsQuery.expand("ObservedProperty($select=id,name,properties),"
+							+ "Thing($select=id,name,properties),"
+							+ "Observations($orderby=phenomenonTime desc;$top=1;$select=result,phenomenonTime,parameters)");
+				} else {
+					dsQuery.expand("ObservedProperty($select=id,name,properties),"
+							+ "Thing($select=id,name,properties)");
+				}
 				EntityList<Datastream> dsList = dsQuery.list();
 				LOGGER.info("Datastreams: {}", dsList.size());
 				hasMore = false;
@@ -351,9 +344,9 @@ public class ImporterAwaaPredictions implements Importer {
 		}
 
 		private SortedMap<Integer, Run> initRuns() throws ImportException {
-			String runsUrlRaw = editorUrlRuns.getValue();
+			String runsUrlRaw = runsUrl;
 			String runsUrl = translator.replaceIn(runsUrlRaw, true);
-			String runsJson = fetchFromUrl(runsUrl);
+			String runsJson = UrlUtils.fetchFromUrl(runsUrl);
 			JsonNode runsNode = convertJson(runsJson);
 			JsonNode listJson = JsonUtils.walk(runsNode, "rows");
 			if (!listJson.isArray()) {
@@ -373,7 +366,7 @@ public class ImporterAwaaPredictions implements Importer {
 
 		private JsonNode fetchList(String rawUrl, String walkPath) throws ImportException {
 			String replacedUrl = translator.replaceIn(rawUrl, true);
-			String baseJson = fetchFromUrl(replacedUrl);
+			String baseJson = UrlUtils.fetchFromUrl(replacedUrl);
 			JsonNode riversNode = convertJson(baseJson);
 			JsonNode listJson = JsonUtils.walk(riversNode, walkPath);
 			if (!listJson.isArray()) {
@@ -387,7 +380,7 @@ public class ImporterAwaaPredictions implements Importer {
 		 */
 		private SortedMap<Integer, River> importRivers(Run run) throws ImportException {
 			translator.put("idrunmike", Integer.toString(run.id));
-			JsonNode listJson = fetchList(editorUrlRivers.getValue(), "rows");
+			JsonNode listJson = fetchList(riversUrl, "rows");
 			SortedMap<Integer, River> riverMap = new TreeMap<>();
 			for (JsonNode element : listJson) {
 				Integer riverId = Integer.valueOf(JsonUtils.walk(element, "ID").asText());
@@ -412,7 +405,7 @@ public class ImporterAwaaPredictions implements Importer {
 			}
 			translator.put("idrunmike", Integer.toString(run.id));
 			translator.put("idriver", Integer.toString(river.id));
-			JsonNode listJson = fetchList(editorUrlSections.getValue(), "rows");
+			JsonNode listJson = fetchList(sectionsUrl, "rows");
 			SortedMap<Integer, RiverSection> sectionMap = new TreeMap<>();
 			for (JsonNode element : listJson) {
 				Integer sectionId = Integer.valueOf(JsonUtils.walk(element, "IDSEZIONE").asText());
@@ -427,9 +420,9 @@ public class ImporterAwaaPredictions implements Importer {
 				section.distance = Double.valueOf(JsonUtils.walk(element, "KM").asText());
 				section.lat = Double.valueOf(JsonUtils.walk(element, "LAT").asText());
 				section.lon = Double.valueOf(JsonUtils.walk(element, "LON").asText());
-				section.thresholds.add(Double.valueOf(JsonUtils.walk(element, "ALLARME1").asText()));
-				section.thresholds.add(Double.valueOf(JsonUtils.walk(element, "ALLARME2").asText()));
-				section.thresholds.add(Double.valueOf(JsonUtils.walk(element, "ALLARME3").asText()));
+				section.thresholds.add(new BigDecimal(JsonUtils.walk(element, "ALLARME1").asText()));
+				section.thresholds.add(new BigDecimal(JsonUtils.walk(element, "ALLARME2").asText()));
+				section.thresholds.add(new BigDecimal(JsonUtils.walk(element, "ALLARME3").asText()));
 			}
 			for (RiverSection section : sectionMap.values()) {
 				try {
@@ -452,7 +445,7 @@ public class ImporterAwaaPredictions implements Importer {
 			parameters.put("runId", run.id);
 
 			List<Observation> observations = new ArrayList<>();
-			JsonNode listJson = fetchList(editorUrlLevels.getValue(), "rows");
+			JsonNode listJson = fetchList(levelsUrl, "rows");
 			for (JsonNode element : listJson) {
 				if (sectionId != Integer.valueOf(JsonUtils.walk(element, "IDSEZIONE").asText())) {
 					throw new ImportException("Incorrect section id in response.");
@@ -506,16 +499,24 @@ public class ImporterAwaaPredictions implements Importer {
 				LOGGER.error("Found multiple river sections with id " + section.id);
 			}
 			Thing thing;
+			Map<String, Object> thingProps = new HashMap<>();
+			thingProps.put("type", "riverSection");
+			thingProps.put("awaaId", section.id);
+			thingProps.put("riverAwaaId", section.river.id);
+			thingProps.put("distance", BigDecimal.valueOf(section.distance));
+			// Old threshold locations, should be removed in the future.
+			thingProps.put("treshold1", section.thresholds.get(0));
+			thingProps.put("treshold2", section.thresholds.get(1));
+			thingProps.put("treshold3", section.thresholds.get(2));
+
 			if (tList.size() > 0) {
 				section.thing = tList.toList().get(0);
 				thing = section.thing;
+				if (addAllToMap(thing.getProperties(), thingProps)) {
+					service.update(thing);
+				}
 			} else {
 				LOGGER.info("Creating section Thing {}.", section.name);
-				Map<String, Object> thingProps = new HashMap<>();
-				thingProps.put("type", "riverSection");
-				thingProps.put("awaaId", section.id);
-				thingProps.put("riverAwaaId", section.river.id);
-				thingProps.put("distance", section.distance);
 				thing = new Thing(section.name, "River section " + section.name, thingProps);
 				service.create(thing);
 
@@ -569,10 +570,29 @@ public class ImporterAwaaPredictions implements Importer {
 		}
 
 		private List<Observation> computeForDatastreams() throws IOException, ServiceFailureException, ImportException {
+			if (runsToValidate == 0) {
+				return computeForDatastreamsImport();
+			} else {
+				return computeForDatastreamsValidate();
+			}
+		}
+
+		private List<Observation> computeForDatastreamsImport() throws IOException, ServiceFailureException, ImportException {
 			Datastream ds = datastreams.next();
 			int sectionAwaaId = JsonUtils.toInt(ds.getThing().getProperties().get("awaaId"));
 			int riverAwaaId = JsonUtils.toInt(ds.getThing().getProperties().get("riverAwaaId"));
-			int lastRun = JsonUtils.toInt(ds.getProperties().get("lastRunId"), 0);
+
+			int lastRunDs = JsonUtils.toInt(ds.getProperties().get("lastRunId"), 0);
+
+			Observation first = ds.observations()
+					.query()
+					.orderBy("phenomenonTime desc,id desc")
+					.first();
+			int lastRunObs = JsonUtils.toInt(first.getParameters().get("runId"), lastRunDs);
+			if (lastRunObs != lastRunDs) {
+				LOGGER.warn("Datastream has different lastRunId ({}) than its Observations ({})", lastRunDs, lastRunObs);
+			}
+			int lastRun = lastRunDs;
 			int nextRun = -1;
 			for (Integer availableRun : runs.keySet()) {
 				if (availableRun > lastRun) {
@@ -587,23 +607,59 @@ public class ImporterAwaaPredictions implements Importer {
 			}
 			if (sleepTime > 0) {
 				try {
-					Thread.sleep(sleepTime);
+					Thread.sleep(sleepTime * 1000);
 				} catch (InterruptedException ex) {
 					LOGGER.error("Rude wakeop!", ex);
 				}
 			}
 
-			Datastream dsOnlyId = ds.withOnlyId();
-			List<Observation> observations = importObservations(dsOnlyId.withOnlyId(), nextRun, riverAwaaId, sectionAwaaId);
+			List<Observation> observations = importObservations(ds, nextRun, riverAwaaId, sectionAwaaId);
 			LOGGER.info("Generated {} observations for river {}, section {}, run {}", observations.size(), riverAwaaId, sectionAwaaId, nextRun);
 
 			if (!noAct) {
 				// Update the property lastRunId, both in the local cache and on the server.
 				Map<String, Object> properties = ds.getProperties();
 				properties.put("lastRunId", nextRun);
+				Datastream dsOnlyId = ds.withOnlyId();
 				dsOnlyId.setProperties(properties);
 				service.update(dsOnlyId);
 			}
+			return observations;
+		}
+
+		private List<Observation> computeForDatastreamsValidate() throws IOException, ServiceFailureException, ImportException {
+			Datastream ds = datastreams.next();
+			int sectionAwaaId = JsonUtils.toInt(ds.getThing().getProperties().get("awaaId"));
+			int riverAwaaId = JsonUtils.toInt(ds.getThing().getProperties().get("riverAwaaId"));
+
+			int lastRunDs = JsonUtils.toInt(ds.getProperties().get("lastRunId"), 0);
+
+			List<Integer> validateRuns = null;
+			for (int i = runIds.size() - 1; i >= 0; i--) {
+				if (runIds.get(i) == lastRunDs) {
+					validateRuns = runIds.subList(Math.max(0, i - runsToValidate + 1), i + 1);
+					LOGGER.info("Validating runs {}", validateRuns);
+					break;
+				}
+			}
+
+			if (validateRuns == null) {
+				// Nothing to do for this datastream.
+				return Collections.EMPTY_LIST;
+			}
+			if (sleepTime > 0) {
+				try {
+					Thread.sleep(sleepTime * 1000);
+				} catch (InterruptedException ex) {
+					LOGGER.error("Rude wakeop!", ex);
+				}
+			}
+
+			List<Observation> observations = new ArrayList<>();
+			for (Integer runId : validateRuns) {
+				observations.addAll(importObservations(ds, runId, riverAwaaId, sectionAwaaId));
+			}
+			LOGGER.info("Generated {} observations for river {}, section {}", observations.size(), riverAwaaId, sectionAwaaId);
 			return observations;
 		}
 
