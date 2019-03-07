@@ -52,6 +52,13 @@ public class ValidatorByParameter extends AbstractConfigurable<SensorThingsServi
 	private String parameter;
 
 	@ConfigurableField(
+			label = "Check Time",
+			description = "Check the phenomenonTime too",
+			editor = EditorBoolean.class)
+	@EditorBoolean.EdOptsBool()
+	private boolean checkPhenomenonTime;
+
+	@ConfigurableField(
 			label = "Update",
 			description = "Update existing observations.",
 			editor = EditorBoolean.class)
@@ -70,6 +77,11 @@ public class ValidatorByParameter extends AbstractConfigurable<SensorThingsServi
 	private String buildFilter(Observation obs) {
 		StringBuilder filter = new StringBuilder();
 		boolean first = true;
+		if (checkPhenomenonTime) {
+			filter.append("phenomenonTime eq ");
+			filter.append(obs.getPhenomenonTime().toString());
+			first = false;
+		}
 		for (String param : parameters) {
 			if (first) {
 				first = false;
@@ -102,7 +114,7 @@ public class ValidatorByParameter extends AbstractConfigurable<SensorThingsServi
 				if (first == null) {
 					return true;
 				} else {
-					LOGGER.warn("Observation {} with given Parameters {} = {} exists.", first.getId(), parameters, obs.getParameters());
+					LOGGER.trace("Observation {} with given Parameters {} = {} exists.", first.getId(), parameters, obs.getParameters());
 					if (update) {
 						obs.setId(first.getId());
 						return true;
@@ -120,7 +132,7 @@ public class ValidatorByParameter extends AbstractConfigurable<SensorThingsServi
 				if (first == null) {
 					return true;
 				} else {
-					LOGGER.warn("Observation {} with given Parameter {} = {} exists.", first.getId(), parameters, obs.getParameters());
+					LOGGER.trace("Observation {} with given Parameter {} = {} exists.", first.getId(), parameters, obs.getParameters());
 					if (update) {
 						obs.setId(first.getId());
 						return true;
