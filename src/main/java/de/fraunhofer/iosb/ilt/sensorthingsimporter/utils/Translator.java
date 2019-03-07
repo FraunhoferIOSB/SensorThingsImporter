@@ -18,11 +18,16 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.JsonElement;
+import de.fraunhofer.iosb.ilt.configurable.AbstractConfigurable;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.csv.CSVRecord;
@@ -33,23 +38,38 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
-public class Translator {
+public class Translator extends AbstractConfigurable<Void, Void> {
 
 	/**
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(Translator.class);
 	private static final Pattern PLACE_HOLDER_PATTERN = Pattern.compile("\\{([0-9]+)\\}");
-	private final Map<String, String> replaces;
 
-	public Translator() {
-		replaces = new HashMap<>();
+	private static final TypeReference<Map<String, String>> TYPE_REF_MAP_STRING_STRING = new TypeReference<Map<String, String>>() {
+		// Empty by design.
+	};
+	private final Map<String, String> replaces = new HashMap<>();
+
+	@ConfigurableField(
+			label = "Translations", description = "A map that translates input values to url values.",
+			editor = EditorString.class)
+	@EditorString.EdOptsString(lines = 10, dflt = "{\"from\":\"to\"}")
+	private String mappings;
+
+	@Override
+	public void configure(JsonElement config, Void context, Void edtCtx) {
+		super.configure(config, context, edtCtx);
+		setMappings(mappings);
 	}
 
-	public Translator(String json) throws IOException {
-		ObjectMapper mapper = new ObjectMapper();
-		replaces = mapper.readValue(json, new TypeReference<Map<String, String>>() {
-		});
+	public void setMappings(String json) {
+		try {
+			ObjectMapper mapper = new ObjectMapper();
+			replaces.putAll(mapper.readValue(json, TYPE_REF_MAP_STRING_STRING));
+		} catch (IOException ex) {
+			throw new RuntimeException("Failed to parse mapping.", ex);
+		}
 	}
 
 	public String translate(String input) {

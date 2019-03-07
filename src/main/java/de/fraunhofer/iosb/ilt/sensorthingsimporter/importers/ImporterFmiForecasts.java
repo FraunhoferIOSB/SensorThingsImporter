@@ -121,11 +121,8 @@ public class ImporterFmiForecasts implements Importer {
 		getConfigEditor(context, edtCtx).setConfig(config);
 		sleepTime = 1000 * editorSleep.getValue();
 
-		try {
-			translator = new Translator(editorTranslator.getValue());
-		} catch (IOException exc) {
-			throw new IllegalArgumentException(exc);
-		}
+		translator = new Translator();
+		translator.setMappings(editorTranslator.getValue());
 	}
 
 	@Override
