@@ -1,0 +1,11 @@
+projectName: SensorThingsImporter
+projectDescription: SensroThinsImporter base
+allBranches: true
+
+branches:
+  - name: master
+    description: master specific description
+    build:
+      type: webhook
+      method: POST
+      url: https://gitlab-ext.iosb.fraunhofer.de/api/v4/projects/186/ref/master/trigger/pipeline?token=ffecbf5ff36bd352232bb509f6b806
