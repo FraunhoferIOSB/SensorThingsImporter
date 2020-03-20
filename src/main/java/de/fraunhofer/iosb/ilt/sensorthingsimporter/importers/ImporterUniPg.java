@@ -16,8 +16,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
 
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.document.DocumentParser;
-import com.google.common.collect.AbstractIterator;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
@@ -30,6 +28,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.DsMapperFilter;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.document.DocumentParser;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.Utils;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
@@ -185,7 +184,7 @@ public class ImporterUniPg implements Importer {
 		}
 	}
 
-	private class ObsListIter extends AbstractIterator<List<Observation>> {
+	private class ObsListIter implements Iterator<List<Observation>> {
 
 		Iterator<Map.Entry<String, TreeMap<Long, File>>> baseIterator;
 		Iterator<Map.Entry<Long, File>> filesIterator;
@@ -288,14 +287,19 @@ public class ImporterUniPg implements Importer {
 		}
 
 		@Override
-		protected List<Observation> computeNext() {
+		public boolean hasNext() {
+			return baseIterator.hasNext() || (filesIterator != null && filesIterator.hasNext());
+		}
+
+		@Override
+		public List<Observation> next() {
 			if (filesIterator == null || !filesIterator.hasNext()) {
 				if (baseIterator.hasNext()) {
 					Map.Entry<String, TreeMap<Long, File>> nextBaseEntry = baseIterator.next();
 					filesIterator = nextBaseEntry.getValue().entrySet().iterator();
 					currentBase = nextBaseEntry.getKey();
 				} else {
-					return endOfData();
+					return Collections.emptyList();
 				}
 			}
 			if (filesIterator.hasNext()) {
@@ -305,7 +309,7 @@ public class ImporterUniPg implements Importer {
 					LOGGER.error("Failed", exc);
 				}
 			}
-			return endOfData();
+			return Collections.emptyList();
 		}
 	}
 

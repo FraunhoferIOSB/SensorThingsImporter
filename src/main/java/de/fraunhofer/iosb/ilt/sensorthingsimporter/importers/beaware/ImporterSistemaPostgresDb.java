@@ -16,8 +16,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.beaware;
 
-import com.google.common.base.Strings;
-import com.google.common.collect.AbstractIterator;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.AbstractConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
@@ -29,6 +27,7 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.SensorThingsUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.SensorThingsUtils.AggregationLevels;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.sta.Utils;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.Entity;
 import de.fraunhofer.iosb.ilt.sta.model.Location;
@@ -54,6 +53,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -291,13 +291,13 @@ public class ImporterSistemaPostgresDb extends AbstractConfigurable<SensorThings
 
 	private String getObservedPropertyNameFor(String sistemaName) {
 		String internalName = observedPropertyNameMapping.get(sistemaName.toUpperCase());
-		if (Strings.isNullOrEmpty(internalName)) {
+		if (Utils.isNullOrEmpty(internalName)) {
 			return sistemaName;
 		}
 		return internalName;
 	}
 
-	private class ObsListIter extends AbstractIterator<List<Observation>> {
+	private class ObsListIter implements Iterator<List<Observation>> {
 
 		private boolean initialised = false;
 		private BasicDataSource dataSource;
@@ -839,7 +839,12 @@ public class ImporterSistemaPostgresDb extends AbstractConfigurable<SensorThings
 		}
 
 		@Override
-		protected List<Observation> computeNext() {
+		public boolean hasNext() {
+			return datastreamIter.hasNext() || multiDatastreamIter.hasNext();
+		}
+
+		@Override
+		public List<Observation> next() {
 			Connection connection = null;
 			try {
 				connection = dataSource.getConnection();
@@ -861,7 +866,7 @@ public class ImporterSistemaPostgresDb extends AbstractConfigurable<SensorThings
 					}
 				}
 			}
-			return endOfData();
+			return Collections.emptyList();
 		}
 
 		private Instant startTimeFromPhenTime(TimeObject time) {

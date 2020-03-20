@@ -16,7 +16,8 @@
 		<maven.compiler.source>8</maven.compiler.source>
 		<maven.compiler.target>8</maven.compiler.target>
 
-		<FROST-Client.version>0.22</FROST-Client.version>
+		<FROST-Client.version>0.28</FROST-Client.version>
+		<commons-collections.version>4.1</commons-collections.version>
 		<commons-csv.version>1.4</commons-csv.version>
 		<commons-io.version>2.5</commons-io.version>
 		<commons-dbcp2.version>2.4.0</commons-dbcp2.version>
@@ -112,6 +113,11 @@
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
 			<version>${logback.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-collections4</artifactId>
+			<version>${commons-collections.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>

@@ -16,7 +16,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
-import com.google.common.base.Strings;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.Utils;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
@@ -101,7 +100,7 @@ public class SensorThingsUtils {
 
 	public static ObservedProperty findOrCreateOp(SensorThingsService service, String name, URI def, String description, Map<String, Object> properties, String filter, boolean aggregates) throws ServiceFailureException {
 		Query<ObservedProperty> query = service.observedProperties().query();
-		if (Strings.isNullOrEmpty(filter)) {
+		if (Utils.isNullOrEmpty(filter)) {
 			query.filter("name eq '" + Utils.escapeForStringConstant(name) + "'");
 		} else {
 			query.filter(filter);

@@ -18,7 +18,6 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.beaware;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.AbstractIterator;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
@@ -28,8 +27,8 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.document.DocumentParser;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen.TimeGen;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.document.DocumentParser;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.Id;
@@ -181,7 +180,7 @@ public class ImporterAwaa implements Importer {
 		}
 	}
 
-	private class ObsListIter extends AbstractIterator<List<Observation>> {
+	private class ObsListIter implements Iterator<List<Observation>> {
 
 		private final Iterator<Datastream> datastreams;
 		private final Iterator<MultiDatastream> multiDatastreams;
@@ -303,7 +302,12 @@ public class ImporterAwaa implements Importer {
 		}
 
 		@Override
-		protected List<Observation> computeNext() {
+		public boolean hasNext() {
+			return datastreams.hasNext() || multiDatastreams.hasNext();
+		}
+
+		@Override
+		public List<Observation> next() {
 			while (datastreams.hasNext()) {
 				try {
 					return computeForDatastreams();
@@ -318,7 +322,7 @@ public class ImporterAwaa implements Importer {
 					LOGGER.error("Failed", exc);
 				}
 			}
-			return endOfData();
+			return Collections.emptyList();
 		}
 	}
 

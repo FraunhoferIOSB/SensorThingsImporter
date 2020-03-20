@@ -16,13 +16,9 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.beaware;
 
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.ParserZonedDateTime;
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.ParserNumber;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.ComparisonChain;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.AbstractConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
@@ -40,6 +36,8 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.SensorThingsUtils.Aggre
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.SensorThingsUtils.addAllToMap;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.ParserNumber;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.ParserZonedDateTime;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.Location;
@@ -65,6 +63,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import org.apache.commons.collections4.comparators.ComparatorChain;
 import org.geojson.LineString;
 import org.geojson.LngLatAlt;
 import org.geojson.Point;
@@ -256,7 +255,7 @@ public class ImporterAwaaPredictions extends AbstractConfigurable<SensorThingsSe
 		}
 	}
 
-	private class ObsListIter extends AbstractIterator<List<Observation>> {
+	private class ObsListIter implements Iterator<List<Observation>> {
 
 		private final SortedMap<Integer, Run> runs;
 		private final List<Integer> runIds = new ArrayList<>();
@@ -555,7 +554,15 @@ public class ImporterAwaaPredictions extends AbstractConfigurable<SensorThingsSe
 			}
 			LOGGER.info("Creating Location for river {}.", river);
 			List<RiverSection> sectionList = new ArrayList<>(sections.values());
-			Collections.sort(sectionList, (RiverSection o1, RiverSection o2) -> ComparisonChain.start().compare(o1.distance, o2.distance).compare(o1.id, o2.id).result());
+			Collections.sort(
+					sectionList,
+					(o1, o2) -> new ComparatorChain<RiverSection>()
+							.thenComparingDouble((value) -> {
+								return value.distance;
+							})
+							.thenComparingInt((value) -> {
+								return value.id;
+							}).compare(o1, o2));
 			List<LngLatAlt> points = new ArrayList<>();
 			for (RiverSection section : sectionList) {
 				points.add(new LngLatAlt(section.lon, section.lat));
@@ -668,7 +675,12 @@ public class ImporterAwaaPredictions extends AbstractConfigurable<SensorThingsSe
 		}
 
 		@Override
-		protected List<Observation> computeNext() {
+		public boolean hasNext() {
+			return datastreams.hasNext() || (multiDatastreams != null && multiDatastreams.hasNext());
+		}
+
+		@Override
+		public List<Observation> next() {
 			while (datastreams.hasNext()) {
 				try {
 					return computeForDatastreams();
@@ -687,7 +699,7 @@ public class ImporterAwaaPredictions extends AbstractConfigurable<SensorThingsSe
 					LOGGER.error("Failed", exc);
 				}
 			}
-			return endOfData();
+			return Collections.emptyList();
 		}
 	}
 

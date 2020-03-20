@@ -16,7 +16,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
 
-import com.google.common.collect.AbstractIterator;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
@@ -703,7 +702,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		return input.substring(input.lastIndexOf('/') + 1);
 	}
 
-	private class ObservationListIter extends AbstractIterator<List<Observation>> {
+	private class ObservationListIter implements Iterator<List<Observation>> {
 
 		private final EntityCache<String, FeatureOfInterest> foiCache;
 		private final EntityCache<String, Datastream> datastreamCache;
@@ -802,7 +801,12 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		}
 
 		@Override
-		protected List<Observation> computeNext() {
+		public boolean hasNext() {
+			return datastreamIterator.hasNext();
+		}
+
+		@Override
+		public List<Observation> next() {
 			if (datastreamIterator.hasNext()) {
 				Datastream ds = datastreamIterator.next();
 				try {
@@ -811,7 +815,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 					LOGGER.error("Failed to import data for datastream " + ds.getName(), ex);
 				}
 			}
-			return endOfData();
+			return Collections.emptyList();
 		}
 
 	}

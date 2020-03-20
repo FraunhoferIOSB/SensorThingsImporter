@@ -19,7 +19,6 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.beaware;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.AbstractIterator;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
@@ -179,7 +178,7 @@ public class ImporterFmiForecasts implements Importer {
 		}
 	}
 
-	private class ObsListIter extends AbstractIterator<List<Observation>> {
+	private class ObsListIter implements Iterator<List<Observation>> {
 
 		private String dataUrl;
 		private Iterator<Thing> stations;
@@ -369,7 +368,12 @@ public class ImporterFmiForecasts implements Importer {
 		}
 
 		@Override
-		protected List<Observation> computeNext() {
+		public boolean hasNext() {
+			return stations.hasNext();
+		}
+
+		@Override
+		public List<Observation> next() {
 			while (stations.hasNext()) {
 				try {
 					return computeForStation();
@@ -377,7 +381,7 @@ public class ImporterFmiForecasts implements Importer {
 					LOGGER.error("Failed", exc);
 				}
 			}
-			return endOfData();
+			return Collections.emptyList();
 		}
 	}
 

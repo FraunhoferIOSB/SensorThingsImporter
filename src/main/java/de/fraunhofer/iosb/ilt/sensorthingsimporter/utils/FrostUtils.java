@@ -18,7 +18,6 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Strings;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.Utils;
 import de.fraunhofer.iosb.ilt.sta.jackson.ObjectMapperFactory;
@@ -624,7 +623,7 @@ public final class FrostUtils {
 	}
 
 	public static <Q extends Entity<Q>> Query<Q> addOrCreateFilter(final Query<Q> query, final String filter, final String name) {
-		if (Strings.isNullOrEmpty(filter)) {
+		if (Utils.isNullOrEmpty(filter)) {
 			return query.filter("name eq '" + Utils.escapeForStringConstant(name) + "'");
 		} else {
 			return query.filter(filter);

@@ -17,7 +17,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
-import com.google.common.collect.AbstractIterator;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
@@ -41,6 +40,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -223,7 +223,7 @@ public class ImporterCsv implements Importer {
 		}
 	}
 
-	private class ObsListIter extends AbstractIterator<List<Observation>> {
+	private class ObsListIter implements Iterator<List<Observation>> {
 
 		private final Iterator<CSVRecord> records;
 		private boolean limitRows;
@@ -240,7 +240,12 @@ public class ImporterCsv implements Importer {
 		}
 
 		@Override
-		protected List<Observation> computeNext() {
+		public boolean hasNext() {
+			return records.hasNext();
+		}
+
+		@Override
+		public List<Observation> next() {
 			while (records.hasNext()) {
 				CSVRecord record = records.next();
 				totalCount++;
@@ -249,7 +254,7 @@ public class ImporterCsv implements Importer {
 					continue;
 				}
 				if (limitRows && rowCount > rowLimit) {
-					return endOfData();
+					return Collections.emptyList();
 				}
 				List<Observation> result = new ArrayList<>();
 				for (RecordConverterCSV rcCsv : rcCsvs) {
@@ -267,7 +272,7 @@ public class ImporterCsv implements Importer {
 				return result;
 			}
 			LOGGER.info("Parsed {} rows of {}.", rowCount, totalCount);
-			return endOfData();
+			return Collections.emptyList();
 		}
 	}
 
