@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
- * Karlsruhe, Germany.
+ * Copyright (C) 2019 Fraunhofer IOSB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,12 +28,12 @@ import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 public class AuthNone implements AuthMethod {
 
 	@Override
-	public void configure(JsonElement config, Object context, Object edtCtx, ConfigEditor<?> configEditor) {
+	public void configure(JsonElement config, Void context, Void edtCtx, ConfigEditor<?> ce) {
 		// Nothing to configure
 	}
 
 	@Override
-	public ConfigEditor<?> getConfigEditor(Object context, Object edtCtx) {
+	public ConfigEditor<?> getConfigEditor(Void context, Void edtCtx) {
 		return new EditorNull();
 	}
 

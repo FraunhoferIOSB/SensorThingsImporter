@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
- * Karlsruhe, Germany.
+ * Copyright (C) 2019 Fraunhofer IOSB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +23,7 @@ import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
  *
  * @author scf
  */
-public interface AuthMethod extends Configurable<Object, Object> {
+public interface AuthMethod extends Configurable<Void, Void> {
 
 	public void setAuth(SensorThingsService service);
 }
