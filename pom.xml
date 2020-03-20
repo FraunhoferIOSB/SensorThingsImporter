@@ -13,8 +13,8 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<mainClass>de.fraunhofer.iosb.ilt.sensorthingsimporter.MainApp</mainClass>
 		<docker-image-name>fraunhoferiosb/frost-importer</docker-image-name>
-		<maven.compiler.source>11</maven.compiler.source>
-		<maven.compiler.target>11</maven.compiler.target>
+		<maven.compiler.source>8</maven.compiler.source>
+		<maven.compiler.target>8</maven.compiler.target>
 
 		<FROST-Client.version>0.22</FROST-Client.version>
 		<commons-csv.version>1.4</commons-csv.version>

@@ -164,7 +164,7 @@ public class FXMLController implements Initializable {
 	private void actionImport(ActionEvent event) throws ConfigurationException {
 		buttonImport.setDisable(true);
 
-		Task<Void> task = new Task<>() {
+		Task<Void> task = new Task<Void>() {
 			@Override
 			protected Void call() throws Exception {
 				updateProgress(0, 100);
