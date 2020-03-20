@@ -683,8 +683,8 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(dsId);
 				Datastream cachedDs = datastreamCache.get(dsId);
 				UnitOfMeasurement uom = FrostUtils.NULL_UNIT;
-				if (!uom.equals(cachedDs.getUnitOfMeasurement())) {
-					//uom = cachedDs.getUnitOfMeasurement();
+				if (cachedDs != null && !uom.equals(cachedDs.getUnitOfMeasurement())) {
+					uom = cachedDs.getUnitOfMeasurement();
 				}
 				Datastream ds = frostUtils.findOrCreateDatastream(filter, dsName, dsDescription, properties, uom, thing, observedProperty, sensor, cachedDs);
 				datastreamCache.put(dsId, ds);
@@ -772,8 +772,6 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 					sweValueExtractor.reset();
 				}
 
-				Datastream dsLight = ds.withOnlyId();
-				FeatureOfInterest foiLight = foi.withOnlyId();
 				while (sweValueExtractor.hasNext()) {
 					sweValueExtractor.next();
 					try {
@@ -782,8 +780,8 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 						ZonedDateTime zdtStart = ZonedDateTime.parse(timeStart.lastValue.trim());
 						ZonedDateTime zdtEnd = ZonedDateTime.parse(timeEnd.lastValue.trim());
 						o.setPhenomenonTimeFrom(Interval.of(zdtStart.toInstant(), zdtEnd.toInstant()));
-						o.setDatastream(dsLight);
-						o.setFeatureOfInterest(foiLight);
+						o.setDatastream(ds);
+						o.setFeatureOfInterest(foi);
 						result.add(o);
 					} catch (NumberFormatException ex) {
 						LOGGER.error("Failed to parse number {}", value.lastValue);
