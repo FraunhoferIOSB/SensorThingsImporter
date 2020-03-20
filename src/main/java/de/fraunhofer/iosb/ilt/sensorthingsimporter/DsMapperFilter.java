@@ -18,6 +18,7 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
 import com.google.gson.JsonElement;
+import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
@@ -54,7 +55,7 @@ public class DsMapperFilter implements DatastreamMapper {
 	}
 
 	@Override
-	public void configure(JsonElement config, Object context, Object edtCtx) {
+	public void configure(JsonElement config, Object context, Object edtCtx, ConfigEditor<?> configEditor) {
 		if (!(context instanceof SensorThingsService)) {
 			throw new IllegalArgumentException("Context must be a SensorThingsService. We got a " + context.getClass());
 		}

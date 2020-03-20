@@ -14,23 +14,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import de.fraunhofer.iosb.ilt.configurable.Configurable;
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
-import java.util.List;
 
 /**
  *
  * @author scf
+ * @param <T> The type of the result.
  */
-public interface DocumentParser extends Configurable<SensorThingsService, Object> {
+public interface Parser<T> extends Configurable<SensorThingsService, Object> {
 
-	public List<Observation> process(Datastream ds, String input) throws ImportException;
+	public T parse(JsonNode data);
 
-	public List<Observation> process(MultiDatastream mds, String... inputs) throws ImportException;
+	public T parse(String data);
 }

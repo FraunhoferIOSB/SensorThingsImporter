@@ -29,7 +29,7 @@ import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 public class AuthNone implements AuthMethod {
 
 	@Override
-	public void configure(JsonElement config, Object context, Object edtCtx) {
+	public void configure(JsonElement config, Object context, Object edtCtx, ConfigEditor<?> configEditor) {
 		// Nothing to configure
 	}
 

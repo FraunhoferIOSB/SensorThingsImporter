@@ -16,17 +16,13 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen;
 
-import com.google.gson.JsonElement;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorEnum;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
 
 /**
  *
@@ -34,42 +30,28 @@ import java.util.Map;
  */
 public class TimeGenAgo implements TimeGen {
 
-	private EditorMap<Map<String, Object>> editor;
-	private EditorInt editorAmount;
-	private EditorEnum<ChronoUnit> editorUnit;
+	@ConfigurableField(editor = EditorInt.class,
+			label = "Amount", description = "The amount of steps to go into the past.")
+	@EditorInt.EdOptsInt(dflt = 1, min = 0, max = 999999, step = 1)
+	private int amount;
+	@ConfigurableField(editor = EditorEnum.class,
+			label = "Unit", description = "The unit.")
+	@EditorEnum.EdOptsEnum(sourceType = ChronoUnit.class, dflt = "DAYS")
+	private ChronoUnit unit;
 
 	@Override
 	public Instant getInstant() {
-		return Instant.now().minus(editorUnit.getValue().getDuration().multipliedBy(editorAmount.getValue()));
+		return Instant.now().minus(unit.getDuration().multipliedBy(amount));
 	}
 
 	@Override
 	public Instant getInstant(Datastream ds) {
-		return Instant.now().minus(editorUnit.getValue().getDuration().multipliedBy(editorAmount.getValue()));
+		return Instant.now().minus(unit.getDuration().multipliedBy(amount));
 	}
 
 	@Override
 	public Instant getInstant(MultiDatastream mds) {
-		return Instant.now().minus(editorUnit.getValue().getDuration().multipliedBy(editorAmount.getValue()));
-	}
-
-	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
-		getConfigEditor(context, edtCtx).setConfig(config);
-	}
-
-	@Override
-	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-		if (editor == null) {
-			editor = new EditorMap<>();
-
-			editorUnit = new EditorEnum(ChronoUnit.class, ChronoUnit.DAYS, "Unit", "The unit.");
-			editor.addOption("unit", editorUnit, false);
-
-			editorAmount = new EditorInt(0, 999999, 1, 1, "amount", "The amount of steps to go into the past");
-			editor.addOption("amount", editorAmount, false);
-		}
-		return editor;
+		return Instant.now().minus(unit.getDuration().multipliedBy(amount));
 	}
 
 }

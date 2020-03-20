@@ -16,7 +16,7 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen;
 
-import de.fraunhofer.iosb.ilt.configurable.Configurable;
+import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
@@ -26,7 +26,7 @@ import java.time.Instant;
  *
  * @author scf
  */
-public interface TimeGen extends Configurable<SensorThingsService, Object> {
+public interface TimeGen extends AnnotatedConfigurable<SensorThingsService, Object> {
 
 	public Instant getInstant();
 

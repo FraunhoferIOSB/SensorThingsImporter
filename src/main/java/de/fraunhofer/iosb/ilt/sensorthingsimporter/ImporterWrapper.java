@@ -20,7 +20,9 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
+import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.Configurable;
+import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
@@ -69,20 +71,24 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 	private long sleepTime;
 
 	@Override
-	public void configure(JsonElement config, Object context, Object edtCtx) {
-		service = new SensorThingsService();
-		getConfigEditor(service, edtCtx).setConfig(config);
-		importer = editorImporter.getValue();
-		uploader = editorUploader.getValue();
-		validator = editorValidator.getValue();
+	public void configure(JsonElement config, Object context, Object edtCtx, ConfigEditor<?> configEditor) {
+		try {
+			service = new SensorThingsService();
+			getConfigEditor(service, edtCtx).setConfig(config);
+			importer = editorImporter.getValue();
+			uploader = editorUploader.getValue();
+			validator = editorValidator.getValue();
 
-		if (validator == null) {
-			validator = new Validator.ValidatorNull();
+			if (validator == null) {
+				validator = new Validator.ValidatorNull();
+			}
+
+			sleepTime = editorSleepTime.getValue();
+			doSleep = sleepTime > 0;
+			messageIntervalStart = editorMsgInterval.getValue();
+		} catch (ConfigurationException ex) {
+			throw new IllegalStateException(ex);
 		}
-
-		sleepTime = editorSleepTime.getValue();
-		doSleep = sleepTime > 0;
-		messageIntervalStart = editorMsgInterval.getValue();
 	}
 
 	@Override
@@ -172,7 +178,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 		this.noAct = noAct;
 		try {
 			JsonElement json = new JsonParser().parse(config);
-			configure(json, null, null);
+			configure(json, null, null, null);
 			importer.setVerbose(noAct);
 			importer.setNoAct(noAct);
 			uploader.setNoAct(noAct);

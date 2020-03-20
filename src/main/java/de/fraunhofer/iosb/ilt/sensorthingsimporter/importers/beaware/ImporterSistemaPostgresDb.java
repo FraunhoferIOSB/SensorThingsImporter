@@ -14,12 +14,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.beaware;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.AbstractIterator;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.AbstractConfigurable;
+import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
@@ -196,8 +198,8 @@ public class ImporterSistemaPostgresDb extends AbstractConfigurable<SensorThings
 	private String noResult = "9999";
 
 	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
-		super.configure(config, context, edtCtx);
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+		super.configure(config, context, edtCtx, configEditor);
 		service = context;
 	}
 

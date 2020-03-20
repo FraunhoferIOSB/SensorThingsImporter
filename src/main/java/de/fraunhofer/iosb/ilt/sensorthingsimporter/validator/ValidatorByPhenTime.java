@@ -117,7 +117,7 @@ public class ValidatorByPhenTime implements Validator {
 	}
 
 	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
 		getConfigEditor(context, edtCtx).setConfig(config);
 		update = editorUpdate.getValue();
 	}

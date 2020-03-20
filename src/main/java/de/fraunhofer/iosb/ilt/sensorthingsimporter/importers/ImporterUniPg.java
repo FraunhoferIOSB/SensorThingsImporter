@@ -16,9 +16,11 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
 
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.document.DocumentParser;
 import com.google.common.collect.AbstractIterator;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
@@ -96,7 +98,7 @@ public class ImporterUniPg implements Importer {
 	}
 
 	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
 		service = context;
 		getConfigEditor(context, edtCtx).setConfig(config);
 		docParser = editorDocumentParser.getValue();

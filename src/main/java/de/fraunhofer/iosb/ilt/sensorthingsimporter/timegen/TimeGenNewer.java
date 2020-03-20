@@ -16,16 +16,12 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen;
 
-import com.google.gson.JsonElement;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.Map;
 
 /**
  *
@@ -33,18 +29,20 @@ import java.util.Map;
  */
 public class TimeGenNewer implements TimeGen {
 
-	private EditorMap<Map<String, Object>> editor;
-	private EditorString editorStartTime;
+	@ConfigurableField(editor = EditorString.class,
+			label = "StartTime", description = "The starting time, if the datastream has no observations yet.")
+	@EditorString.EdOptsString(dflt = "2017-01-01T00:00:00Z")
+	private String startTime;
 
 	@Override
 	public Instant getInstant() {
-		return ZonedDateTime.parse(editorStartTime.getValue()).toInstant();
+		return ZonedDateTime.parse(startTime).toInstant();
 	}
 
 	@Override
 	public Instant getInstant(Datastream ds) {
 		if (ds.getObservations().toList().isEmpty()) {
-			return ZonedDateTime.parse(editorStartTime.getValue()).toInstant();
+			return ZonedDateTime.parse(startTime).toInstant();
 		} else {
 			return ds.getObservations().toList().get(0).getPhenomenonTime().getAsDateTime().plusSeconds(1).toInstant();
 		}
@@ -53,26 +51,10 @@ public class TimeGenNewer implements TimeGen {
 	@Override
 	public Instant getInstant(MultiDatastream mds) {
 		if (mds.getObservations().toList().isEmpty()) {
-			return ZonedDateTime.parse(editorStartTime.getValue()).toInstant();
+			return ZonedDateTime.parse(startTime).toInstant();
 		} else {
 			return mds.getObservations().toList().get(0).getPhenomenonTime().getAsDateTime().plusSeconds(1).toInstant();
 		}
-	}
-
-	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
-		getConfigEditor(context, edtCtx).setConfig(config);
-	}
-
-	@Override
-	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-		if (editor == null) {
-			editor = new EditorMap<>();
-
-			editorStartTime = new EditorString("2017-01-01T00:00:00Z", 1, "StartTime", "The starting time, if the datastream has no observations yet.");
-			editor.addOption("startTime", editorStartTime, true);
-		}
-		return editor;
 	}
 
 }

@@ -21,18 +21,23 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler.ImporterScheduler;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
 import javafx.stage.FileChooser;
 import org.apache.commons.io.FileUtils;
@@ -57,6 +62,8 @@ public class FXMLController implements Initializable {
 	private CheckBox toggleNoAct;
 	@FXML
 	private CheckBox toggleScheduler;
+	@FXML
+	private ProgressBar progressBar;
 
 	private ImporterWrapper wrapper;
 	private ImporterScheduler scheduler;
@@ -65,8 +72,10 @@ public class FXMLController implements Initializable {
 	private EditorMap<?> configEditorSchedule;
 	private FileChooser fileChooser = new FileChooser();
 
+	private ExecutorService executor = Executors.newFixedThreadPool(1);
+
 	@FXML
-	private void actionLoad(ActionEvent event) {
+	private void actionLoad(ActionEvent event) throws ConfigurationException {
 		if (toggleScheduler.isSelected()) {
 			loadScheduler();
 		} else {
@@ -82,10 +91,10 @@ public class FXMLController implements Initializable {
 		wrapper = new ImporterWrapper();
 		configEditorImport = wrapper.getConfigEditor(null, null);
 		replaceEditor();
-		wrapper.configure(json, null, null);
+		wrapper.configure(json, null, null, null);
 	}
 
-	private void loadScheduler() {
+	private void loadScheduler() throws ConfigurationException {
 		JsonElement json = loadFromFile("Load Scheduler");
 		if (json == null) {
 			return;
@@ -93,7 +102,7 @@ public class FXMLController implements Initializable {
 		scheduler = new ImporterScheduler();
 		configEditorSchedule = scheduler.getConfigEditor(null, null);
 		replaceEditor();
-		scheduler.configure(json, null, null);
+		scheduler.configure(json, null, null, null);
 	}
 
 	private JsonElement loadFromFile(String title) {
@@ -152,7 +161,28 @@ public class FXMLController implements Initializable {
 	}
 
 	@FXML
-	private void actionImport(ActionEvent event) {
+	private void actionImport(ActionEvent event) throws ConfigurationException {
+		buttonImport.setDisable(true);
+
+		Task<Void> task = new Task<>() {
+			@Override
+			protected Void call() throws Exception {
+				updateProgress(0, 100);
+				try {
+					runImport();
+				} catch (ConfigurationException | RuntimeException ex) {
+					LOGGER.error("Failed to import.", ex);
+				}
+				updateProgress(100, 100);
+				importDone();
+				return null;
+			}
+		};
+		progressBar.progressProperty().bind(task.progressProperty());
+		executor.submit(task);
+	}
+
+	private void runImport() throws ConfigurationException {
 		if (toggleScheduler.isSelected()) {
 			scheduler.setNoAct(toggleNoAct.isSelected());
 			JsonElement json = configEditorSchedule.getConfig();
@@ -168,6 +198,10 @@ public class FXMLController implements Initializable {
 			String config = new Gson().toJson(json);
 			ImporterWrapper.importConfig(config, toggleNoAct.isSelected());
 		}
+	}
+
+	private void importDone() {
+		buttonImport.setDisable(false);
 	}
 
 	@FXML
@@ -192,5 +226,9 @@ public class FXMLController implements Initializable {
 		configEditorSchedule = scheduler.getConfigEditor(null, null);
 
 		replaceEditor();
+	}
+
+	public void close() {
+		executor.shutdown();
 	}
 }

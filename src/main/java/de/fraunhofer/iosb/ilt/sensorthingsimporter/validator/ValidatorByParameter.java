@@ -19,6 +19,8 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.AbstractConfigurable;
+import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
@@ -68,8 +70,8 @@ public class ValidatorByParameter extends AbstractConfigurable<SensorThingsServi
 	private List<String> parameters;
 
 	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
-		super.configure(config, context, edtCtx);
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+		super.configure(config, context, edtCtx, configEditor);
 		String[] split = parameter.split(",");
 		parameters = Arrays.asList(split);
 	}

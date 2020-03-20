@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.beaware;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -116,7 +116,7 @@ public class ImporterFmiForecasts implements Importer {
 	}
 
 	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
 		service = context;
 		getConfigEditor(context, edtCtx).setConfig(config);
 		sleepTime = 1000 * editorSleep.getValue();

@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.JsonElement;
@@ -40,7 +40,7 @@ public class ParserTime implements ParserZonedDateTime {
 	DateTimeFormatter formatter;
 
 	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
 		getConfigEditor(context, edtCtx).setConfig(config);
 		formatter = DateTimeFormatter.ofPattern(editorTimeFormat.getValue());
 		if (!editorZone.getValue().isEmpty()) {

@@ -30,7 +30,9 @@ public class ImporterGui extends Application {
 
 	@Override
 	public void start(Stage stage) throws Exception {
-		Parent root = FXMLLoader.load(getClass().getResource("/fxml/Scene.fxml"));
+		FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/Scene.fxml"));
+		Parent root = loader.load();
+		FXMLController controller = loader.getController();
 
 		Scene scene = new Scene(root);
 		scene.getStylesheets().add("/styles/Styles.css");
@@ -38,6 +40,7 @@ public class ImporterGui extends Application {
 		stage.setTitle("SensorThings Importer");
 		stage.setScene(scene);
 		stage.show();
+		stage.setOnCloseRequest(e -> controller.close());
 	}
 
 	/**

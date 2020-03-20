@@ -18,6 +18,7 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.auth;
 
 import com.google.gson.JsonElement;
+import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
@@ -45,7 +46,7 @@ public class AuthBasic implements AuthMethod {
 	private EditorString editorPassword;
 
 	@Override
-	public void configure(JsonElement config, Object context, Object edtCtx) {
+	public void configure(JsonElement config, Object context, Object edtCtx, ConfigEditor<?> configEditor) {
 		getConfigEditor(context, edtCtx).setConfig(config);
 	}
 

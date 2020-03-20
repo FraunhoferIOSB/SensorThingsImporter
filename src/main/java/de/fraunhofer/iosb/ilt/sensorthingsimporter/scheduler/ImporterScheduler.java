@@ -19,6 +19,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import de.fraunhofer.iosb.ilt.configurable.AbstractConfigurable;
+import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
@@ -61,7 +62,7 @@ public class ImporterScheduler extends AbstractConfigurable<Void, Void> {
 
 	private Thread shutdownHook;
 
-	public void loadOptions(Options options) throws IOException {
+	public void loadOptions(Options options) throws IOException, ConfigurationException {
 		noAct = options.getNoAct().isSet();
 		String fileName = options.getFileName().getValue();
 		File file = new File(fileName);
@@ -69,9 +70,9 @@ public class ImporterScheduler extends AbstractConfigurable<Void, Void> {
 		setConfig(config);
 	}
 
-	public void setConfig(String config) {
+	public void setConfig(String config) throws ConfigurationException {
 		JsonElement json = new JsonParser().parse(config);
-		configure(json, null, null);
+		configure(json, null, null, null);
 	}
 
 	public void start() throws SchedulerException {

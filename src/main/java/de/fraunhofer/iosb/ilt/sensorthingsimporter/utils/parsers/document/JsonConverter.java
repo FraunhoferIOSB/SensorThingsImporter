@@ -14,19 +14,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.document;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.Parser;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.ParserTime;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
@@ -66,7 +69,7 @@ public class JsonConverter implements DocumentParser {
 	private ParserTime timeParser;
 
 	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
 		getConfigEditor(context, edtCtx).setConfig(config);
 		String listPath = editorPathList.getValue();
 		listPathParts = listPath.split("/");

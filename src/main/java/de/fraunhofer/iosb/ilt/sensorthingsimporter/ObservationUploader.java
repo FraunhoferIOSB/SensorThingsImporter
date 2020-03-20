@@ -17,10 +17,11 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
 import com.google.gson.JsonElement;
+import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.Configurable;
+import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthMethod;
@@ -33,8 +34,7 @@ import de.fraunhofer.iosb.ilt.sta.model.ext.DataArrayDocument;
 import de.fraunhofer.iosb.ilt.sta.model.ext.DataArrayValue;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -48,21 +48,35 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
-public class ObservationUploader implements Configurable<SensorThingsService, Object> {
+public class ObservationUploader implements AnnotatedConfigurable<SensorThingsService, Object> {
 
 	/**
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(ObservationUploader.class);
 
-	private EditorMap<Map<String, Object>> editor;
-	private EditorString editorService;
-	private EditorSubclass<Object, Object, AuthMethod> editorAuthMethod;
-	private EditorBoolean editorUseDataArray;
+	@ConfigurableField(editor = EditorString.class,
+			label = "Service URL", description = "The url of the server to import into.")
+	@EditorString.EdOptsString(dflt = "http://localhost:8080/FROST-Server/v1.0")
+	private String serviceUrl;
+
+	@ConfigurableField(editor = EditorSubclass.class,
+			label = "Auth Method", description = "The authentication method the service uses.",
+			optional = true)
+	@EditorSubclass.EdOptsSubclass(
+			iface = AuthMethod.class)
+	private AuthMethod authMethod;
+
+	@ConfigurableField(editor = EditorBoolean.class,
+			label = "Use DataArrays",
+			description = "Use the SensorThingsAPI DataArray extension to post Observations. "
+			+ "This is much more efficient when posting many observations. "
+			+ "The number of items grouped together is determined by the messageInterval setting.")
+	@EditorBoolean.EdOptsBool()
+	private boolean useDataArrays;
 
 	private SensorThingsService service;
 	private boolean noAct = false;
-	private boolean dataArray = false;
 
 	private final Map<Entity, DataArrayValue> davMap = new HashMap<>();
 
@@ -74,40 +88,18 @@ public class ObservationUploader implements Configurable<SensorThingsService, Ob
 	private int updated = 0;
 
 	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+		AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
 		service = context;
-		getConfigEditor(service, edtCtx).setConfig(config);
-		dataArray = editorUseDataArray.getValue();
+
 		try {
-			service.setEndpoint(new URI(editorService.getValue()));
-			AuthMethod authMethod = editorAuthMethod.getValue();
+			service.setEndpoint(new URL(serviceUrl));
 			if (authMethod != null) {
 				authMethod.setAuth(service);
 			}
-		} catch (MalformedURLException | URISyntaxException ex) {
-			LOGGER.error("Failed to create service.", ex);
+		} catch (MalformedURLException ex) {
 			throw new IllegalArgumentException("Failed to create service.", ex);
 		}
-	}
-
-	@Override
-	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-		if (editor == null) {
-			editor = new EditorMap<>();
-			editorService = new EditorString("https://service.somewhere/path/v1.0", 1, "Service URL", "The url of the server.");
-			editor.addOption("serviceUrl", editorService, false);
-
-			editorAuthMethod = new EditorSubclass<>(context, edtCtx, AuthMethod.class, "Auth Method", "The authentication method the service uses.", false, "className");
-			editor.addOption("authMethod", editorAuthMethod, true);
-
-			editorUseDataArray = new EditorBoolean(false, "Use DataArrays",
-					"Use the SensorThingsAPI DataArray extension to post Observations. "
-					+ "This is much more efficient when posting many observations. "
-					+ "The number of items grouped together is determined by the messageInterval setting.");
-			editor.addOption("useDataArrays", editorUseDataArray, true);
-		}
-		return editor;
-
 	}
 
 	public void setNoAct(boolean noAct) {
@@ -126,10 +118,10 @@ public class ObservationUploader implements Configurable<SensorThingsService, Ob
 		if (obs.getId() != null && !noAct) {
 			service.update(obs);
 			updated++;
-		} else if (!dataArray && !noAct) {
+		} else if (!useDataArrays && !noAct) {
 			service.create(obs);
 			inserted++;
-		} else if (dataArray) {
+		} else if (useDataArrays) {
 			addToDataArray(obs);
 		}
 	}

@@ -14,19 +14,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.beaware;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.AbstractIterator;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.document.DocumentParser;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen.TimeGen;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
@@ -102,7 +104,7 @@ public class ImporterAwaa implements Importer {
 	}
 
 	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
 		service = context;
 		getConfigEditor(context, edtCtx).setConfig(config);
 		timeFormatter = DateTimeFormatter.ofPattern(editorTimeFormat.getValue());

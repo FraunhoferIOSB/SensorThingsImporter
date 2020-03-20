@@ -20,6 +20,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.AbstractConfigurable;
+import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import java.io.IOException;
@@ -27,7 +29,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.csv.CSVRecord;
@@ -58,8 +59,8 @@ public class Translator extends AbstractConfigurable<Void, Void> {
 	private String mappings;
 
 	@Override
-	public void configure(JsonElement config, Void context, Void edtCtx) {
-		super.configure(config, context, edtCtx);
+	public void configure(JsonElement config, Void context, Void edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+		super.configure(config, context, edtCtx, configEditor);
 		setMappings(mappings);
 	}
 

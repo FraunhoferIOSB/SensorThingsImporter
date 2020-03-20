@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.JsonElement;
@@ -27,23 +27,25 @@ import java.math.BigDecimal;
  *
  * @author scf
  */
-public class ParserBigdecimal implements Parser<BigDecimal> {
+public class ParserNumber implements Parser<Number> {
 
 	private EditorNull editor = new EditorNull("BigDecimal", "Parses strings into BigDecimals.");
 
 	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
 		getConfigEditor(context, edtCtx).setConfig(config);
 	}
 
 	@Override
 	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
 		return editor;
-
 	}
 
 	@Override
-	public BigDecimal parse(JsonNode value) {
+	public Number parse(JsonNode value) {
+		if (value.isNumber()) {
+			return value.numberValue();
+		}
 		return new BigDecimal(value.asText());
 	}
 

@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -35,6 +36,7 @@ public class JsonUtils {
 	public static TypeReference TYPE_MAP_STRING_OBJECT = new TypeReference<Map<String, Object>>() {
 		// Empty on purpose.
 	};
+	public static Charset UTF_8 = Charset.forName("UTF-8");
 
 	/**
 	 * The logger for this class.

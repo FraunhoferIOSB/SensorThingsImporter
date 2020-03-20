@@ -19,6 +19,8 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.gson.JsonElement;
+import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.EditorFactory;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
@@ -98,7 +100,7 @@ public class ImporterCsv implements Importer {
 	}
 
 	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx) {
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
 		service = context;
 		getConfigEditor(service, edtCtx).setConfig(config);
 	}
@@ -140,7 +142,7 @@ public class ImporterCsv implements Importer {
 		return editor;
 	}
 
-	public CSVParser init() throws ImportException {
+	public CSVParser init() throws ImportException, ConfigurationException {
 
 		rcCsvs.clear();
 		rcCsvs.addAll(editorConverters.getValue());
@@ -211,14 +213,12 @@ public class ImporterCsv implements Importer {
 
 	@Override
 	public Iterator<List<Observation>> iterator() {
-
 		try {
 			final CSVParser parser = init();
 			final Iterator<CSVRecord> records = parser.iterator();
 			ObsListIter obsListIter = new ObsListIter(records, rowSkip, rowLimit);
 			return obsListIter;
-		} catch (ImportException exc) {
-			LOGGER.error("Failed", exc);
+		} catch (ImportException | ConfigurationException exc) {
 			throw new IllegalStateException("Failed to handle csv file.", exc);
 		}
 	}
