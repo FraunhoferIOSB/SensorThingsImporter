@@ -59,19 +59,23 @@ public class ImporterScheduler extends AbstractConfigurable<Void, Void> {
 
 	private boolean noAct = false;
 	private Scheduler scheduler;
+	private File basePath;
 
 	private Thread shutdownHook;
 
 	public void loadOptions(Options options) throws IOException, ConfigurationException {
 		noAct = options.getNoAct().isSet();
 		String fileName = options.getFileName().getValue();
+		LOGGER.info("Loading schedule from {}", fileName);
 		File file = new File(fileName);
+		basePath = file.getAbsoluteFile().getParentFile();
+		LOGGER.info("Setting base path to {}", basePath);
 		String config = FileUtils.readFileToString(file, "UTF-8");
 		setConfig(config);
 	}
 
 	public void setConfig(String config) throws ConfigurationException {
-		JsonElement json = new JsonParser().parse(config);
+		JsonElement json = JsonParser.parseString(config);
 		configure(json, null, null, null);
 	}
 
@@ -84,10 +88,13 @@ public class ImporterScheduler extends AbstractConfigurable<Void, Void> {
 		for (final Schedule schedule : schedules) {
 			String triggerName = "trigger" + i;
 			String jobName = "job" + i;
+			File file = new File(basePath, schedule.getFileName());
+			String fileName = file.getAbsolutePath();
+			LOGGER.info("Adding job {} with schedule {} from file {}", jobName, schedule.getCronLine(), fileName);
 
 			JobDetail jobDetail = JobBuilder.newJob(ImporterJob.class)
 					.withIdentity(jobName)
-					.usingJobData(ImporterJob.KEY_FILENAME, schedule.getFileName())
+					.usingJobData(ImporterJob.KEY_FILENAME, fileName)
 					.usingJobData(ImporterJob.KEY_NO_ACT, noAct)
 					.build();
 
