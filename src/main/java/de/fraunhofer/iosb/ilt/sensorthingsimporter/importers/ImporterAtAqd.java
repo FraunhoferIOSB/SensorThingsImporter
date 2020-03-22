@@ -827,12 +827,12 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			if (datastreamIterator.hasNext()) {
 				Datastream ds = datastreamIterator.next();
 				try {
+					tracker.updateProgress(++progress, count);
 					return importDatastream(ds);
 				} catch (ImportException | ServiceFailureException ex) {
 					LOGGER.error("Failed to import data for datastream " + ds.getName(), ex);
 				}
 			}
-			tracker.updateProgress(++progress, count);
 			return Collections.emptyList();
 		}
 
