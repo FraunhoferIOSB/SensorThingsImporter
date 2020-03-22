@@ -52,7 +52,7 @@ public class ImporterJob implements Job {
 
 			String config = loadFile(importerFileName);
 			ImporterWrapper importer = new ImporterWrapper();
-			importer.doImport(config, noAct);
+			importer.doImport(config, noAct, null);
 		} catch (IOException ex) {
 			LOGGER.error("Failed to load configuration.", ex);
 			throw new JobExecutionException("Failed to load configuration", ex);

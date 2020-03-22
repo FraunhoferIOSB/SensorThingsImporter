@@ -27,6 +27,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.Validator;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
@@ -168,19 +169,24 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 		File configFile = new File(fileName);
 		try {
 			String config = FileUtils.readFileToString(configFile, "UTF-8");
-			doImport(config, noAct);
+			doImport(config, noAct, null);
 		} catch (IOException ex) {
 			LOGGER.error("Failed to read config file.", ex);
 		}
 	}
 
-	public void doImport(String config, boolean noAct) {
+	public void doImport(String config, boolean noAct, ProgressTracker tracker) {
 		this.noAct = noAct;
+		if (tracker == null) {
+			tracker = (p, t) -> {
+			};
+		}
 		try {
-			JsonElement json = new JsonParser().parse(config);
+			JsonElement json = JsonParser.parseString(config);
 			configure(json, null, null, null);
 			importer.setVerbose(noAct);
 			importer.setNoAct(noAct);
+			importer.setProgressTracker(tracker);
 			uploader.setNoAct(noAct);
 			doImport();
 		} catch (JsonSyntaxException exc) {
@@ -191,9 +197,9 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 		}
 	}
 
-	public static void importConfig(String config, boolean noAct) {
+	public static void importConfig(String config, boolean noAct, ProgressTracker tracker) {
 		ImporterWrapper wrapper = new ImporterWrapper();
-		wrapper.doImport(config, noAct);
+		wrapper.doImport(config, noAct, tracker);
 	}
 
 	public static void importCmdLine(List<String> arguments) throws URISyntaxException, IOException, MalformedURLException, ServiceFailureException {

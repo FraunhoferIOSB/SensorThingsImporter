@@ -24,6 +24,7 @@ import com.google.gson.JsonParser;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler.ImporterScheduler;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -169,7 +170,7 @@ public class FXMLController implements Initializable {
 			protected Void call() throws Exception {
 				updateProgress(0, 100);
 				try {
-					runImport();
+					runImport(this::updateProgress);
 				} catch (ConfigurationException | RuntimeException ex) {
 					LOGGER.error("Failed to import.", ex);
 				}
@@ -182,7 +183,7 @@ public class FXMLController implements Initializable {
 		executor.submit(task);
 	}
 
-	private void runImport() throws ConfigurationException {
+	private void runImport(ProgressTracker tracker) throws ConfigurationException {
 		if (toggleScheduler.isSelected()) {
 			scheduler.setNoAct(toggleNoAct.isSelected());
 			JsonElement json = configEditorSchedule.getConfig();
@@ -196,7 +197,7 @@ public class FXMLController implements Initializable {
 		} else {
 			JsonElement json = configEditorImport.getConfig();
 			String config = new Gson().toJson(json);
-			ImporterWrapper.importConfig(config, toggleNoAct.isSelected());
+			ImporterWrapper.importConfig(config, toggleNoAct.isSelected(), tracker);
 		}
 	}
 

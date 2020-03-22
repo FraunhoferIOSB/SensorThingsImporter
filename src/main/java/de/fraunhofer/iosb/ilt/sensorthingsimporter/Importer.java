@@ -18,6 +18,7 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
 import de.fraunhofer.iosb.ilt.configurable.Configurable;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.util.List;
@@ -37,4 +38,7 @@ public interface Importer extends Configurable<SensorThingsService, Object>, Ite
 	public void setVerbose(boolean verbose);
 
 	public void setNoAct(boolean noAct);
+
+	public default void setProgressTracker(ProgressTracker tracker) {
+	}
 }

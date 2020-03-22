@@ -28,6 +28,7 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen.TimeGen;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.Utils;
@@ -174,7 +175,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 	private TimeGen startTime;
 
 	private boolean verbose = false;
-	private boolean noAct = false;
+	private ProgressTracker tracker;
 
 	private SensorThingsService service;
 	private FrostUtils frostUtils;
@@ -225,20 +226,33 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 
 	@Override
 	public void setNoAct(boolean noAct) {
-		this.noAct = noAct;
 		frostUtils.setDryRun(noAct);
+	}
+
+	@Override
+	public void setProgressTracker(ProgressTracker tracker) {
+		this.tracker = tracker;
 	}
 
 	@Override
 	public Iterator<List<Observation>> iterator() {
 		try {
+			int total = 6;
+			int progress = 0;
+			tracker.updateProgress(progress, total);
 			loadCache();
+			tracker.updateProgress(++progress, total);
 			if (fullImport) {
 				importThings();
+				tracker.updateProgress(++progress, total);
 				importObservedProperties();
+				tracker.updateProgress(++progress, total);
 				importSensors();
+				tracker.updateProgress(++progress, total);
 				importFeaturesOfInterest();
+				tracker.updateProgress(++progress, total);
 				importDatastreams();
+				tracker.updateProgress(++progress, total);
 			}
 			return new ObservationListIter(foiCache, datastreamCache, observationsUrl, startTime);
 		} catch (ImportException | ServiceFailureException ex) {
@@ -710,6 +724,8 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		private final String observationsUrl;
 		private final Iterator<Datastream> datastreamIterator;
 		private final TimeGen startTime;
+		private final long count;
+		private long progress = 0;
 
 		public ObservationListIter(EntityCache<String, FeatureOfInterest> foiCache, EntityCache<String, Datastream> datastreamCache, String observationsUrl, TimeGen startTime) {
 			this.foiCache = foiCache;
@@ -717,6 +733,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			this.observationsUrl = observationsUrl;
 			this.startTime = startTime;
 			datastreamIterator = datastreamCache.values().iterator();
+			count = datastreamCache.values().size();
 		}
 
 		private List<Observation> importDatastream(Datastream ds) throws ImportException, ServiceFailureException {
@@ -815,6 +832,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 					LOGGER.error("Failed to import data for datastream " + ds.getName(), ex);
 				}
 			}
+			tracker.updateProgress(++progress, count);
 			return Collections.emptyList();
 		}
 
