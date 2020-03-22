@@ -308,7 +308,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				(entity) -> {
 					return Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null);
 				});
-		LOGGER.info("Loaded {} FeaturesOfInterest", datastreamCount);
+		LOGGER.info("Loaded {} Datastreams", datastreamCount);
 	}
 
 	private void importThings() throws ImportException {
@@ -422,7 +422,8 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 
 			String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(atop.localId);
 			ObservedProperty cachedObservedProperty = observedPropertyCache.get(atop.localId);
-			frostUtils.findOrCreateOp(filter, atop.name, atop.definition, atop.description, properties, cachedObservedProperty);
+			ObservedProperty op = frostUtils.findOrCreateOp(filter, atop.name, atop.definition, atop.description, properties, cachedObservedProperty);
+			observedPropertyCache.put(atop.localId, op);
 		}
 	}
 
