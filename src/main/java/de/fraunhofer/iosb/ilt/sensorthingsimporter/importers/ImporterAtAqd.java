@@ -763,6 +763,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				sweValueExtractor.addRequestedField(timeEnd);
 				sweValueExtractor.addRequestedField(value);
 				sweValueExtractor.parse();
+				LOGGER.info("Parsing {} Observations", sweValueExtractor.getElementCount());
 
 				if (FrostUtils.NULL_UNIT.equals(ds.getUnitOfMeasurement()) && sweValueExtractor.hasNext()) {
 					sweValueExtractor.next();

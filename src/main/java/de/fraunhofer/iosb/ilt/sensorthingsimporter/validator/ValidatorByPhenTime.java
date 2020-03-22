@@ -85,7 +85,7 @@ public class ValidatorByPhenTime implements Validator {
 					return true;
 				} else {
 					if (!resultCompare(obs.getResult(), first.getResult())) {
-						LOGGER.warn("Observation {} with given phenomenonTime {} exists, but result not the same. {} {} != {} {}.", first.getId(), obs.getPhenomenonTime(), obs.getResult().getClass().getName(), obs.getResult(), first.getResult(), first.getResult().getClass().getName());
+						LOGGER.debug("Observation {} with given phenomenonTime {} exists, but result not the same. {} {} != {} {}.", first.getId(), obs.getPhenomenonTime(), obs.getResult().getClass().getName(), obs.getResult(), first.getResult(), first.getResult().getClass().getName());
 						if (update) {
 							obs.setId(first.getId());
 							return true;
@@ -101,7 +101,7 @@ public class ValidatorByPhenTime implements Validator {
 					return true;
 				} else {
 					if (!obs.getResult().equals(first.getResult())) {
-						LOGGER.warn("Observation {} with given phenomenonTime {} exists, but result not the same. {} != {}.", first.getId(), obs.getPhenomenonTime(), obs.getResult(), first.getResult());
+						LOGGER.debug("Observation {} with given phenomenonTime {} exists, but result not the same. {} != {}.", first.getId(), obs.getPhenomenonTime(), obs.getResult(), first.getResult());
 						if (update) {
 							obs.setId(first.getId());
 							return true;

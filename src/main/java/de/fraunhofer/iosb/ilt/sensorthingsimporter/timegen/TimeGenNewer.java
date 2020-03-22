@@ -18,16 +18,28 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen;
 
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
+import de.fraunhofer.iosb.ilt.sta.model.Observation;
+import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
 import java.time.Instant;
 import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author scf
  */
 public class TimeGenNewer implements TimeGen {
+
+	/**
+	 * The logger for this class.
+	 */
+	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(TimeGenNewer.class);
 
 	@ConfigurableField(editor = EditorString.class,
 			label = "StartTime", description = "The starting time, if the datastream has no observations yet.")
@@ -41,11 +53,26 @@ public class TimeGenNewer implements TimeGen {
 
 	@Override
 	public Instant getInstant(Datastream ds) {
-		if (ds.getObservations().toList().isEmpty()) {
-			return ZonedDateTime.parse(startTime).toInstant();
-		} else {
-			return ds.getObservations().toList().get(0).getPhenomenonTime().getAsDateTime().plusSeconds(1).toInstant();
+		if (!ds.getObservations().toList().isEmpty()) {
+			TimeObject phenomenonTime = ds.getObservations().toList().get(0).getPhenomenonTime();
+			if (phenomenonTime.isInterval()) {
+				return phenomenonTime.getAsInterval().getEnd();
+			}
+			return phenomenonTime.getAsDateTime().plusSeconds(1).toInstant();
 		}
+		try {
+			List<Observation> obsList = ds.observations().query().top(1).orderBy("phenomenonTime desc").list().toList();
+			if (!obsList.isEmpty()) {
+				TimeObject phenomenonTime = obsList.get(0).getPhenomenonTime();
+				if (phenomenonTime.isInterval()) {
+					return phenomenonTime.getAsInterval().getEnd();
+				}
+				return phenomenonTime.getAsDateTime().plusSeconds(1).toInstant();
+			}
+		} catch (ServiceFailureException ex) {
+			LOGGER.error("Failed to fetch last Observation.", ex);
+		}
+		return ZonedDateTime.parse(startTime).toInstant();
 	}
 
 	@Override
