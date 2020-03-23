@@ -20,7 +20,7 @@ before_script:
 build-master:
   stage: build
   script:
-    - mvn $MAVEN_CLI_OPTS clean install
+    - mvn $MAVEN_CLI_OPTS install
     - mvn $MAVEN_CLI_OPTS dockerfile:build -Ddocker-image-name="$CI_REGISTRY_IMAGE"
     - mvn $MAVEN_CLI_OPTS dockerfile:push -Ddocker-image-name="$CI_REGISTRY_IMAGE"
   only:
@@ -31,7 +31,7 @@ build-master:
 build:
   stage: build
   script:
-    - mvn $MAVEN_CLI_OPTS clean install
+    - mvn $MAVEN_CLI_OPTS compile
     - mvn $MAVEN_CLI_OPTS dockerfile:build -Ddocker-image-name="$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
     - mvn $MAVEN_CLI_OPTS dockerfile:push -Ddocker-image-name="$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
   except:
