@@ -1,11 +1,12 @@
 image: maven:3-jdk-11
 
 services:
-  - docker:dind
+  - docker:18.09-dind
 
 variables:
   MAVEN_CLI_OPTS: "--batch-mode -Ddockerfile.username=gitlab-ci-token -Ddockerfile.password=$CI_BUILD_TOKEN"
   MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+  DOCKER_HOST: tcp://localhost:2375
 
 stages:
   - build
