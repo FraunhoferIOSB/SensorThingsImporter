@@ -4,4 +4,4 @@ FROM openjdk:11-jre
 ARG JAR_FILE
 COPY target/${JAR_FILE} /usr/local/FROST/FROST-Importer.jar
 WORKDIR /usr/local/FROST
-CMD ["java", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCGroupMemoryLimitForHeap", "-jar", "FROST-Importer.jar", "-s", "-c", "config/scheduler.json"]
+CMD ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=80", "-jar", "FROST-Importer.jar", "-s", "-c", "config/scheduler.json"]
