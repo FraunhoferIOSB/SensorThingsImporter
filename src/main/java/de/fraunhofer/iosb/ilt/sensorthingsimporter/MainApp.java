@@ -21,6 +21,7 @@ import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.Option;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.Parameter;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler.ImporterScheduler;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.GitVersionInfo;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -45,6 +46,7 @@ public class MainApp {
 	 * @throws org.quartz.SchedulerException
 	 */
 	public static void main(String[] args) throws URISyntaxException, IOException, MalformedURLException, ServiceFailureException, SchedulerException, ConfigurationException {
+		GitVersionInfo.logGitInfo();
 		List<String> arguments = new ArrayList<>(Arrays.asList(args));
 		if (arguments.isEmpty()) {
 			showHelp();

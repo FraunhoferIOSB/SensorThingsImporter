@@ -24,6 +24,7 @@
 		<configurable.version>0.23</configurable.version>
 		<dockerfile-maven-plugin.version>1.4.13</dockerfile-maven-plugin.version>
 		<geotools.version>22.2</geotools.version>
+		<git-commit-id-plugin.version>4.0.0</git-commit-id-plugin.version>
 		<javax-activation.version>1.1.1</javax-activation.version>
 		<logback.version>1.1.8</logback.version>
 		<openjfx.version>11.0.2</openjfx.version>
@@ -76,6 +77,32 @@
 						<version>${javax-activation.version}</version>
 					</dependency>
 				</dependencies>
+			</plugin>
+			<plugin>
+				<groupId>pl.project13.maven</groupId>
+				<artifactId>git-commit-id-plugin</artifactId>
+				<version>${git-commit-id-plugin.version}</version>
+				<executions>
+					<execution>
+						<id>get-the-git-infos</id>
+						<goals>
+							<goal>revision</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<dotGitDirectory>${project.basedir}/../.git</dotGitDirectory>
+					<prefix>git</prefix>
+					<verbose>false</verbose>
+					<generateGitPropertiesFile>true</generateGitPropertiesFile>
+					<generateGitPropertiesFilename>${project.build.outputDirectory}/git.json</generateGitPropertiesFilename>
+					<format>json</format>
+					<gitDescribe>
+						<skip>false</skip>
+						<always>false</always>
+						<dirty>-dirty</dirty>
+					</gitDescribe>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
