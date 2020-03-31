@@ -27,6 +27,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_BEGIN_TIME;
+import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_COUNTRY_CODE;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_END_TIME;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_LOCAL_ID;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_MEASUREMENT_REGIME;
@@ -366,6 +367,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 
 				Map<String, Object> stationProps = new HashMap<>();
 				stationProps.put(TAG_OWNER, entityOwner);
+				stationProps.put(TAG_COUNTRY_CODE, stationNamesSpace.substring(0, 2));
 				stationProps.put(TAG_LOCAL_ID, stationId);
 				stationProps.put(TAG_NAMESPACE, stationNamesSpace);
 				stationProps.put(TAG_MEDIA_MONITORED, stationMediaMonitored);
@@ -379,6 +381,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 
 				Map<String, Object> locationProps = new HashMap<>();
 				locationProps.put(TAG_OWNER, entityOwner);
+				locationProps.put(TAG_COUNTRY_CODE, stationNamesSpace.substring(0, 2));
 				locationProps.put(TAG_LOCAL_ID, stationId);
 				locationProps.put(TAG_NAMESPACE, stationNamesSpace);
 				locationProps.put(TAG_METADATA, stationMetaData);

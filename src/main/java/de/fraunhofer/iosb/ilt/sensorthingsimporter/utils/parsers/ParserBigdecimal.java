@@ -36,19 +36,27 @@ public class ParserBigdecimal implements Parser<BigDecimal>, AnnotatedConfigurab
 
 	@Override
 	public BigDecimal parse(JsonNode value) {
-		BigDecimal bigDecimal = new BigDecimal(value.asText());
-		if (dropTailingZeroes) {
-			return bigDecimal.stripTrailingZeros();
+		try {
+			BigDecimal bigDecimal = new BigDecimal(value.asText());
+			if (dropTailingZeroes) {
+				return bigDecimal.stripTrailingZeros();
+			}
+			return bigDecimal;
+		} catch (NumberFormatException ex) {
+			return null;
 		}
-		return bigDecimal;
 	}
 
 	@Override
 	public BigDecimal parse(String value) {
-		BigDecimal bigDecimal = new BigDecimal(value);
-		if (dropTailingZeroes) {
-			return bigDecimal.stripTrailingZeros();
+		try {
+			BigDecimal bigDecimal = new BigDecimal(value);
+			if (dropTailingZeroes) {
+				return bigDecimal.stripTrailingZeros();
+			}
+			return bigDecimal;
+		} catch (NumberFormatException ex) {
+			return null;
 		}
-		return bigDecimal;
 	}
 }
