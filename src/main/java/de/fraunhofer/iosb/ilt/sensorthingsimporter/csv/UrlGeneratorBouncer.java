@@ -24,6 +24,7 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
@@ -70,12 +71,17 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
 		@Override
 		public URL next() {
 			try {
-				if (!currentIterator.hasNext()) {
+				if (currentIterator.hasNext()) {
+					String next = currentIterator.next();
+					next = next.substring(next.indexOf("http"));
+					return new URL(next);
+				} else {
+					if (!parentIterator.hasNext()) {
+						return null;
+					}
 					nextParent();
+					return next();
 				}
-				String next = currentIterator.next();
-				next = next.substring(next.indexOf("http"));
-				return new URL(next);
 			} catch (MalformedURLException | ImportException ex) {
 				throw new IllegalStateException(ex);
 			}
@@ -86,7 +92,12 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
 				URL nextParentUrl = parentIterator.next();
 				String fetchFromUrl = UrlUtils.fetchFromUrl(nextParentUrl.toString().trim());
 				String[] split = StringUtils.split(fetchFromUrl, "\n\r ");
-				List<String> asList = Arrays.asList(split);
+				List<String> asList;
+				if (fetchFromUrl.isEmpty() || split.length == 0) {
+					asList = Collections.emptyList();
+				} else {
+					asList = Arrays.asList(split);
+				}
 				currentIterator = asList.iterator();
 			}
 		}

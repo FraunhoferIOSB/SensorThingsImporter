@@ -19,6 +19,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -57,7 +58,11 @@ public class UrlUtils {
 			CloseableHttpClient client = HttpClients.createSystem();
 			HttpGet get = new HttpGet(targetUrl);
 			CloseableHttpResponse response = client.execute(get);
-			String data = EntityUtils.toString(response.getEntity(), charset);
+			HttpEntity entity = response.getEntity();
+			if (entity == null) {
+				return "";
+			}
+			String data = EntityUtils.toString(entity, charset);
 			return data;
 		} catch (IOException ex) {
 			LOGGER.error("Failed to fetch url " + targetUrl, ex);
