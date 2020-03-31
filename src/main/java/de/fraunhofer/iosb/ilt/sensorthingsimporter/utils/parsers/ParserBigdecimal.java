@@ -17,10 +17,9 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.gson.JsonElement;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.Configurable;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorNull;
+import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
 
@@ -28,28 +27,28 @@ import java.math.BigDecimal;
  *
  * @author scf
  */
-public class ParserBigdecimal implements Parser<BigDecimal>, Configurable<SensorThingsService, Object> {
+public class ParserBigdecimal implements Parser<BigDecimal>, AnnotatedConfigurable<SensorThingsService, Object> {
 
-	private final EditorNull editor = new EditorNull("BigDecimal", "Parses strings into BigDecimals.");
-
-	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
-		getConfigEditor(context, edtCtx).setConfig(config);
-	}
-
-	@Override
-	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-		return editor;
-
-	}
+	@ConfigurableField(editor = EditorBoolean.class,
+			label = "Truncate 0s", description = "Drop trailing zeroes from results.")
+	@EditorBoolean.EdOptsBool()
+	private boolean dropTailingZeroes;
 
 	@Override
 	public BigDecimal parse(JsonNode value) {
-		return new BigDecimal(value.asText());
+		BigDecimal bigDecimal = new BigDecimal(value.asText());
+		if (dropTailingZeroes) {
+			return bigDecimal.stripTrailingZeros();
+		}
+		return bigDecimal;
 	}
 
 	@Override
 	public BigDecimal parse(String value) {
-		return new BigDecimal(value);
+		BigDecimal bigDecimal = new BigDecimal(value);
+		if (dropTailingZeroes) {
+			return bigDecimal.stripTrailingZeros();
+		}
+		return bigDecimal;
 	}
 }
