@@ -28,6 +28,7 @@
 		<javax-activation.version>1.1.1</javax-activation.version>
 		<junit.version>4.13</junit.version>
 		<logback.version>1.1.8</logback.version>
+		<maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
 		<openjfx.version>11.0.2</openjfx.version>
 		<postgresql.version>42.2.2</postgresql.version>
 		<quartz.version>2.3.0</quartz.version>
@@ -39,25 +40,29 @@
 	<build>
 		<plugins>
 			<plugin>
-				<!-- TODO: replace with http://docs.geotools.org/latest/userguide/faq.html#how-do-i-create-an-executable-jar-for-my-geotools-app -->
-				<artifactId>maven-assembly-plugin</artifactId>
-				<configuration>
-					<archive>
-						<manifest>
-							<mainClass>${mainClass}</mainClass>
-						</manifest>
-					</archive>
-					<descriptorRefs>
-						<descriptorRef>jar-with-dependencies</descriptorRef>
-					</descriptorRefs>
-				</configuration>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>${maven-shade-plugin.version}</version>
 				<executions>
 					<execution>
-						<id>make-assembly</id> <!-- this is used for inheritance merges -->
-						<phase>package</phase> <!-- bind to the packaging phase -->
+						<phase>package</phase>
 						<goals>
-							<goal>single</goal>
+							<goal>shade</goal>
 						</goals>
+						<configuration>
+							<shadedArtifactAttached>true</shadedArtifactAttached>
+							<transformers>
+								<!-- This bit sets the main class for the executable jar as you otherwise -->
+								<!-- would with the assembly plugin                                       -->
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<manifestEntries>
+										<Main-Class>${mainClass}</Main-Class>
+									</manifestEntries>
+								</transformer>
+								<!-- This bit merges the various GeoTools META-INF/services files         -->
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+							</transformers>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>
@@ -68,7 +73,7 @@
 				<configuration>
 					<repository>${docker-image-name}</repository>
 					<buildArgs>
-						<JAR_FILE>${project.build.finalName}-jar-with-dependencies.jar</JAR_FILE>
+						<JAR_FILE>${project.build.finalName}-shaded.jar</JAR_FILE>
 					</buildArgs>
 				</configuration>
 				<dependencies>
