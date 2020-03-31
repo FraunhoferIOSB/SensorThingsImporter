@@ -62,6 +62,7 @@ public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<Sen
 
 	private Id latestDsId;
 	private Id latestMdsId;
+	private Instant cacheStart;
 	private Map<TimeObject, Observation> cache = new LinkedHashMap<>();
 
 	private boolean resultCompare(Object one, Object two) {
@@ -118,6 +119,7 @@ public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<Sen
 	private void clearCache() {
 		latestDsId = null;
 		latestMdsId = null;
+		cacheStart = null;
 		cache.clear();
 	}
 
@@ -147,26 +149,44 @@ public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<Sen
 		throw new IllegalArgumentException("Must pass either a Datastream or multiDatastream.");
 	}
 
-	private Observation getFromCache(TimeObject phenTime, BaseDao<Observation> observations) throws ServiceFailureException {
+	private static Instant instantFrom(TimeObject time) {
+		return time.isInterval() ? time.getAsInterval().getStart() : time.getAsDateTime().toInstant();
+	}
+
+	private Observation getFromCache(TimeObject checkTime, BaseDao<Observation> observations) throws ServiceFailureException {
+		Instant checkInstant = instantFrom(checkTime);
 		if (cache.isEmpty()) {
-			Instant refInstant;
-			if (phenTime.isInterval()) {
-				refInstant = phenTime.getAsInterval().getStart();
-			} else {
-				refInstant = phenTime.getAsDateTime().toInstant();
-			}
 			EntityList<Observation> list = observations.query()
 					.select("@iot.id", "result", "phenomenonTime")
-					.filter("phenomenonTime ge " + refInstant.toString())
+					.filter("phenomenonTime ge " + checkInstant.toString())
 					.top(1000)
 					.list();
-			Iterator<Observation> fullIterator = list.fullIterator();
-			while (fullIterator.hasNext()) {
-				Observation obs = fullIterator.next();
-				cache.put(obs.getPhenomenonTime(), obs);
+			addToCache(list);
+		} else {
+			if (checkInstant.isBefore(cacheStart)) {
+				EntityList<Observation> list = observations.query()
+						.select("@iot.id", "result", "phenomenonTime")
+						.filter("phenomenonTime ge " + checkInstant.toString() + " and phenomenonTime le " + cacheStart)
+						.top(1000)
+						.list();
+				addToCache(list);
 			}
 		}
-		return cache.get(phenTime);
+
+		return cache.get(checkTime);
+	}
+
+	private void addToCache(EntityList<Observation> list) {
+		Iterator<Observation> fullIterator = list.fullIterator();
+		while (fullIterator.hasNext()) {
+			Observation obs = fullIterator.next();
+			TimeObject phenomenonTime = obs.getPhenomenonTime();
+			cache.put(phenomenonTime, obs);
+			Instant instant = instantFrom(phenomenonTime);
+			if (cacheStart == null || instant.isBefore(cacheStart)) {
+				cacheStart = instant;
+			}
+		}
 	}
 
 	private Observation getObservation(TimeObject phenTime, BaseDao<Observation> observations) throws ServiceFailureException {
@@ -179,6 +199,9 @@ public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<Sen
 	private void addToCache(Observation obs) {
 		if (cacheObservations) {
 			cache.put(obs.getPhenomenonTime(), obs);
+			if (cacheStart == null) {
+				cacheStart = instantFrom(obs.getPhenomenonTime());
+			}
 		}
 	}
 
