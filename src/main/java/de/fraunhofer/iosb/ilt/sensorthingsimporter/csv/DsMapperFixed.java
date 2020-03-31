@@ -15,10 +15,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.Configurable;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
@@ -33,7 +34,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
-public class DsMapperFixed implements DatastreamMapper {
+public class DsMapperFixed implements DatastreamMapper, Configurable<Object, Object> {
 
 	/**
 	 * The logger for this class.

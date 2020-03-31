@@ -15,28 +15,27 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import java.util.List;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sta.model.Datastream;
+import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
+import org.apache.commons.csv.CSVRecord;
 
 /**
  *
  * @author scf
  */
-public interface Importer extends Iterable<List<Observation>> {
+public interface DatastreamMapper {
 
 	/**
-	 * Tell the importer to give lots of output.
+	 * Get the Datastream to be used for the given record.
 	 *
-	 * @param verbose flag indicating that the importer should give lots of
-	 * output.
+	 * @param record The record to get the Datastream for.
+	 * @return The Datastream to use for the given record.
+	 * @throws ImportException if there is a permanent failure.
 	 */
-	public void setVerbose(boolean verbose);
+	public Datastream getDatastreamFor(CSVRecord record) throws ImportException;
 
-	public void setNoAct(boolean noAct);
-
-	public default void setProgressTracker(ProgressTracker tracker) {
-	}
+	public MultiDatastream getMultiDatastreamFor(CSVRecord record) throws ImportException;
 }

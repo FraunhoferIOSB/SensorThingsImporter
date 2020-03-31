@@ -18,3 +18,4 @@ nbactions.xml
 *.json
 *.txt
 *.lvm
+/nbproject/

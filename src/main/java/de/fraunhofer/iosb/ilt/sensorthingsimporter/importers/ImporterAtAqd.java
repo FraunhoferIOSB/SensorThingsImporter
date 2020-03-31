@@ -26,24 +26,31 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
+import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_BEGIN_TIME;
+import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_END_TIME;
+import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_LOCAL_ID;
+import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_MEASUREMENT_REGIME;
+import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_MEDIA_MONITORED;
+import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_METADATA;
+import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_MOBILE;
+import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_NAMESPACE;
+import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_OWNER;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaObservedProperty;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen.TimeGen;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.EntityCache;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.Utils;
-import de.fraunhofer.iosb.ilt.sta.dao.BaseDao;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.Entity;
 import de.fraunhofer.iosb.ilt.sta.model.FeatureOfInterest;
 import de.fraunhofer.iosb.ilt.sta.model.Location;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.ObservedProperty;
 import de.fraunhofer.iosb.ilt.sta.model.Sensor;
 import de.fraunhofer.iosb.ilt.sta.model.Thing;
-import de.fraunhofer.iosb.ilt.sta.model.ext.EntityList;
 import de.fraunhofer.iosb.ilt.sta.model.ext.UnitOfMeasurement;
-import de.fraunhofer.iosb.ilt.sta.query.Query;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -53,7 +60,6 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -95,17 +101,6 @@ import org.xml.sax.SAXException;
 public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThingsService, Object> {
 
 	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ImporterAtAqd.class.getName());
-
-	private static final String TAG_OWNER = "owner";
-	private static final String TAG_METADATA = "metadata";
-	private static final String TAG_END_TIME = "endTime";
-	private static final String TAG_BEGIN_TIME = "beginTime";
-	private static final String TAG_MOBILE = "mobile";
-	private static final String TAG_MEASUREMENT_REGIME = "measurementRegime";
-	private static final String TAG_MEDIA_MONITORED = "mediaMonitored";
-	private static final String TAG_NAMESPACE = "namespace";
-	private static final String TAG_LOCAL_ID = "localId";
-	private static final String TAG_RECOMMENDED_UNIT = "recommendedUnit";
 
 	private static final Pattern SENSOR_ID_PATTERN = Pattern.compile("^(SPP\\.[0-9]+\\.[0-9A-Za-z]+\\.[0-9]+\\.([0-9]+))\\.([0-9]+)\\.([0-9]+)$");
 
@@ -182,12 +177,22 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 
 	private final NameSpaceContextMap nameSpaceContext = new NameSpaceContextMap();
 
-	private final EntityCache<String, Location> locationsCache = new EntityCache<>();
-	private final EntityCache<String, Thing> thingsCache = new EntityCache<>();
-	private final EntityCache<Integer, ObservedProperty> observedPropertyCache = new EntityCache<>();
-	private final EntityCache<String, Sensor> sensorCache = new EntityCache<>();
-	private final EntityCache<String, FeatureOfInterest> foiCache = new EntityCache<>();
-	private final EntityCache<String, Datastream> datastreamCache = new EntityCache<>();
+	private final EntityCache<String, Location> locationsCache = new EntityCache<>(
+			(entity) -> Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null),
+			Location::getName);
+	private final EntityCache<String, Thing> thingsCache = new EntityCache<>(
+			(entity) -> Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null),
+			Thing::getName);
+	private final EntityCache<Integer, ObservedProperty> observedPropertyCache = EeaObservedProperty.createObservedPropertyCache();
+	private final EntityCache<String, Sensor> sensorCache = new EntityCache<>(
+			(entity) -> Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null),
+			Sensor::getName);
+	private final EntityCache<String, FeatureOfInterest> foiCache = new EntityCache<>(
+			(entity) -> Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null),
+			FeatureOfInterest::getName);
+	private final EntityCache<String, Datastream> datastreamCache = new EntityCache<>(
+			(entity) -> Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null),
+			Datastream::getName);
 
 	public ImporterAtAqd() {
 		nameSpaceContext.register("ad", "urn:x-inspire:specification:gmlas:Addresses:3.0");
@@ -245,7 +250,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			if (fullImport) {
 				importThings();
 				tracker.updateProgress(++progress, total);
-				importObservedProperties();
+				EeaObservedProperty.importObservedProperties(frostUtils, observedPropertyCache);
 				tracker.updateProgress(++progress, total);
 				importSensors();
 				tracker.updateProgress(++progress, total);
@@ -264,64 +269,46 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		LOGGER.info("Caching entities");
 
 		String filter = "properties/" + TAG_OWNER + " eq " + FrostUtils.quoteForUrl(entityOwner);
+		final int observedPropertyCount = observedPropertyCache.load(
+				service.observedProperties(),
+				filter,
+				"id,name,description,definition,properties",
+				"");
+		LOGGER.info("Loaded {} ObservedProperties", observedPropertyCount);
+
 		final int locationCount = locationsCache.load(
 				service.locations(),
 				filter,
 				"id,name,description,properties,encodingType,location",
-				"",
-				(entity) -> {
-					return Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null);
-				});
+				"");
 		LOGGER.info("Loaded {} Locations", locationCount);
 
 		final int thingCount = thingsCache.load(
 				service.things(),
 				filter,
 				"id,name,description,properties",
-				"Locations($select=id)",
-				(entity) -> {
-					return Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null);
-				});
+				"Locations($select=id)");
 		LOGGER.info("Loaded {} Things", thingCount);
-
-		final int observedPropertyCount = observedPropertyCache.load(
-				service.observedProperties(),
-				filter,
-				"id,name,description,definition,properties",
-				"",
-				(entity) -> {
-					return Integer.parseInt(entity.getProperties().get(TAG_LOCAL_ID).toString());
-				});
-		LOGGER.info("Loaded {} ObservedProperties", observedPropertyCount);
 
 		final int sensorCount = sensorCache.load(
 				service.sensors(),
 				filter,
 				"id,name,description,encodingtype,metadata,properties",
-				"",
-				(entity) -> {
-					return Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null);
-				});
+				"");
 		LOGGER.info("Loaded {} Sensors", sensorCount);
 
 		final int foiCount = foiCache.load(
 				service.featuresOfInterest(),
 				filter,
 				"id,name,description,encodingtype,feature,properties",
-				"",
-				(entity) -> {
-					return Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null);
-				});
+				"");
 		LOGGER.info("Loaded {} FeaturesOfInterest", foiCount);
 
 		final int datastreamCount = datastreamCache.load(
 				service.datastreams(),
 				filter,
 				"id,name,description,unitOfMeasurement,observationType,properties,phenomenonTime",
-				"",
-				(entity) -> {
-					return Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null);
-				});
+				"");
 		LOGGER.info("Loaded {} Datastreams", datastreamCount);
 	}
 
@@ -413,31 +400,6 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			throw new ImportException("Coordinate conversion problem.", ex);
 		} catch (ServiceFailureException ex) {
 			throw new ImportException("Failed to communicate with SensorThings API service.", ex);
-		}
-	}
-
-	private void importObservedProperties() throws ServiceFailureException {
-		AtOpRegistry atOpRegistry = new AtOpRegistry();
-		atOpRegistry.register(new AtOp(1, "SO2", "SO2", "µg/m3", "http://dd.eionet.europa.eu/vocabulary/aq/pollutant/1"));
-		atOpRegistry.register(new AtOp(5, "PM10", "PM10", "µg/m3", "http://dd.eionet.europa.eu/vocabulary/aq/pollutant/5"));
-		atOpRegistry.register(new AtOp(7, "O3", "O3", "µg/m3", "http://dd.eionet.europa.eu/vocabularyconcept/aq/pollutant/7"));
-		atOpRegistry.register(new AtOp(8, "NO2", "NO2", "µg/m3", "http://dd.eionet.europa.eu/vocabulary/aq/pollutant/8"));
-		atOpRegistry.register(new AtOp(9, "NOX as NO2", "NOX as NO2", "µg/m3", "http://dd.eionet.europa.eu/vocabulary/aq/pollutant/9"));
-		atOpRegistry.register(new AtOp(10, "CO", "CO", "mg/m3", "http://dd.eionet.europa.eu/vocabulary/aq/pollutant/10"));
-		atOpRegistry.register(new AtOp(38, "NO", "NO", "µg/m3", "http://dd.eionet.europa.eu/vocabulary/aq/pollutant/38"));
-		atOpRegistry.register(new AtOp(71, "CO2", "CO2", "ppmv", "http://dd.eionet.europa.eu/vocabulary/aq/pollutant/71"));
-		atOpRegistry.register(new AtOp(6001, "PM2.5", "PM2.5", "µg/m3", "http://dd.eionet.europa.eu/vocabulary/aq/pollutant/6001"));
-
-		for (AtOp atop : atOpRegistry.values()) {
-			Map<String, Object> properties = new HashMap<>();
-			properties.put(TAG_LOCAL_ID, atop.localId);
-			properties.put(TAG_OWNER, entityOwner);
-			properties.put(TAG_RECOMMENDED_UNIT, atop.recommendedUnit);
-
-			String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(atop.localId);
-			ObservedProperty cachedObservedProperty = observedPropertyCache.get(atop.localId);
-			ObservedProperty op = frostUtils.findOrCreateOp(filter, atop.name, atop.definition, atop.description, properties, cachedObservedProperty);
-			observedPropertyCache.put(atop.localId, op);
 		}
 	}
 
@@ -652,15 +614,15 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				String dsId = exprId.evaluate(feature);
 				String dsName = dsId;
 
-				String foiLocalId = afterLastSlash(exprFoiLocalId.evaluate(feature));
-				String obsPropLocalId = afterLastSlash(exprObsPropLocalId.evaluate(feature));
-				String sensorLocalId = afterLastSlash(exprSensorLocalId.evaluate(feature));
+				String foiLocalId = FrostUtils.afterLastSlash(exprFoiLocalId.evaluate(feature));
+				String obsPropLocalId = FrostUtils.afterLastSlash(exprObsPropLocalId.evaluate(feature));
+				String sensorLocalId = FrostUtils.afterLastSlash(exprSensorLocalId.evaluate(feature));
 				Matcher matcher = SENSOR_ID_PATTERN.matcher(sensorLocalId);
 				if (!matcher.matches()) {
 					LOGGER.error("Failed to match ProcessId {}", sensorLocalId);
 				}
 				sensorLocalId = matcher.group(1);
-				String thingLocalId = afterLastSlash(exprThingLocalId.evaluate(feature));
+				String thingLocalId = FrostUtils.afterLastSlash(exprThingLocalId.evaluate(feature));
 
 				if (!foiCache.containsId(foiLocalId)) {
 					LOGGER.error("Specified FoI ({}) not found for feature {}.", foiLocalId, dsId);
@@ -713,10 +675,6 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		LOGGER.info("Done with SamplingPoints, imported {} of {}.", imported, total);
 	}
 
-	private String afterLastSlash(String input) {
-		return input.substring(input.lastIndexOf('/') + 1);
-	}
-
 	private class ObservationListIter implements Iterator<List<Observation>> {
 
 		private final EntityCache<String, FeatureOfInterest> foiCache;
@@ -766,7 +724,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				if (!samplingPointId.endsWith(dsLocalId)) {
 					LOGGER.error("Returned data has sampling point {}, but expected data for {}", samplingPointId, dsLocalId);
 				}
-				FeatureOfInterest foi = foiCache.get(afterLastSlash(featureId));
+				FeatureOfInterest foi = foiCache.get(FrostUtils.afterLastSlash(featureId));
 				if (foi == null) {
 					LOGGER.error("Could not find foi for {}", featureId);
 					return result;
@@ -785,7 +743,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 
 				if (FrostUtils.NULL_UNIT.equals(ds.getUnitOfMeasurement()) && sweValueExtractor.hasNext()) {
 					sweValueExtractor.next();
-					String name = afterLastSlash(value.uom);
+					String name = FrostUtils.afterLastSlash(value.uom);
 					ds.setUnitOfMeasurement(new UnitOfMeasurement(name, name, value.uom));
 					frostUtils.update(ds);
 					sweValueExtractor.reset();
@@ -867,93 +825,6 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			return prefixByUri.getOrDefault(namespaceURI, Collections.emptyList()).iterator();
 		}
 
-	}
-
-	/**
-	 *
-	 * @param <T> The entity type this cache caches.
-	 * @param <U> The type of the localId.
-	 */
-	private static class EntityCache<U, T extends Entity<T>> {
-
-		private final Map<U, T> entitiesByLocalId = new LinkedHashMap<>();
-
-		public T get(U localId) {
-			return entitiesByLocalId.get(localId);
-		}
-
-		public boolean containsId(U localId) {
-			return entitiesByLocalId.containsKey(localId);
-		}
-
-		public void put(U localId, T entity) {
-			entitiesByLocalId.put(localId, entity);
-		}
-
-		public int load(BaseDao<T> dao, String filter, LocalIdExtractor<U, T> localIdExtractor) throws ServiceFailureException {
-			return load(dao, filter, "", "", localIdExtractor);
-		}
-
-		public int load(BaseDao<T> dao, String filter, String select, String expand, LocalIdExtractor<U, T> localIdExtractor) throws ServiceFailureException {
-			Query<T> query = dao.query();
-			if (!select.isEmpty()) {
-				query.select(select);
-			}
-			if (!expand.isEmpty()) {
-				query.expand(expand);
-			}
-			EntityList<T> entities = query.filter(filter).top(1000).list();
-			Iterator<T> it = entities.fullIterator();
-			int count = 0;
-			while (it.hasNext()) {
-				T entitiy = it.next();
-				U localId = localIdExtractor.extractFrom(entitiy);
-				if (localId != null) {
-					entitiesByLocalId.put(localId, entitiy);
-					count++;
-				}
-			}
-			return count;
-		}
-
-		public Collection<T> values() {
-			return entitiesByLocalId.values();
-		}
-
-		private static interface LocalIdExtractor<U, T extends Entity<T>> {
-
-			public U extractFrom(T entity);
-		}
-	}
-
-	private static class AtOp {
-
-		int localId;
-		String name;
-		String description;
-		String definition;
-		String recommendedUnit;
-
-		public AtOp(int localId, String name, String description, String recommendedUnit, String definition) {
-			this.localId = localId;
-			this.name = name;
-			this.description = description;
-			this.recommendedUnit = recommendedUnit;
-			this.definition = definition;
-		}
-	}
-
-	private static class AtOpRegistry {
-
-		private final Map<Integer, AtOp> atOpById = new HashMap<>();
-
-		public void register(AtOp atop) {
-			atOpById.put(atop.localId, atop);
-		}
-
-		public Collection<AtOp> values() {
-			return atOpById.values();
-		}
 	}
 
 	private static class SweValueExtractor {

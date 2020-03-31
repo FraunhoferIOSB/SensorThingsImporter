@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
- * Karlsruhe, Germany.
+ * Copyright (C) 2020 Fraunhofer IOSB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,28 +14,33 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers;
 
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import java.util.List;
+import java.time.ZonedDateTime;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  *
- * @author scf
+ * @author hylke
  */
-public interface Importer extends Iterable<List<Observation>> {
+public class ParserTimeTest {
+
+	public ParserTimeTest() {
+	}
 
 	/**
-	 * Tell the importer to give lots of output.
-	 *
-	 * @param verbose flag indicating that the importer should give lots of
-	 * output.
+	 * Test of parse method, of class ParserTime.
 	 */
-	public void setVerbose(boolean verbose);
+	@Test
+	public void testParse_String() {
+		ParserTime instance = new ParserTime();
+		instance.setFormat("yyyy-MM-dd HH:mm:ssXXX");
+		instance.setZone("");
 
-	public void setNoAct(boolean noAct);
-
-	public default void setProgressTracker(ProgressTracker tracker) {
+		ZonedDateTime expResult = ZonedDateTime.parse("2020-03-29T00:00:00+01:00");
+		ZonedDateTime result = instance.parse("2020-03-29 00:00:00+01:00");
+		Assert.assertEquals(expResult, result);
 	}
+
 }

@@ -37,18 +37,27 @@ public class UrlUtils {
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(UrlUtils.class);
+	private static final Charset UTF8 = Charset.forName("UTF-8");
 
 	private UrlUtils() {
 		// Utility class.
 	}
 
 	public static String fetchFromUrl(String targetUrl) throws ImportException {
+		return fetchFromUrl(targetUrl, UTF8);
+	}
+
+	public static String fetchFromUrl(String targetUrl, String charset) throws ImportException {
+		return fetchFromUrl(targetUrl, Charset.forName(charset));
+	}
+
+	public static String fetchFromUrl(String targetUrl, Charset charset) throws ImportException {
 		try {
 			LOGGER.info("Fetching: {}", targetUrl);
 			CloseableHttpClient client = HttpClients.createSystem();
 			HttpGet get = new HttpGet(targetUrl);
 			CloseableHttpResponse response = client.execute(get);
-			String data = EntityUtils.toString(response.getEntity(), Charset.forName("UTF-8"));
+			String data = EntityUtils.toString(response.getEntity(), charset);
 			return data;
 		} catch (IOException ex) {
 			LOGGER.error("Failed to fetch url " + targetUrl, ex);

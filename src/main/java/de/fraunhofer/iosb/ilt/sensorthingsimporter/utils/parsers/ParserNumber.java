@@ -19,6 +19,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.Configurable;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorNull;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
@@ -27,9 +28,9 @@ import java.math.BigDecimal;
  *
  * @author scf
  */
-public class ParserNumber implements Parser<Number> {
+public class ParserNumber implements Parser<Number>, Configurable<SensorThingsService, Object> {
 
-	private EditorNull editor = new EditorNull("BigDecimal", "Parses strings into BigDecimals.");
+	private final EditorNull editor = new EditorNull("BigDecimal", "Parses strings into BigDecimals.");
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer IOSB
+ * Copyright (C) 2020 Fraunhofer IOSB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,18 +14,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import java.net.URL;
 
 /**
  *
- * @author scf
- * @param <T> The type of the result.
+ * @author hylke
  */
-public interface Parser<T> {
+public interface UrlGenerator extends Iterable<URL> {
 
-	public T parse(JsonNode data);
-
-	public T parse(String data);
 }

@@ -15,11 +15,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
 import com.google.gson.JsonElement;
+import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
@@ -37,7 +42,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
-public class DsMapperFilter implements DatastreamMapper {
+public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<SensorThingsService, Object> {
 
 	/**
 	 * The logger for this class.
@@ -46,39 +51,32 @@ public class DsMapperFilter implements DatastreamMapper {
 	private final Map<String, Datastream> datastreamCache = new HashMap<>();
 	private final Map<String, MultiDatastream> multiDatastreamCache = new HashMap<>();
 
-	private SensorThingsService service;
+	@ConfigurableField(editor = EditorString.class,
+			label = "Filter", description = "A filter that will be added to the query for the datastream.\nUse placeholders {colNr} to add the content of columns to the query.")
+	@EditorString.EdOptsString(dflt = "Thing/properties/id eq {1}", lines = 3)
 	private String filterTemplate;
 
-	private EditorString editor;
+	@ConfigurableField(editor = EditorSubclass.class, optional = true,
+			label = "DS Generator", description = "Generates Datastreams if the required one does not exist yet.")
+	@EditorSubclass.EdOptsSubclass(iface = DatastreamGenerator.class)
+	private DatastreamGenerator dsGenerator;
+
+	private SensorThingsService service;
 
 	public DsMapperFilter() {
 	}
 
 	@Override
-	public void configure(JsonElement config, Object context, Object edtCtx, ConfigEditor<?> configEditor) {
-		if (!(context instanceof SensorThingsService)) {
-			throw new IllegalArgumentException("Context must be a SensorThingsService. We got a " + context.getClass());
-		}
-		service = (SensorThingsService) context;
-		getConfigEditor(service, edtCtx).setConfig(config);
-		filterTemplate = editor.getValue();
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+		service = context;
+		AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
 	}
 
 	@Override
-	public EditorString getConfigEditor(Object context, Object edtCtx) {
-		if (editor == null) {
-			editor = new EditorString("Thing/properties/id eq {1}", 3, "Filter",
-					"A filter that will be added to the query for the datastream."
-					+ " Use placeholders {colNr} to add the content of columns to the query.");
-		}
-		return editor;
-	}
-
-	@Override
-	public Datastream getDatastreamFor(CSVRecord record) {
+	public Datastream getDatastreamFor(CSVRecord record) throws ImportException {
 		try {
 			String filter = Translator.fillTemplate(filterTemplate, record);
-			Datastream ds = getDatastreamFor(filter);
+			Datastream ds = getDatastreamFor(filter, record);
 			return ds;
 		} catch (ServiceFailureException ex) {
 			LOGGER.error("Failed to fetch datastream.", ex);
@@ -90,7 +88,7 @@ public class DsMapperFilter implements DatastreamMapper {
 	public MultiDatastream getMultiDatastreamFor(CSVRecord record) {
 		try {
 			String filter = Translator.fillTemplate(filterTemplate, record);
-			MultiDatastream ds = getMultiDatastreamFor(filter);
+			MultiDatastream ds = getMultiDatastreamFor(filter, record);
 			return ds;
 		} catch (ServiceFailureException ex) {
 			LOGGER.error("Failed to fetch datastream.", ex);
@@ -98,24 +96,32 @@ public class DsMapperFilter implements DatastreamMapper {
 		}
 	}
 
-	private Datastream getDatastreamFor(String filter) throws ServiceFailureException {
+	private Datastream getDatastreamFor(String filter, CSVRecord record) throws ServiceFailureException, ImportException {
 		Datastream ds = datastreamCache.get(filter);
 		if (ds != null) {
 			return ds;
 		}
 		Query<Datastream> query = service.datastreams().query().filter(filter);
 		EntityList<Datastream> streams = query.list();
-		if (streams.size() != 1) {
+		if (streams.size() > 1) {
 			LOGGER.error("Found incorrect number of datastreams: {} for filter: {}", streams.size(), filter);
 			throw new IllegalArgumentException("Found incorrect number of datastreams: " + streams.size());
+		} else if (streams.isEmpty()) {
+			if (dsGenerator != null) {
+				ds = dsGenerator.createDatastreamFor(record);
+				LOGGER.info("Created datastream {} for query {}.", ds.getId(), filter);
+			} else {
+				throw new IllegalArgumentException("Found no datastreams for filter: " + filter);
+			}
+		} else {
+			ds = streams.iterator().next();
+			LOGGER.debug("Found datastream {} for query {}.", ds.getId(), filter);
 		}
-		ds = streams.iterator().next();
-		LOGGER.info("Found datastream {} for query {}.", ds.getId(), filter);
 		datastreamCache.put(filter, ds);
 		return ds;
 	}
 
-	private MultiDatastream getMultiDatastreamFor(String filter) throws ServiceFailureException {
+	private MultiDatastream getMultiDatastreamFor(String filter, CSVRecord record) throws ServiceFailureException {
 		MultiDatastream mds = multiDatastreamCache.get(filter);
 		if (mds != null) {
 			return mds;

@@ -18,6 +18,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.Utils;
 import de.fraunhofer.iosb.ilt.sta.jackson.ObjectMapperFactory;
@@ -49,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.geojson.GeoJsonObject;
+import org.geojson.Point;
 import org.geotools.geometry.DirectPosition2D;
 import org.geotools.referencing.CRS;
 import org.opengis.geometry.MismatchedDimensionException;
@@ -94,6 +96,10 @@ public final class FrostUtils {
 
 	public void setDryRun(boolean dryRun) {
 		this.dryRun = dryRun;
+	}
+
+	public SensorThingsService getService() {
+		return service;
 	}
 
 	public <T extends Entity<T>> void update(T entity) throws ServiceFailureException {
@@ -819,6 +825,23 @@ public final class FrostUtils {
 		return new TimeObject(interval);
 	}
 
+	public static Point convertCoordinates(Point point, String locationSrsName) throws ImportException {
+		try {
+			CoordinateReferenceSystem sourceCrs = CRS.decode(locationSrsName);
+			CoordinateReferenceSystem targetCrs = CRS.decode("EPSG:4326");
+			MathTransform transform = CRS.findMathTransform(sourceCrs, targetCrs);
+			DirectPosition2D sourcePoint = new DirectPosition2D(
+					sourceCrs,
+					point.getCoordinates().getLongitude(),
+					point.getCoordinates().getLatitude());
+			DirectPosition2D targetPoint = new DirectPosition2D(targetCrs);
+			transform.transform(sourcePoint, targetPoint);
+			return new Point(targetPoint.x, targetPoint.y);
+		} catch (FactoryException | MismatchedDimensionException | TransformException ex) {
+			throw new ImportException(ex);
+		}
+	}
+
 	public static DirectPosition2D convertCoordinates(String locationPos, String locationSrsName) throws FactoryException, TransformException, NumberFormatException, MismatchedDimensionException {
 		String[] coordinates = locationPos.split(" ");
 		CoordinateReferenceSystem sourceCrs = CRS.decode(locationSrsName);
@@ -835,4 +858,9 @@ public final class FrostUtils {
 		subMap.put(key, value);
 		return subMap;
 	}
+
+	public static String afterLastSlash(String input) {
+		return input.substring(input.lastIndexOf('/') + 1);
+	}
+
 }

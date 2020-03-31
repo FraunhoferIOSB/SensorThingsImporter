@@ -18,49 +18,63 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.JsonElement;
+import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
+import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
+import de.fraunhofer.iosb.ilt.sta.Utils;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Map;
 
 /**
  *
  * @author scf
  */
-public class ParserTime implements ParserZonedDateTime {
+public class ParserTime implements ParserZonedDateTime, AnnotatedConfigurable<Object, Object> {
 
-	private EditorMap<Map<String, Object>> editor;
-	private EditorString editorTimeFormat;
-	private EditorString editorZone;
+	@ConfigurableField(editor = EditorString.class,
+			label = "Format", description = "The format to use when parsing the time.")
+	@EditorString.EdOptsString(dflt = "yyyy-MM-dd HH:mm:ssXXX")
+	private String format;
+
+	@ConfigurableField(editor = EditorString.class, optional = true,
+			label = "Zone", description = "The timezone to use when the parsed time did not contain a timezone.")
+	@EditorString.EdOptsString()
+	private String zone;
 
 	DateTimeFormatter formatter;
 
 	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
-		getConfigEditor(context, edtCtx).setConfig(config);
-		formatter = DateTimeFormatter.ofPattern(editorTimeFormat.getValue());
-		if (!editorZone.getValue().isEmpty()) {
-			formatter = formatter.withZone(ZoneId.of(editorZone.getValue()));
+	public void configure(JsonElement config, Object context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+		AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
+		init();
+	}
+
+	private void init() {
+		formatter = DateTimeFormatter.ofPattern(format);
+		if (!Utils.isNullOrEmpty(zone)) {
+			formatter = formatter.withZone(ZoneId.of(zone));
 		}
 	}
 
-	@Override
-	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-		if (editor == null) {
-			editor = new EditorMap<>();
+	public String getFormat() {
+		return format;
+	}
 
-			editorTimeFormat = new EditorString("yyyy-MM-dd HH:mm:ssX", 1, "Format", "The format to use when parsing the time.");
-			editor.addOption("format", editorTimeFormat, false);
+	public void setFormat(String format) {
+		this.format = format;
+		init();
+	}
 
-			editorZone = new EditorString("", 1, "Zone", "The timezone to use when the parsed time did not contain a timezone.");
-			editor.addOption("zone", editorZone, true);
-		}
-		return editor;
+	public String getZone() {
+		return zone;
+	}
 
+	public void setZone(String zone) {
+		this.zone = zone;
+		init();
 	}
 
 	@Override

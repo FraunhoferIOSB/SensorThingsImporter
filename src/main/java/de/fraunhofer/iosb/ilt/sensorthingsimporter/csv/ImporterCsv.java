@@ -18,41 +18,33 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
 import com.google.gson.JsonElement;
+import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
-import de.fraunhofer.iosb.ilt.configurable.EditorFactory;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,31 +52,54 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
-public class ImporterCsv implements Importer {
+public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThingsService, Object> {
 
 	/**
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(ImporterCsv.class);
 	private SensorThingsService service;
-	private long rowLimit;
-	private long rowSkip;
 	private boolean verbose;
 
 	private final List<RecordConverterCSV> rcCsvs = new ArrayList<>();
 
-	private EditorMap<Map<String, Object>> editor;
-	private EditorBoolean editorUseDataArray;
+	@ConfigurableField(editor = EditorList.class,
+			label = "Converters", description = "The classes that convert columns into observations.")
+	@EditorList.EdOptsList(editor = EditorClass.class, minCount = 1, labelText = "Add a Converter")
+	@EditorClass.EdOptsClass(clazz = RecordConverterCSV.class)
+	private List<RecordConverterCSV> recordConvertors;
 
-	private EditorList<RecordConverterCSV, EditorClass<SensorThingsService, Object, RecordConverterCSV>> editorConverters;
+	@ConfigurableField(editor = EditorInt.class, optional = true,
+			label = "Row Limit", description = "The maximum number of rows to insert as observations (0=no limit).")
+	@EditorInt.EdOptsInt(dflt = 0, max = Integer.MAX_VALUE, min = 0, step = 1)
+	private Integer rowLimit;
 
-	private EditorInt editorRowLimit;
-	private EditorInt editorRowSkip;
+	@ConfigurableField(editor = EditorInt.class, optional = true,
+			label = "Row Skip", description = "The number of rows to skip when reading the file (0=none).")
+	@EditorInt.EdOptsInt(dflt = 0, max = Integer.MAX_VALUE, min = 0, step = 1)
+	private Integer rowSkip;
 
-	private EditorString editorCharSet;
-	private EditorString editorInput;
-	private EditorString editorDelimiter;
-	private EditorBoolean editorTabDelim;
+	@ConfigurableField(editor = EditorString.class, optional = true,
+			label = "Characterset", description = "The character set to use when parsing the csv file (default UTF-8).")
+	@EditorString.EdOptsString(dflt = "UTF-8")
+	private String charset;
+
+	@ConfigurableField(editor = EditorSubclass.class,
+			label = "Input Url", description = "The input url(s)")
+	@EditorSubclass.EdOptsSubclass(iface = UrlGenerator.class)
+	private UrlGenerator inputUrl;
+
+	@ConfigurableField(editor = EditorString.class, optional = true,
+			label = "Delimiter", description = "The character to use as delimiter ('\\t' for tab, default ',').")
+	@EditorString.EdOptsString(dflt = ",")
+	private String delimiter;
+
+	@ConfigurableField(editor = EditorBoolean.class, optional = true,
+			label = "Has Header", description = "Check if the CSV file has a header line.")
+	@EditorBoolean.EdOptsBool()
+	private boolean hasHeader;
+
+	private CSVFormat format;
 
 	public ImporterCsv() {
 	}
@@ -100,123 +115,31 @@ public class ImporterCsv implements Importer {
 	}
 
 	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
 		service = context;
-		getConfigEditor(service, edtCtx).setConfig(config);
+		AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
 	}
 
-	@Override
-	public EditorMap<Map<String, Object>> getConfigEditor(final SensorThingsService context, final Object edtCtx) {
-		if (editor == null) {
-			editor = new EditorMap<>();
-
-			EditorFactory<EditorClass<SensorThingsService, Object, RecordConverterCSV>> factory;
-			factory = () -> new EditorClass<>(context, edtCtx, RecordConverterCSV.class);
-			editorConverters = new EditorList(factory, "Converters", "The classes that convert columns into observations.");
-			editor.addOption("recordConvertors", editorConverters, false);
-
-			editorUseDataArray = new EditorBoolean(false, "Use DataArrays",
-					"Use the SensorThingsAPI DataArray extension to post Observations. "
-					+ "This is much more efficient when posting many observations. "
-					+ "The number of items grouped together is determined by the messageInterval setting.");
-			editor.addOption("useDataArrays", editorUseDataArray, true);
-
-			editorRowLimit = new EditorInt(0, Integer.MAX_VALUE, 1, 0, "Row Limit", "The maximum number of rows to insert as observations (0=no limit).");
-			editor.addOption("rowLimit", editorRowLimit, true);
-
-			editorRowSkip = new EditorInt(0, Integer.MAX_VALUE, 1, 0, "Row Skip", "The number of rows to skip when reading the file (0=none).");
-			editor.addOption("rowSkip", editorRowSkip, true);
-
-			editorCharSet = new EditorString("UTF-8", 1, "Characterset", "The character set to use when parsing the csv file (default UTF-8).");
-			editor.addOption("charset", editorCharSet, true);
-
-			editorInput = new EditorString("", 1, "InputUrl", "The path or URL to the csv file.");
-			editor.addOption("input", editorInput, false);
-
-			editorDelimiter = new EditorString("", 1, "delimiter", "The delimiter to use instead of comma.");
-			editor.addOption("delimiter", editorDelimiter, true);
-
-			editorTabDelim = new EditorBoolean(false, "Tab Delimited", "Use tab as delimiter instead of comma.");
-			editor.addOption("tab", editorTabDelim, true);
-		}
-		return editor;
-	}
-
-	public CSVParser init() throws ImportException, ConfigurationException {
+	private void init() throws ImportException, ConfigurationException {
 
 		rcCsvs.clear();
-		rcCsvs.addAll(editorConverters.getValue());
+		rcCsvs.addAll(recordConvertors);
 		for (RecordConverterCSV rcCsv : rcCsvs) {
 			rcCsv.setVerbose(verbose);
 		}
 
-		rowLimit = editorRowLimit.getValue();
-		rowSkip = editorRowSkip.getValue();
-
-		CSVFormat format = CSVFormat.DEFAULT;
-		if (editorTabDelim.getValue()) {
-			format = format.withDelimiter('\t');
+		format = CSVFormat.DEFAULT
+				.withDelimiter(delimiter.charAt(0));
+		if (hasHeader) {
+			format = format.withFirstRecordAsHeader();
 		}
-		String delim = editorDelimiter.getValue();
-		if (delim.length() > 0) {
-			format = format.withDelimiter(delim.charAt(0));
-		}
-
-		String input = editorInput.getValue();
-		URL inUrl = null;
-		try {
-			inUrl = new URL(input);
-			LOGGER.info("Found a url: {}", input);
-		} catch (MalformedURLException ex) {
-			LOGGER.info("Not a url: {} -- {}", input, ex.getMessage());
-		}
-		File inFile = null;
-		try {
-			inFile = new File(input);
-			LOGGER.info("Found a file: {}", input);
-		} catch (Exception e) {
-		}
-
-		String charset = editorCharSet.getValue();
-		CSVParser parser;
-		try {
-			if (inUrl != null) {
-				if (inUrl.getProtocol().startsWith("http")) {
-					CloseableHttpClient client = HttpClients.createSystem();
-					HttpGet get = new HttpGet(inUrl.toURI());
-					CloseableHttpResponse response = client.execute(get);
-					String data = EntityUtils.toString(response.getEntity(), charset);
-					parser = CSVParser.parse(data, format);
-				} else if (inUrl.getProtocol().startsWith("ftp")) {
-					URLConnection connection = inUrl.openConnection();
-					try (InputStream stream = connection.getInputStream()) {
-						String data = IOUtils.toString(stream, "UTF-8");
-						parser = CSVParser.parse(data, format);
-					}
-				} else {
-					LOGGER.error("Unsupported scheme: {}.", inUrl.getProtocol());
-					throw new ImportException("Unsupported scheme: " + inUrl.getProtocol());
-				}
-			} else if (inFile != null) {
-				parser = CSVParser.parse(inFile, Charset.forName(charset), format);
-			} else {
-				LOGGER.error("Failed");
-				throw new ImportException("No valid input url or file.");
-			}
-		} catch (IOException | URISyntaxException exc) {
-			LOGGER.error("Failed", exc);
-			throw new ImportException("Failed to handle csv file.", exc);
-		}
-
-		return parser;
 	}
 
 	@Override
 	public Iterator<List<Observation>> iterator() {
 		try {
-			final CSVParser parser = init();
-			final Iterator<CSVRecord> records = parser.iterator();
-			ObsListIter obsListIter = new ObsListIter(records, rowSkip, rowLimit);
+			init();
+			ObsListIter obsListIter = new ObsListIter(inputUrl.iterator(), rowSkip, rowLimit);
 			return obsListIter;
 		} catch (ImportException | ConfigurationException exc) {
 			throw new IllegalStateException("Failed to handle csv file.", exc);
@@ -225,27 +148,38 @@ public class ImporterCsv implements Importer {
 
 	private class ObsListIter implements Iterator<List<Observation>> {
 
-		private final Iterator<CSVRecord> records;
-		private boolean limitRows;
-		private long rowLimit;
+		private final Iterator<URL> urlIterator;
+		private Iterator<CSVRecord> records;
+		private final boolean limitRows;
+		private final long rowLimit;
+		private final long rowSkipBase;
 		private long rowSkip;
 		private int rowCount = 0;
 		private int totalCount = 0;
 
-		public ObsListIter(Iterator<CSVRecord> records, long rowSkip, long rowLimit) {
+		public ObsListIter(Iterator<URL> urlIterator, long rowSkip, long rowLimit) throws ImportException {
+			this.rowSkipBase = rowSkip;
 			this.rowSkip = rowSkip;
-			this.records = records;
+			this.urlIterator = urlIterator;
+			this.records = nextUrl().iterator();
 			this.rowLimit = rowLimit;
 			limitRows = rowLimit > 0;
 		}
 
 		@Override
 		public boolean hasNext() {
-			return records.hasNext();
+			return records.hasNext() || urlIterator.hasNext();
 		}
 
 		@Override
 		public List<Observation> next() {
+			if (!records.hasNext()) {
+				try {
+					records = nextUrl().iterator();
+				} catch (ImportException ex) {
+					throw new IllegalStateException(ex);
+				}
+			}
 			while (records.hasNext()) {
 				CSVRecord record = records.next();
 				totalCount++;
@@ -273,6 +207,37 @@ public class ImporterCsv implements Importer {
 			}
 			LOGGER.info("Parsed {} rows of {}.", rowCount, totalCount);
 			return Collections.emptyList();
+		}
+
+		private CSVParser nextUrl() throws ImportException {
+			rowSkip = rowSkipBase;
+			URL inUrl = urlIterator.next();
+			CSVParser parser;
+			try {
+				if (inUrl != null) {
+					if (inUrl.getProtocol().startsWith("http")) {
+						String data = UrlUtils.fetchFromUrl(inUrl.toString(), charset);
+						parser = CSVParser.parse(data, format);
+					} else if (inUrl.getProtocol().startsWith("ftp")) {
+						URLConnection connection = inUrl.openConnection();
+						try (InputStream stream = connection.getInputStream()) {
+							String data = IOUtils.toString(stream, "UTF-8");
+							parser = CSVParser.parse(data, format);
+						}
+					} else {
+						LOGGER.error("Unsupported scheme: {}.", inUrl.getProtocol());
+						throw new ImportException("Unsupported scheme: " + inUrl.getProtocol());
+					}
+				} else {
+					LOGGER.error("Failed");
+					throw new ImportException("No valid input url or file.");
+				}
+			} catch (IOException exc) {
+				LOGGER.error("Failed", exc);
+				throw new ImportException("Failed to handle csv file.", exc);
+			}
+
+			return parser;
 		}
 	}
 

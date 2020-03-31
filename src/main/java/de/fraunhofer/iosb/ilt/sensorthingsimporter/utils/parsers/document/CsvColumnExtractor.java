@@ -26,8 +26,8 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.DatastreamMapper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DatastreamMapper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.Parser;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
@@ -99,7 +99,7 @@ public class CsvColumnExtractor implements DocumentParser {
 		return editor;
 	}
 
-	private List<Observation> process(String data) throws IOException {
+	private List<Observation> process(String data) throws IOException, ImportException {
 		CSVFormat format = CSVFormat.DEFAULT;
 		if (editorTabDelim.getValue()) {
 			format = format.withDelimiter('\t');

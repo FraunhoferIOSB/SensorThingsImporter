@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.Configurable;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
@@ -81,7 +82,7 @@ import org.xml.sax.SAXException;
  *
  * @author scf
  */
-public class ImporterFmiForecasts implements Importer {
+public class ImporterFmiForecasts implements Importer, Configurable<SensorThingsService, Object> {
 
 	/**
 	 * The logger for this class.

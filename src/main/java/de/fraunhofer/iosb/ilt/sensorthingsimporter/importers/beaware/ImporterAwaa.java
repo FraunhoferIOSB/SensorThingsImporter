@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.Configurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
@@ -63,7 +64,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
-public class ImporterAwaa implements Importer {
+public class ImporterAwaa implements Importer, Configurable<SensorThingsService, Object> {
 
 	/**
 	 * The logger for this class.

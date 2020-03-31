@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
- * Karlsruhe, Germany.
+ * Copyright (C) 2020 Fraunhofer IOSB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,26 +14,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
-import de.fraunhofer.iosb.ilt.configurable.Configurable;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import org.apache.commons.csv.CSVRecord;
 
 /**
  *
- * @author scf
+ * @author hylke
  */
-public interface DatastreamMapper extends Configurable<Object, Object> {
+public interface DatastreamGenerator {
 
-	/**
-	 * Get the Datastream to be used for the given record.
-	 *
-	 * @param record The record to get the Datastream for.
-	 * @return The Datastream to use for the given record.
-	 */
-	public Datastream getDatastreamFor(CSVRecord record);
-
-	public MultiDatastream getMultiDatastreamFor(CSVRecord record);
+	public Datastream createDatastreamFor(CSVRecord record) throws ImportException;
 }
