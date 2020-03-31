@@ -17,19 +17,14 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
-import com.google.gson.JsonElement;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.Configurable;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorNull;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 
 /**
  *
  * @author scf
  */
-public interface Validator extends Configurable<SensorThingsService, Object> {
+public interface Validator {
 
 	public boolean isValid(Observation obs) throws ImportException;
 
@@ -41,15 +36,6 @@ public interface Validator extends Configurable<SensorThingsService, Object> {
 		@Override
 		public boolean isValid(Observation obs) throws ImportException {
 			return true;
-		}
-
-		@Override
-		public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
-		}
-
-		@Override
-		public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-			return new EditorNull();
 		}
 
 	}

@@ -18,6 +18,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.Configurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.EditorFactory;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
@@ -33,7 +34,7 @@ import java.util.Map;
  *
  * @author scf
  */
-public class ValidatorMulti implements Validator {
+public class ValidatorMulti implements Validator, Configurable<SensorThingsService, Object> {
 
 	private EditorMap<Map<String, Object>> editor;
 	private EditorList<Validator, EditorSubclass<SensorThingsService, Object, Validator>> editorValidators;

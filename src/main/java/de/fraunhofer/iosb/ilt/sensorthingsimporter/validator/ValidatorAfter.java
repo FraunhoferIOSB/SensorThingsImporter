@@ -19,6 +19,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.Configurable;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
@@ -36,7 +37,7 @@ import org.threeten.extra.Minutes;
  *
  * @author scf
  */
-public class ValidatorAfter implements Validator {
+public class ValidatorAfter implements Validator, Configurable<SensorThingsService, Object> {
 
 	private EditorMap<Map<String, Object>> editor;
 	private EditorInt editorDays;

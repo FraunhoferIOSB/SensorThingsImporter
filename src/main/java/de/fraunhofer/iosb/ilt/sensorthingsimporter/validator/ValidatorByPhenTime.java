@@ -17,17 +17,24 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
-import com.google.gson.JsonElement;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.sta.dao.BaseDao;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
+import de.fraunhofer.iosb.ilt.sta.model.Id;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
+import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
+import de.fraunhofer.iosb.ilt.sta.model.ext.EntityList;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,27 +43,60 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
-public class ValidatorByPhenTime implements Validator {
+public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<SensorThingsService, Object> {
 
 	/**
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(ValidatorByPhenTime.class);
-	private EditorMap<Map<String, Object>> editor;
-	private EditorBoolean editorUpdate;
 
+	@ConfigurableField(editor = EditorBoolean.class,
+			label = "Update", description = "Update results that are different.")
+	@EditorBoolean.EdOptsBool()
 	private boolean update;
 
+	@ConfigurableField(editor = EditorBoolean.class,
+			label = "Cache", description = "Download & cache all observations with phenomenonTime later than the first encoutered.")
+	@EditorBoolean.EdOptsBool()
+	private boolean cacheObservations;
+
+	private Id latestDsId;
+	private Id latestMdsId;
+	private Map<TimeObject, Observation> cache = new LinkedHashMap<>();
+
 	private boolean resultCompare(Object one, Object two) {
+		if (one == null) {
+			return two == null;
+		}
+		if (two == null) {
+			return false;
+		}
 		if (one.equals(two)) {
+			return true;
+		}
+		if (one instanceof List) {
+			if (!(two instanceof List)) {
+				return false;
+			}
+			List listOne = (List) one;
+			List listTwo = (List) two;
+			int size = listOne.size();
+			if (listTwo.size() != size) {
+				return false;
+			}
+			for (int i = 0; i < size; i++) {
+				if (!resultCompare(listOne.get(i), listTwo.get(i))) {
+					return false;
+				}
+			}
 			return true;
 		}
 		try {
 			if (one instanceof Long && two instanceof Integer) {
-				return one.equals(new Long((Integer) two));
+				return one.equals(Long.valueOf((Integer) two));
 			}
 			if (two instanceof Long && one instanceof Integer) {
-				return two.equals(new Long((Integer) one));
+				return two.equals(Long.valueOf((Integer) one));
 			}
 			if (one instanceof BigDecimal && two instanceof BigDecimal) {
 				// Would have returned true above if equal
@@ -75,61 +115,99 @@ public class ValidatorByPhenTime implements Validator {
 		return false;
 	}
 
+	private void clearCache() {
+		latestDsId = null;
+		latestMdsId = null;
+		cache.clear();
+	}
+
+	private BaseDao<Observation> validateCache(Datastream d, MultiDatastream m) {
+		if (cacheObservations) {
+			if (d != null) {
+				Id id = d.getId();
+				if (!id.equals(latestDsId)) {
+					clearCache();
+					latestDsId = id;
+				}
+			}
+			if (m != null) {
+				Id id = m.getId();
+				if (!id.equals(latestMdsId)) {
+					clearCache();
+					latestMdsId = id;
+				}
+			}
+		}
+		if (d != null) {
+			return d.observations();
+		}
+		if (m != null) {
+			return m.observations();
+		}
+		throw new IllegalArgumentException("Must pass either a Datastream or multiDatastream.");
+	}
+
+	private Observation getFromCache(TimeObject phenTime, BaseDao<Observation> observations) throws ServiceFailureException {
+		if (cache.isEmpty()) {
+			Instant refInstant;
+			if (phenTime.isInterval()) {
+				refInstant = phenTime.getAsInterval().getStart();
+			} else {
+				refInstant = phenTime.getAsDateTime().toInstant();
+			}
+			EntityList<Observation> list = observations.query()
+					.select("@iot.id", "result", "phenomenonTime")
+					.filter("phenomenonTime ge " + refInstant.toString())
+					.top(1000)
+					.list();
+			Iterator<Observation> fullIterator = list.fullIterator();
+			while (fullIterator.hasNext()) {
+				Observation obs = fullIterator.next();
+				cache.put(obs.getPhenomenonTime(), obs);
+			}
+		}
+		return cache.get(phenTime);
+	}
+
+	private Observation getObservation(TimeObject phenTime, BaseDao<Observation> observations) throws ServiceFailureException {
+		if (cacheObservations) {
+			return getFromCache(phenTime, observations);
+		}
+		return observations.query().select("@iot.id", "result").filter("phenomenonTime eq " + phenTime.toString()).first();
+	}
+
+	private void addToCache(Observation obs) {
+		if (cacheObservations) {
+			cache.put(obs.getPhenomenonTime(), obs);
+		}
+	}
+
 	@Override
 	public boolean isValid(Observation obs) throws ImportException {
 		try {
-			Datastream ds = obs.getDatastream();
-			if (ds != null) {
-				Observation first = ds.observations().query().select("@iot.id", "result").filter("phenomenonTime eq " + obs.getPhenomenonTime().toString()).first();
-				if (first == null) {
-					return true;
-				} else {
-					if (!resultCompare(obs.getResult(), first.getResult())) {
-						LOGGER.debug("Observation {} with given phenomenonTime {} exists, but result not the same. {} {} != {} {}.", first.getId(), obs.getPhenomenonTime(), obs.getResult().getClass().getName(), obs.getResult(), first.getResult(), first.getResult().getClass().getName());
-						if (update) {
-							obs.setId(first.getId());
-							return true;
-						}
+			Datastream d = obs.getDatastream();
+			MultiDatastream m = obs.getMultiDatastream();
+			BaseDao<Observation> observations = validateCache(d, m);
+
+			TimeObject phenomenonTime = obs.getPhenomenonTime();
+			Observation first = getObservation(phenomenonTime, observations);
+			if (first == null) {
+				addToCache(obs);
+				return true;
+			} else {
+				if (!resultCompare(obs.getResult(), first.getResult())) {
+					LOGGER.debug("Observation {} with given phenomenonTime {} exists, but result not the same. {} {} != {} {}.", first.getId(), phenomenonTime, obs.getResult().getClass().getName(), obs.getResult(), first.getResult(), first.getResult().getClass().getName());
+					if (update) {
+						obs.setId(first.getId());
+						addToCache(obs);
+						return true;
 					}
-					return false;
 				}
+				return false;
 			}
-			MultiDatastream mds = obs.getMultiDatastream();
-			if (mds != null) {
-				Observation first = mds.observations().query().select("@iot.id", "result").filter("phenomenonTime eq " + obs.getPhenomenonTime().toString()).first();
-				if (first == null) {
-					return true;
-				} else {
-					if (!obs.getResult().equals(first.getResult())) {
-						LOGGER.debug("Observation {} with given phenomenonTime {} exists, but result not the same. {} != {}.", first.getId(), obs.getPhenomenonTime(), obs.getResult(), first.getResult());
-						if (update) {
-							obs.setId(first.getId());
-							return true;
-						}
-					}
-					return false;
-				}
-			}
-			throw new ImportException("Observation has no Datastream of Multidatastream set!");
 		} catch (ServiceFailureException ex) {
 			throw new ImportException("Failed to validate.", ex);
 		}
 	}
 
-	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
-		getConfigEditor(context, edtCtx).setConfig(config);
-		update = editorUpdate.getValue();
-	}
-
-	@Override
-	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-		if (editor == null) {
-			editor = new EditorMap<>();
-
-			editorUpdate = new EditorBoolean(false, "Update", "Update results that are different.");
-			editor.addOption("update", editorUpdate, false);
-		}
-		return editor;
-	}
 }

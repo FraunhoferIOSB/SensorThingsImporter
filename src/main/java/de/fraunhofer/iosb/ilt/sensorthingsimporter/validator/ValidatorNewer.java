@@ -19,6 +19,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.Configurable;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorNull;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
@@ -38,7 +39,7 @@ import java.util.Map;
  *
  * @author scf
  */
-public class ValidatorNewer implements Validator {
+public class ValidatorNewer implements Validator, Configurable<SensorThingsService, Object> {
 
 	private EditorNull editor = new EditorNull("Validator", "Validates the observation against the datastream");
 	private final Map<Id, Instant> datastreamCache = new HashMap<>();
