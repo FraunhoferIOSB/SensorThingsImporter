@@ -18,6 +18,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
@@ -43,6 +44,13 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
 			label = "Input Url", description = "The input url(s)")
 	@EditorSubclass.EdOptsSubclass(iface = UrlGenerator.class)
 	private UrlGenerator inputUrl;
+
+	@ConfigurableField(
+			label = "Sort",
+			description = "Sort the urls received from the input url.",
+			editor = EditorBoolean.class)
+	@EditorBoolean.EdOptsBool()
+	private boolean sort;
 
 	@Override
 	public Iterator<URL> iterator() {
@@ -97,6 +105,9 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
 					asList = Collections.emptyList();
 				} else {
 					asList = Arrays.asList(split);
+				}
+				if (sort) {
+					asList.sort(null);
 				}
 				currentIterator = asList.iterator();
 			}

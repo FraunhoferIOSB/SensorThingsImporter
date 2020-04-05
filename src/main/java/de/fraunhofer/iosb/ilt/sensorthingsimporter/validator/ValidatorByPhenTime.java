@@ -30,8 +30,11 @@ import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
 import de.fraunhofer.iosb.ilt.sta.model.ext.EntityList;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
+import de.fraunhofer.iosb.ilt.swe.common.Utils;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -59,6 +62,11 @@ public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<Sen
 			label = "Cache", description = "Download & cache all observations with phenomenonTime later than the first encoutered.")
 	@EditorBoolean.EdOptsBool()
 	private boolean cacheObservations;
+
+	@ConfigurableField(editor = EditorBoolean.class,
+			label = "Cache deletes duplicates", description = "Delete duplicates if the cache encouters them.")
+	@EditorBoolean.EdOptsBool(dflt = true)
+	private boolean deleteDuplicates;
 
 	private Id latestDsId;
 	private Id latestMdsId;
@@ -155,38 +163,58 @@ public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<Sen
 
 	private Observation getFromCache(TimeObject checkTime, BaseDao<Observation> observations) throws ServiceFailureException {
 		Instant checkInstant = instantFrom(checkTime);
+		List<Observation> toDelete = null;
 		if (cache.isEmpty()) {
 			EntityList<Observation> list = observations.query()
 					.select("@iot.id", "result", "phenomenonTime")
 					.filter("phenomenonTime ge " + checkInstant.toString())
+					.orderBy("phenomenonTime asc")
 					.top(1000)
 					.list();
-			addToCache(list);
+			toDelete = addToCache(list);
 		} else {
 			if (checkInstant.isBefore(cacheStart)) {
 				EntityList<Observation> list = observations.query()
 						.select("@iot.id", "result", "phenomenonTime")
 						.filter("phenomenonTime ge " + checkInstant.toString() + " and phenomenonTime le " + cacheStart)
+						.orderBy("phenomenonTime asc")
 						.top(1000)
 						.list();
-				addToCache(list);
+				toDelete = addToCache(list);
+			}
+		}
+		if (!Utils.isNullOrEmpty(toDelete)) {
+			LOGGER.warn("Deleting {} duplicates.", toDelete.size());
+			for (Observation delete : toDelete) {
+				observations.delete(delete);
 			}
 		}
 
 		return cache.get(checkTime);
 	}
 
-	private void addToCache(EntityList<Observation> list) {
+	private List<Observation> addToCache(EntityList<Observation> list) {
+		List<Observation> toDelete = null;
 		Iterator<Observation> fullIterator = list.fullIterator();
 		while (fullIterator.hasNext()) {
 			Observation obs = fullIterator.next();
 			TimeObject phenomenonTime = obs.getPhenomenonTime();
-			cache.put(phenomenonTime, obs);
+			Observation old = cache.put(phenomenonTime, obs);
 			Instant instant = instantFrom(phenomenonTime);
 			if (cacheStart == null || instant.isBefore(cacheStart)) {
 				cacheStart = instant;
 			}
+			if (deleteDuplicates && old != null && !old.getId().equals(obs.getId())) {
+				if (toDelete == null) {
+					toDelete = new ArrayList<>();
+				}
+				toDelete.add(old);
+			}
 		}
+		if (toDelete == null) {
+			return Collections.emptyList();
+		}
+		return toDelete;
 	}
 
 	private Observation getObservation(TimeObject phenTime, BaseDao<Observation> observations) throws ServiceFailureException {
