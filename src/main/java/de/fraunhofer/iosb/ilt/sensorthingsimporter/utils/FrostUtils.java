@@ -662,6 +662,9 @@ public final class FrostUtils {
 		for (final Map.Entry<String, Object> entry : source.entrySet()) {
 			final String key = entry.getKey();
 			final Object value = entry.getValue();
+			if ((value == null || String.valueOf(value).isEmpty()) && !target.containsKey(key)) {
+				continue;
+			}
 			if (!target.containsKey(key)) {
 				target.put(key, value);
 				updated = true;

@@ -139,6 +139,10 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 		dsProps.put(TAG_NAMESPACE, sr.namespace);
 		dsProps.put(TAG_METADATA, stationsUrl);
 
+		if (Utils.isNullOrEmpty(sr.samplingProces)) {
+			LOGGER.error("Station with empty samplingProcess.");
+			return null;
+		}
 		try {
 			String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(sr.airQualityStation);
 			Location location = frostUtils.findOrCreateLocation(
