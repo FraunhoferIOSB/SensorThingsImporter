@@ -79,7 +79,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 	/**
 	 * StationLocalid/SamplingPointLocalId
 	 */
-	private static final Map<String, Map<String, EeaStationRecord>> STATIONS = new HashMap<>();
+	private static final Map<String, Map<String, Map<String, EeaStationRecord>>> STATIONS = new HashMap<>();
 	private final EntityCache<Integer, ObservedProperty> observedPropertyCache = EeaObservedProperty.createObservedPropertyCache();
 
 	@Override
@@ -200,10 +200,12 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 		loadStationData();
 		loadObservedProperties();
 		String stationLocalId = getFromRecord(record, "station_localid", "AirQualityStation");
-		String sppLocalId = getFromRecord(record, "samplingpoint_localid", "SamplingPoint");
+		String pointLocalId = getFromRecord(record, "samplingpoint_localid", "SamplingPoint");
+		String processLocalId = getFromRecord(record, "samplingprocess_localid", "SamplingProcess");
 		return STATIONS
 				.getOrDefault(stationLocalId, Collections.emptyMap())
-				.get(sppLocalId);
+				.getOrDefault(pointLocalId, Collections.emptyMap())
+				.get(processLocalId);
 	}
 
 	private void loadObservedProperties() throws ImportException {
@@ -239,7 +241,8 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 				CSVRecord record = iterator.next();
 				EeaStationRecord station = new EeaStationRecord(record);
 				STATIONS.computeIfAbsent(station.airQualityStation, (t) -> new HashMap<>())
-						.put(station.samplingPoint, station);
+						.computeIfAbsent(station.samplingPoint, (t) -> new HashMap<>())
+						.put(station.samplingProces, station);
 			}
 
 		} catch (IOException ex) {
@@ -301,7 +304,10 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 			inletHeight = record.get("InletHeight");
 			buildingDistance = record.get("BuildingDistance");
 			kerbDistance = record.get("KerbDistance");
-		}
 
+			if (Utils.isNullOrEmpty(samplingProces)) {
+				samplingProces = "Unknown";
+			}
+		}
 	}
 }
