@@ -18,8 +18,12 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.nio.charset.Charset;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
+import org.apache.http.ParseException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -53,9 +57,20 @@ public class UrlUtils {
 	}
 
 	public static String fetchFromUrl(String targetUrl, Charset charset) throws ImportException {
+		LOGGER.info("Fetching: {}", targetUrl);
 		try {
-			LOGGER.info("Fetching: {}", targetUrl);
-			CloseableHttpClient client = HttpClients.createSystem();
+			if (targetUrl.startsWith("file://")) {
+				return readFileUrl(targetUrl, charset);
+			}
+			return readNormalUrl(targetUrl, charset);
+		} catch (IOException ex) {
+			LOGGER.error("Failed to fetch url " + targetUrl, ex);
+			throw new ImportException("Failed to fetch url " + targetUrl, ex);
+		}
+	}
+
+	private static String readNormalUrl(String targetUrl, Charset charset) throws IOException, ParseException {
+		try (CloseableHttpClient client = HttpClients.createSystem()) {
 			HttpGet get = new HttpGet(targetUrl);
 			CloseableHttpResponse response = client.execute(get);
 			HttpEntity entity = response.getEntity();
@@ -64,9 +79,13 @@ public class UrlUtils {
 			}
 			String data = EntityUtils.toString(entity, charset);
 			return data;
-		} catch (IOException ex) {
-			LOGGER.error("Failed to fetch url " + targetUrl, ex);
-			throw new ImportException("Failed to fetch url " + targetUrl, ex);
+		}
+	}
+
+	private static String readFileUrl(String targetUrl, Charset charset) throws IOException {
+		try (InputStream input = new URL(targetUrl).openStream()) {
+			String string = IOUtils.toString(input, charset);
+			return string;
 		}
 	}
 
