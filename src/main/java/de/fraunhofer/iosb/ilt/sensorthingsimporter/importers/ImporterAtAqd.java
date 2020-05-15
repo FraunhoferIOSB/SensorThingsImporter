@@ -710,6 +710,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			this.startTime = startTime;
 			datastreamIterator = datastreamCache.values().iterator();
 			count = datastreamCache.values().size();
+			LOGGER.info("Importing Observations for {} Datastreams.", count);
 		}
 
 		private List<Observation> importDatastream(Datastream ds) throws ImportException, ServiceFailureException {
