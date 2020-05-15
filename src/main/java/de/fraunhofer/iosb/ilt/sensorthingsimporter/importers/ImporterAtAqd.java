@@ -741,7 +741,10 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				String featureId = exprFeatureId.evaluate(doc);
 				String samplingPointId = exprSamplingPointId.evaluate(doc);
 				if (!samplingPointId.endsWith(dsLocalId)) {
-					LOGGER.error("Returned data has sampling point {}, but expected data for {}", samplingPointId, dsLocalId);
+					LOGGER.debug("Returned data has sampling point {}, but expected data for {}", samplingPointId, dsLocalId);
+				}
+				if (Utils.isNullOrEmpty(featureId)) {
+					return result;
 				}
 				FeatureOfInterest foi = foiCache.get(FrostUtils.afterLastSlash(featureId));
 				if (foi == null) {
