@@ -28,6 +28,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UnitConverter;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.Parser;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.ParserTime;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
@@ -60,6 +61,16 @@ public class RecordConverterCSV implements AnnotatedConfigurable<SensorThingsSer
 			label = "Result Col", description = "The column # that holds the result (first is 0).")
 	@EditorInt.EdOptsInt(dflt = -1, min = 0, max = 99, step = 1)
 	private Integer colResult;
+
+	@ConfigurableField(editor = EditorInt.class, optional = true,
+			label = "Unit Col", description = "The column # that holds the unit of measurement (first is 0).")
+	@EditorInt.EdOptsInt(dflt = -1, min = 0, max = 99, step = 1)
+	private Integer colUnit;
+
+	@ConfigurableField(editor = EditorClass.class, optional = true,
+			label = "UnitConverter", description = "The converter used to convert units.")
+	@EditorClass.EdOptsClass(clazz = UnitConverter.class)
+	private UnitConverter converter;
 
 	@ConfigurableField(editor = EditorList.class,
 			label = "PhenomenonTime Col", description = "The column(s) # that holds the phenomenonTime (first is 0).")
@@ -119,7 +130,13 @@ public class RecordConverterCSV implements AnnotatedConfigurable<SensorThingsSer
 			LOGGER.debug("No result found in column {}.", colResult);
 			return null;
 		}
+
 		Datastream datastream = dsm.getDatastreamFor(record);
+		if (colUnit >= 0) {
+			String unitFrom = record.get(colUnit);
+			String unitTo = datastream.getUnitOfMeasurement().getSymbol();
+			result = convertResult(unitFrom, unitTo, result);
+		}
 		obs = new Observation(result, datastream);
 		log = new StringBuilder("Result: _").append(result).append("_");
 
@@ -141,8 +158,25 @@ public class RecordConverterCSV implements AnnotatedConfigurable<SensorThingsSer
 		if (verbose) {
 			LOGGER.debug(log.toString());
 		}
-		LOGGER.trace("Record: {}", record.toString());
+		LOGGER.trace("Record: {}", record);
 		return obs;
+	}
+
+	private Object convertResult(String unitFrom, String unitTo, Object result) {
+		if (unitFrom.equals(unitTo)) {
+			return result;
+		}
+		if (converter == null) {
+			LOGGER.warn("Do not know how to convert {} to {}.", unitFrom, unitTo);
+			return null;
+		}
+		if (result instanceof BigDecimal) {
+			return converter.convert(unitFrom, unitTo, (BigDecimal) result);
+		}
+		if (result instanceof Number) {
+			return converter.convert(unitFrom, unitTo, new BigDecimal(result.toString()));
+		}
+		return null;
 	}
 
 	private TimeObject listToTimeObject(List<Integer> colList, CSVRecord record) throws ImportException {
