@@ -136,6 +136,10 @@ public class RecordConverterCSV implements AnnotatedConfigurable<SensorThingsSer
 			String unitFrom = record.get(colUnit);
 			String unitTo = datastream.getUnitOfMeasurement().getSymbol();
 			result = convertResult(unitFrom, unitTo, result);
+			if (result == null) {
+				LOGGER.error("Failed to convert from {} to {}.", unitFrom, unitTo);
+				return null;
+			}
 		}
 		obs = new Observation(result, datastream);
 		log = new StringBuilder("Result: _").append(result).append("_");
