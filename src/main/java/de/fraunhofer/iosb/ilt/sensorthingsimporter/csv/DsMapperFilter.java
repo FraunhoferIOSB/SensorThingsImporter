@@ -105,13 +105,11 @@ public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<S
 		EntityList<Datastream> streams = query.list();
 		if (streams.size() > 1) {
 			LOGGER.error("Found incorrect number of datastreams: {} for filter: {}", streams.size(), filter);
-			throw new IllegalArgumentException("Found incorrect number of datastreams: " + streams.size());
+			throw new ImportException("Found incorrect number of datastreams: " + streams.size() + " for filter: " + filter);
 		} else if (streams.isEmpty()) {
 			if (dsGenerator != null) {
 				ds = dsGenerator.createDatastreamFor(record);
 				LOGGER.info("Created datastream {} for filter {}.", ds, filter);
-			} else {
-				throw new IllegalArgumentException("Found no datastreams for filter: " + filter);
 			}
 		} else {
 			ds = streams.iterator().next();
@@ -119,7 +117,7 @@ public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<S
 		}
 		if (ds == null) {
 			LOGGER.error("Found no datastreams for filter: {}.", filter);
-			throw new IllegalArgumentException("Found no datastreams for filter: " + filter);
+			throw new ImportException("Found no datastreams for filter: " + filter);
 		}
 		datastreamCache.put(filter, ds);
 		return ds;
