@@ -109,7 +109,7 @@ public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<S
 		} else if (streams.isEmpty()) {
 			if (dsGenerator != null) {
 				ds = dsGenerator.createDatastreamFor(record);
-				LOGGER.info("Created datastream {} for query {}.", ds.getId(), filter);
+				LOGGER.info("Created datastream {} for query {}.", ds, filter);
 			} else {
 				throw new IllegalArgumentException("Found no datastreams for filter: " + filter);
 			}
