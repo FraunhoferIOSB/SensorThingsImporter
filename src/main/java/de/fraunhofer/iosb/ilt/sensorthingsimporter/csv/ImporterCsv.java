@@ -168,7 +168,7 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 
 		@Override
 		public boolean hasNext() {
-			return records.hasNext() || urlIterator.hasNext();
+			return records != null && records.hasNext() || urlIterator.hasNext();
 		}
 
 		@Override
@@ -180,7 +180,7 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 					throw new IllegalStateException(ex);
 				}
 			}
-			while (records.hasNext()) {
+			while (records != null && records.hasNext()) {
 				CSVRecord record = records.next();
 				totalCount++;
 				if (rowSkip > 0) {
@@ -211,33 +211,35 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 
 		private CSVParser nextUrl() throws ImportException {
 			rowSkip = rowSkipBase;
-			URL inUrl = urlIterator.next();
-			CSVParser parser;
-			try {
-				if (inUrl != null) {
-					if (inUrl.getProtocol().startsWith("http")) {
-						String data = UrlUtils.fetchFromUrl(inUrl.toString(), charset);
-						parser = CSVParser.parse(data, format);
-					} else if (inUrl.getProtocol().startsWith("ftp")) {
-						URLConnection connection = inUrl.openConnection();
-						try (InputStream stream = connection.getInputStream()) {
-							String data = IOUtils.toString(stream, "UTF-8");
+			while (urlIterator.hasNext()) {
+				URL inUrl = urlIterator.next();
+				try {
+					CSVParser parser;
+					if (inUrl != null) {
+						if (inUrl.getProtocol().startsWith("http")) {
+							String data = UrlUtils.fetchFromUrl(inUrl.toString(), charset);
 							parser = CSVParser.parse(data, format);
+						} else if (inUrl.getProtocol().startsWith("ftp")) {
+							URLConnection connection = inUrl.openConnection();
+							try (InputStream stream = connection.getInputStream()) {
+								String data = IOUtils.toString(stream, "UTF-8");
+								parser = CSVParser.parse(data, format);
+							}
+						} else {
+							LOGGER.error("Unsupported scheme: {}.", inUrl.getProtocol());
+							throw new ImportException("Unsupported scheme: " + inUrl.getProtocol());
 						}
 					} else {
-						LOGGER.error("Unsupported scheme: {}.", inUrl.getProtocol());
-						throw new ImportException("Unsupported scheme: " + inUrl.getProtocol());
+						LOGGER.error("No valid input url or file.");
+						throw new ImportException("No valid input url or file.");
 					}
-				} else {
-					LOGGER.error("No valid input url or file.");
-					throw new ImportException("No valid input url or file.");
+					return parser;
+				} catch (ImportException | IOException exc) {
+					LOGGER.error("Failed to handle URL: {}; {}", inUrl, exc.getMessage());
 				}
-			} catch (IOException exc) {
-				LOGGER.error("Failed: {}", exc.getMessage());
-				throw new ImportException("Failed to handle csv file.", exc);
 			}
-
-			return parser;
+			LOGGER.error("NextUrl requested, but no URLs left over.");
+			return null;
 		}
 	}
 
