@@ -181,6 +181,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 					uom, thing, observedProperty, sensor, null);
 			return ds;
 		} catch (ServiceFailureException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException(ex);
 		}
 	}
@@ -220,6 +221,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 					"");
 			EeaObservedProperty.importObservedProperties(frostUtils, observedPropertyCache);
 		} catch (ServiceFailureException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Failed to load observed properties", ex);
 		}
 
@@ -246,6 +248,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 			}
 
 		} catch (IOException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Failed to parse station CSV file", ex);
 		}
 	}

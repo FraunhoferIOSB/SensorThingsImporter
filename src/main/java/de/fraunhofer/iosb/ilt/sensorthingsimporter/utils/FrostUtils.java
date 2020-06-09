@@ -841,6 +841,7 @@ public final class FrostUtils {
 			transform.transform(sourcePoint, targetPoint);
 			return new Point(targetPoint.x, targetPoint.y);
 		} catch (FactoryException | MismatchedDimensionException | TransformException ex) {
+			LOGGER.error("Failed to convert coordinates: {}", ex.getMessage());
 			throw new ImportException(ex);
 		}
 	}

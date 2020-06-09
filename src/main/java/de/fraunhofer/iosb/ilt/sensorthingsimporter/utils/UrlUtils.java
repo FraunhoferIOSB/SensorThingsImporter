@@ -64,7 +64,7 @@ public class UrlUtils {
 			}
 			return readNormalUrl(targetUrl, charset);
 		} catch (IOException ex) {
-			LOGGER.error("Failed to fetch url " + targetUrl, ex);
+			LOGGER.error("Failed to fetch url {}: {}", targetUrl, ex.getMessage());
 			throw new ImportException("Failed to fetch url " + targetUrl, ex);
 		}
 	}

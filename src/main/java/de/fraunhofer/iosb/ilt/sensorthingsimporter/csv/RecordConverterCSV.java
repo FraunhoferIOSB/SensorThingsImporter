@@ -215,7 +215,7 @@ public class RecordConverterCSV implements AnnotatedConfigurable<SensorThingsSer
 			return parseTimestamp(value);
 		} catch (ImportException e) {
 			// Not anything we know!
-			LOGGER.debug("Failed to parse time.", e);
+			LOGGER.debug("Failed to parse {} to a time: {}", value, e.getMessage());
 			throw new ImportException("Time value " + value + " could not be parsed as a time.");
 		}
 	}
@@ -236,6 +236,7 @@ public class RecordConverterCSV implements AnnotatedConfigurable<SensorThingsSer
 			cal.setTimeInMillis(1000 * longValue);
 			return ZonedDateTime.ofInstant(cal.toInstant(), ZoneId.systemDefault());
 		} catch (NumberFormatException e) {
+			LOGGER.debug("Failed to parse {} to a time: {}", value, e.getMessage());
 			throw new ImportException("Could not parse time value " + value);
 		}
 	}

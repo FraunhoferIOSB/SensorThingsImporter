@@ -40,12 +40,16 @@ import java.util.Map;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author scf
  */
 public class CsvColumnExtractor implements DocumentParser {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(CsvColumnExtractor.class.getName());
 
 	private EditorMap<Map<String, Object>> editor;
 	private EditorList<DatastreamMapper, EditorSubclass<SensorThingsService, Object, DatastreamMapper>> editorDsMappers;
@@ -177,6 +181,7 @@ public class CsvColumnExtractor implements DocumentParser {
 		try {
 			return process(input);
 		} catch (IOException exc) {
+			LOGGER.debug("Exception: {}", exc.getMessage());
 			throw new ImportException(exc);
 		}
 	}

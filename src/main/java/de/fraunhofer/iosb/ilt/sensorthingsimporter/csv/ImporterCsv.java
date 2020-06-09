@@ -199,7 +199,7 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 							result.add(obs);
 						}
 					} catch (ImportException ex) {
-						LOGGER.error("Failed to import.", ex);
+						LOGGER.debug("Failed to import.", ex);
 					}
 				}
 				rowCount++;
@@ -229,11 +229,11 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 						throw new ImportException("Unsupported scheme: " + inUrl.getProtocol());
 					}
 				} else {
-					LOGGER.error("Failed");
+					LOGGER.error("No valid input url or file.");
 					throw new ImportException("No valid input url or file.");
 				}
 			} catch (IOException exc) {
-				LOGGER.error("Failed", exc);
+				LOGGER.error("Failed: {}", exc.getMessage());
 				throw new ImportException("Failed to handle csv file.", exc);
 			}
 

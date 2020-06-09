@@ -409,10 +409,13 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			LOGGER.info("Done with stations, imported {} of {}.", imported, total);
 
 		} catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("XML problem.", ex);
 		} catch (FactoryException | MismatchedDimensionException | TransformException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Coordinate conversion problem.", ex);
 		} catch (ServiceFailureException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Failed to communicate with SensorThings API service.", ex);
 		}
 	}
@@ -522,8 +525,10 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				imported++;
 			}
 		} catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("XML problem.", ex);
 		} catch (ServiceFailureException | NumberFormatException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Failed to communicate with SensorThings API service.", ex);
 		}
 		LOGGER.info("Done with processes, imported {} of {}.", imported, total);
@@ -584,10 +589,13 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				imported++;
 			}
 		} catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("XML problem.", ex);
 		} catch (FactoryException | MismatchedDimensionException | TransformException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Coordinate conversion problem.", ex);
 		} catch (ServiceFailureException | NumberFormatException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Failed to communicate with SensorThings API service.", ex);
 		}
 		LOGGER.info("Done with samples, imported {} of {}.", imported, total);
@@ -686,8 +694,10 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				imported++;
 			}
 		} catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("XML problem.", ex);
 		} catch (ServiceFailureException | NumberFormatException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Failed to communicate with SensorThings API service.", ex);
 		}
 		LOGGER.info("Done with SamplingPoints, imported {} of {}.", imported, total);
@@ -793,6 +803,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				return result;
 
 			} catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
+				LOGGER.debug("Exception: {}", ex.getMessage());
 				throw new ImportException("XML problem.", ex);
 			}
 		}

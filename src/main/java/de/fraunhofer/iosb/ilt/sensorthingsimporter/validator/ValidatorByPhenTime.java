@@ -257,6 +257,7 @@ public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<Sen
 				return false;
 			}
 		} catch (ServiceFailureException ex) {
+			LOGGER.debug("Exception fetching validation observations: {}", ex.getMessage());
 			throw new ImportException("Failed to validate.", ex);
 		}
 	}
