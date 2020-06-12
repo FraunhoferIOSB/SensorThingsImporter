@@ -132,6 +132,10 @@ public class RecordConverterCSV implements AnnotatedConfigurable<SensorThingsSer
 		}
 
 		Datastream datastream = dsm.getDatastreamFor(record);
+		if (datastream == null) {
+			LOGGER.debug("No datastream found for column {}", record);
+			return null;
+		}
 		if (colUnit >= 0) {
 			String unitFrom = record.get(colUnit);
 			String unitTo = datastream.getUnitOfMeasurement().getSymbol();

@@ -159,12 +159,16 @@ public class ImporterUniPg implements Importer, Configurable<SensorThingsService
 			if (fastcheck) {
 				if (fastCheckLastId == null) {
 					Datastream ds = checkDataStream.getDatastreamFor(null);
+					if (ds == null) {
+						return true;
+					}
 					Observation last = ds.observations()
 							.query()
 							.filter("parameters/" + TAG_IMPORT_FILE_BASE + " eq '" + Utils.escapeForStringConstant(fileBase) + "'")
 							.orderBy("(parameters/" + TAG_IMPORT_FILE_ID + " add 0) desc")
 							.select("parameters")
 							.first();
+
 					if (last == null) {
 						fastCheckLastId = Integer.MIN_VALUE;
 						return false;
@@ -175,6 +179,9 @@ public class ImporterUniPg implements Importer, Configurable<SensorThingsService
 			}
 
 			Datastream ds = checkDataStream.getDatastreamFor(null);
+			if (ds == null) {
+				return true;
+			}
 			EntityList<Observation> list = ds.observations()
 					.query()
 					.filter("parameters/" + TAG_IMPORT_FILE_ID + " eq " + fileId + " and parameters/" + TAG_IMPORT_FILE_BASE + " eq '" + Utils.escapeForStringConstant(fileBase) + "'")

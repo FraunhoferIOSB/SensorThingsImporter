@@ -92,7 +92,6 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 	public Datastream createDatastreamFor(CSVRecord record) throws ImportException {
 		EeaStationRecord stationRecord = findStation(record);
 		if (stationRecord == null) {
-			LOGGER.error("Could not find station metadata.");
 			return null;
 		}
 		return importEntities(stationRecord, record);
@@ -231,6 +230,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 		if (!STATIONS.isEmpty()) {
 			return;
 		}
+		LOGGER.info("Loading station MetaData from {}", stationsUrl);
 		String data = UrlUtils.fetchFromUrl(stationsUrl);
 		try {
 			CSVParser stationParser = CSVParser.parse(
@@ -248,7 +248,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 			}
 
 		} catch (IOException ex) {
-			LOGGER.debug("Exception: {}", ex.getMessage());
+			LOGGER.debug("IOException parsing CSV file: {}", ex.getMessage());
 			throw new ImportException("Failed to parse station CSV file", ex);
 		}
 	}
