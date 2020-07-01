@@ -31,7 +31,7 @@
 		<maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
 		<openjfx.version>11.0.2</openjfx.version>
 		<postgresql.version>42.2.2</postgresql.version>
-		<quartz.version>2.3.0</quartz.version>
+		<quartz.version>2.3.2</quartz.version>
 	</properties>
 
 	<organization>
