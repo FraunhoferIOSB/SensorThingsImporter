@@ -30,6 +30,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.Validator;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.sta.StatusCodeException;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.File;
@@ -192,6 +193,11 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 		} catch (JsonSyntaxException exc) {
 			LOGGER.error("Failed to parse {}", config);
 			LOGGER.debug("Failed to parse.", exc);
+		} catch (StatusCodeException exc) {
+			LOGGER.error("URL: " + exc.getUrl());
+			LOGGER.error("Code: " + exc.getStatusCode() + " " + exc.getStatusMessage());
+			LOGGER.error("Data: " + exc.getReturnedContent());
+			LOGGER.error("Failed to import.", exc);
 		} catch (ImportException | ServiceFailureException exc) {
 			LOGGER.error("Failed to import.", exc);
 		}
