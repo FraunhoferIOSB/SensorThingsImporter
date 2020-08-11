@@ -38,7 +38,7 @@ public class GitVersionInfo {
 	public static final TypeReference<Map<String, String>> TYPE_MAP_STRING_STRING = new TypeReference<Map<String, String>>() {
 		// Empty on purpose.
 	};
-	public static final String PACKAGE_NAME = "FROST-Server.Core";
+	public static final String PACKAGE_NAME = "SensorThingsImporter";
 
 	/**
 	 * The logger for this class.
