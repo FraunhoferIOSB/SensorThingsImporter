@@ -357,8 +357,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			LOGGER.info("Found {} stations.", total);
 
 			for (int i = 0; i < total; i++) {
-				Node stationNode = stationList.item(i);
-				stationNode.getParentNode().removeChild(stationNode);
+				Node stationNode = stationList.item(i).cloneNode(true);
 
 				String stationId = exprStationId.evaluate(stationNode);
 				String stationName = exprStationName.evaluate(stationNode);
@@ -461,8 +460,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			LOGGER.debug("Found {} processes.", total);
 
 			for (int i = 0; i < total; i++) {
-				Node processNode = processList.item(i);
-				processNode.getParentNode().removeChild(processNode);
+				Node processNode = processList.item(i).cloneNode(true);
 
 				String rawProcessId = exprId.evaluate(processNode);
 				Matcher matcher = SENSOR_ID_PATTERN.matcher(rawProcessId);
@@ -522,6 +520,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				Sensor cachedSensor = sensorCache.get(processId);
 				Sensor sensor = frostUtils.findOrCreateSensor(filter, processName, processDescription, "application/pdf", processMeta, properties, cachedSensor);
 				sensorCache.put(processId, sensor);
+				LOGGER.debug("Process: {}.", processId);
 				imported++;
 			}
 		} catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
@@ -564,8 +563,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			LOGGER.debug("Found {} samples.", total);
 
 			for (int i = 0; i < total; i++) {
-				Node sampleNode = samplesList.item(i);
-				sampleNode.getParentNode().removeChild(sampleNode);
+				Node sampleNode = samplesList.item(i).cloneNode(true);
 
 				String sampleId = exprId.evaluate(sampleNode);
 				String sampleName = sampleId;
@@ -586,6 +584,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				Point geoJson = new Point(targetPoint.x, targetPoint.y);
 				FeatureOfInterest foi = frostUtils.findOrCreateFeature(filter, sampleName, sampleDescription, geoJson, properties, cachedFoi);
 				foiCache.put(sampleId, foi);
+				LOGGER.debug("Sample: {}.", sampleId);
 				imported++;
 			}
 		} catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
@@ -634,8 +633,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			LOGGER.debug("Found {} SamplingPoints.", total);
 
 			for (int i = 0; i < total; i++) {
-				Node feature = featureList.item(i);
-				feature.getParentNode().removeChild(feature);
+				Node feature = featureList.item(i).cloneNode(true);
 
 				String dsId = exprId.evaluate(feature);
 				String dsName = dsId;
@@ -691,6 +689,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				}
 				Datastream ds = frostUtils.findOrCreateDatastream(filter, dsName, dsDescription, properties, uom, thing, observedProperty, sensor, cachedDs);
 				datastreamCache.put(dsId, ds);
+				LOGGER.debug("SamplingPoints: {}.", dsId);
 				imported++;
 			}
 		} catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
@@ -927,8 +926,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 
 			int fieldCount = fieldList.getLength();
 			for (int i = 0; i < fieldCount; i++) {
-				Node fieldNode = fieldList.item(i);
-				fieldNode.getParentNode().removeChild(fieldNode);
+				Node fieldNode = fieldList.item(i).cloneNode(true);
 
 				String fieldName = exprFieldName.evaluate(fieldNode);
 				Field field = requestedFields.get(fieldName);
