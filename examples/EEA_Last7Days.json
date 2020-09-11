@@ -1,0 +1,94 @@
+{
+	"importer": {
+		"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.ImporterCsv",
+		"classConfig": {
+			"hasHeader": true,
+			"recordConvertors": [
+				{
+					"colResult": 11,
+					"resultParser": {
+						"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.ParserBigdecimal",
+						"classConfig": {
+							"dropTailingZeroes": true
+						}
+					},
+					"timeParser": {
+						"format": "yyyy-MM-dd HH:mm:ss XXX"
+					},
+					"colPhenTime": [
+						13,
+						14
+					],
+					"dsm": {
+						"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+						"classConfig": {
+							"dsGenerator": {
+								"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.DataStreamGeneratorEea",
+								"classConfig": {
+									"stationsUrl": "http://discomap.eea.europa.eu/map/fme/metadata/PanEuropean_metadata.csv"
+								}
+							},
+							"filterTemplate": "Thing/properties/localId eq \u0027{3}\u0027 and ObservedProperty/name eq \u0027{8}\u0027"
+						}
+					}
+				}
+			],
+			"inputUrl": {
+				"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.UrlGeneratorBouncer",
+				"classConfig": {
+					"inputUrl": {
+						"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.UrlGeneratorCombinations",
+						"classConfig": {
+							"baseUrl": "https://fme.discomap.eea.europa.eu/fmedatastreaming/AirQualityDownload/AQData_Extract.fmw?CountryCode\u003d{country}\u0026Pollutant\u003d{poll}\u0026Year_from\u003d2020\u0026Year_to\u003d2020\u0026Source\u003dAll\u0026Output\u003dTEXT\u0026TimeCoverage\u003dLast7days",
+							"replaceSets": [
+								{
+									"replaceKey": "{country}",
+									"replacements": [
+										"FR",
+										"IT",
+										"CH",
+										"DE"
+									]
+								},
+								{
+									"replaceKey": "{poll}",
+									"replacements": [
+										"1",
+										"5",
+										"7",
+										"8",
+										"9",
+										"10",
+										"38",
+										"71",
+										"6001"
+									]
+								}
+							]
+						}
+					}
+				}
+			}
+		}
+	},
+	"uploader": {
+	"serviceUrl": "http://localhost:8080/FROST-Server/v1.1",
+		"authMethod": {
+			"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthBasic",
+			"classConfig": {
+				"password": "passwordHere",
+				"ignoreSslErrors": false,
+				"username": "writeUser"
+			}
+		},
+		"useDataArrays": true
+	},
+	"msgInterval": 2000,
+	"validator": {
+		"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.ValidatorByPhenTime",
+		"classConfig": {
+			"update": true,
+			"cacheObservations": true
+		}
+	}
+}

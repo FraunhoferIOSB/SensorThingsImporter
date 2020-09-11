@@ -1,0 +1,43 @@
+{
+	"importer": {
+		"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.ImporterCsv",
+		"classConfig": {
+			"tabIsDelimeter": true,
+			"recordConvertors": [
+				{
+					"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterGroovy",
+					"classConfig": {
+						"script": "package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;\n\nimport de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;\nimport de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;\nimport de.fraunhofer.iosb.ilt.sta.ServiceFailureException;\nimport de.fraunhofer.iosb.ilt.sta.model.Datastream;\nimport de.fraunhofer.iosb.ilt.sta.model.Observation;\nimport de.fraunhofer.iosb.ilt.sta.model.ObservedProperty;\nimport de.fraunhofer.iosb.ilt.sta.model.Sensor;\nimport de.fraunhofer.iosb.ilt.sta.model.Thing;\nimport de.fraunhofer.iosb.ilt.sta.model.TimeObject;\nimport de.fraunhofer.iosb.ilt.sta.model.ext.UnitOfMeasurement;\nimport de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;\nimport java.math.BigDecimal;\nimport java.util.ArrayList;\nimport java.util.Collections;\nimport java.util.List;\nimport java.util.Map;\nimport org.apache.commons.csv.CSVRecord;\nimport org.slf4j.Logger;\nimport org.slf4j.LoggerFactory;\n\npublic class Script implements RecordConverter {\n\n\tprivate static final Logger LOGGER \u003d LoggerFactory.getLogger(Script.class.getName());\n\n\tprivate static final String OP_NAME \u003d \"Population Density\";\n\tprivate static final String OP_DESCRIPTION \u003d \"Population density by NUTS region from Eurostat, Update 14/05/2020\";\n\tprivate static final String OP_DEFINITION \u003d \"Persons per square kilometre	by NUTS 3 region\";\n\tprivate static final String SENSOR_NAME \u003d \"Eurostat Reporting\";\n\tprivate static final String SENSOR_DESCRIPTION \u003d \"Eurostat Reporting\";\n\tprivate static final String SENSOR_ENCODING \u003d \"text/plain\";\n\tprivate static final String SENSOR_META \u003d \"Nothing here yet\";\n\tprivate static final String DATA_SOURCE \u003d \"Eurostat\";\n\tprivate static final UnitOfMeasurement UOM \u003d new UnitOfMeasurement(\"Persons per square kilometre\", \"P/km^2\", \"Persons per square kilometre\");\n\n\tprivate final List\u003cTimeObject\u003e times \u003d new ArrayList\u003c\u003e();\n\tprivate FrostUtils frostUtils;\n\tprivate ObservedProperty op;\n\tprivate Sensor snsr;\n\n\t@Override\n\tpublic void init(SensorThingsService service) throws ImportException {\n\t\tfrostUtils \u003d new FrostUtils(service);\n\t}\n\n\tprivate ObservedProperty getOp() throws ServiceFailureException {\n\t\tif (op \u003d\u003d null) {\n\t\t\top \u003d frostUtils.findOrCreateOp(null, OP_NAME, OP_DEFINITION, OP_DESCRIPTION, Collections.emptyMap(), op);\n\t\t}\n\t\treturn op;\n\t}\n\n\tprivate Sensor getSensor() throws ServiceFailureException {\n\t\tif (snsr \u003d\u003d null) {\n\t\t\tsnsr \u003d frostUtils.findOrCreateSensor(null, SENSOR_NAME, SENSOR_DESCRIPTION, SENSOR_ENCODING, SENSOR_META, Collections.emptyMap(), snsr);\n\t\t}\n\t\treturn snsr;\n\t}\n\n\tprivate Thing getThing(String nutsId) throws ImportException, ServiceFailureException {\n\t\tList\u003cThing\u003e things \u003d frostUtils.getService()\n\t\t\t\t.things()\n\t\t\t\t.query().filter(\"properties/type eq \u0027NUTS\u0027 and properties/nutsId eq \u0027\" + nutsId + \"\u0027\")\n\t\t\t\t.list().toList();\n\t\tif (things.size() \u003e 1) {\n\t\t\tLOGGER.error(\"Found more than one Thing for NUTS region {}\", nutsId);\n\t\t\tthrow new ImportException(\"Found too many things\");\n\t\t} else if (things.isEmpty()) {\n\t\t\tLOGGER.error(\"Found no Thing for NUTS region {}\", nutsId);\n\t\t\tthrow new ImportException(\"Found no Thing\");\n\t\t}\n\t\treturn things.get(0);\n\t}\n\n\tprivate Datastream getDs(String nutsId) throws ServiceFailureException, ImportException {\n\t\tThing thing \u003d getThing(nutsId);\n\t\tfinal ObservedProperty obsProp \u003d getOp();\n\t\tDatastream ds \u003d thing.datastreams()\n\t\t\t\t.query()\n\t\t\t\t.filter(\"ObservedProperty/id eq \" + obsProp.getId().getUrl())\n\t\t\t\t.first();\n\t\tif (ds \u003d\u003d null) {\n\t\t\tString name \u003d obsProp.getName() + \" for \" + thing.getName();\n\t\t\tMap\u003cString, Object\u003e properties \u003d FrostUtils.propertiesBuilder().addItem(\"source\", DATA_SOURCE).build();\n\t\t\tds \u003d frostUtils.findOrCreateDatastream(null, name, name, properties, UOM, thing, obsProp, getSensor(), null);\n\t\t}\n\t\treturn ds;\n\t}\n\n\t@Override\n\tpublic List\u003cObservation\u003e convert(CSVRecord record) throws ImportException {\n\t\tif (times.isEmpty()) {\n\t\t\tLOGGER.info(\"Searching times...\");\n\t\t\tint i \u003d -1;\n\t\t\tfor (String cell : record) {\n\t\t\t\ti++;\n\t\t\t\tif (i \u003d\u003d 0) {\n\t\t\t\t\tcontinue;\n\t\t\t\t}\n\t\t\t\tint year \u003d Integer.parseInt(cell.trim());\n\t\t\t\tTimeObject phenTime \u003d TimeObject.parse(year + \"-01-01T00:00:00Z/\" + (year + 1) + \"-01-01T00:00:00Z\");\n\t\t\t\ttimes.add(phenTime);\n\t\t\t\tLOGGER.info(\"Found column: {} -\u003e {}\", cell, phenTime);\n\t\t\t}\n\t\t\treturn Collections.emptyList();\n\t\t}\n\t\tList\u003cObservation\u003e result \u003d new ArrayList\u003c\u003e();\n\n\t\tString geoCell \u003d record.get(0);\n\t\tString nutsId \u003d geoCell.split(\",\")[1].trim();\n\t\tDatastream ds;\n\t\ttry {\n\t\t\tds \u003d getDs(nutsId);\n\t\t} catch (ServiceFailureException ex) {\n\t\t\tthrow new ImportException(\"Failed to import\", ex);\n\t\t}\n\t\tint i \u003d -2;\n\t\tfor (String cell : record) {\n\t\t\ti++;\n\t\t\tif (i \u003d\u003d -1) {\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t\ttry {\n\t\t\t\tBigDecimal value \u003d new BigDecimal(cell.trim());\n\t\t\t\tTimeObject phenTime \u003d times.get(i);\n\t\t\t\tObservation o \u003d new Observation();\n\t\t\t\to.setResult(value);\n\t\t\t\to.setPhenomenonTime(phenTime);\n\t\t\t\to.setDatastream(ds);\n\t\t\t\tresult.add(o);\n\t\t\t} catch (NumberFormatException ex) {\n\t\t\t\t// Not a number...\n\t\t\t}\n\t\t}\n\t\treturn result;\n\t}\n}\n"
+					}
+				}
+			],
+			"inputUrl": {
+				"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.UrlGeneratorFixed",
+				"classConfig": {
+					"url": "file:///path/to/eurostat/download/demo_r_d3dens.tsv"
+				}
+			}
+		}
+	},
+	"uploader": {
+		"serviceUrl": "http://localhost:8080/FROST-Server/v1.1",
+		"authMethod": {
+			"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthBasic",
+			"classConfig": {
+				"password": "passwordHere",
+				"ignoreSslErrors": false,
+				"username": "writeUser"
+			}
+		},
+		"useDataArrays": true
+	},
+	"msgInterval": 1000,
+	"validator": {
+		"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.ValidatorByPhenTime",
+		"classConfig": {
+			"deleteDuplicates": true,
+			"update": true,
+			"cacheObservations": true
+		}
+	}
+}

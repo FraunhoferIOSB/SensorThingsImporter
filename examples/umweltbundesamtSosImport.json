@@ -1,0 +1,45 @@
+{
+	"importer": {
+		"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.ImporterAtAqd",
+		"classConfig": {
+			"samplesUrl": "http://luft.umweltbundesamt.at/inspire/wfs?service\u003dWFS\u0026version\u003d2.0.0\u0026request\u003dGetFeature\u0026typeName\u003daqd:AQD_Sample",
+			"fieldStartTime": "StartTime",
+			"fieldEndTime": "EndTime",
+			"fullImport": false,
+			"entityOwner": "http://luft.umweltbundesamt.at",
+			"sensorsUrl": "http://luft.umweltbundesamt.at/inspire/wfs?service\u003dWFS\u0026version\u003d2.0.0\u0026request\u003dGetFeature\u0026typeName\u003daqd:AQD_SamplingPointProcess",
+			"samplingPointsUrl": "http://luft.umweltbundesamt.at/inspire/wfs?service\u003dWFS\u0026version\u003d2.0.0\u0026request\u003dGetFeature\u0026typeName\u003daqd:AQD_SamplingPoint",
+			"observationsUrl": "http://luft.umweltbundesamt.at/inspire/sos?service\u003dSOS\u0026version\u003d2.0.0\u0026request\u003dgetObservation\u0026offering\u003durn:STA/{datastreamLocalId}\u0026eventTime\u003d{phenomenonTimeInterval}",
+			"thingsUrl": "http://luft.umweltbundesamt.at/inspire/wfs?service\u003dWFS\u0026version\u003d2.0.0\u0026request\u003dGetFeature\u0026typeName\u003daqd:AQD_Station",
+			"startTime": {
+				"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen.TimeGenAgo",
+				"classConfig": {
+					"amount": 2,
+					"unit": "DAYS"
+				}
+			},
+			"fieldValue": "Value"
+		}
+	},
+	"uploader": {
+		"serviceUrl": "http://localhost:8080/FROST-Server/v1.1",
+		"authMethod": {
+			"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthBasic",
+			"classConfig": {
+				"password": "passwordHere",
+				"ignoreSslErrors": false,
+				"username": "writeUser"
+			}
+		},
+		"useDataArrays": true
+	},
+	"msgInterval": 500,
+	"validator": {
+		"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.ValidatorByPhenTime",
+		"classConfig": {
+			"deleteDuplicates": true,
+			"update": true,
+			"cacheObservations": true
+		}
+	}
+}
