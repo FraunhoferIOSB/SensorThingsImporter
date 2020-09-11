@@ -38,7 +38,9 @@ import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.List;
 import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
@@ -49,12 +51,12 @@ import org.threeten.extra.Interval;
  *
  * @author scf
  */
-public class RecordConverterCSV implements AnnotatedConfigurable<SensorThingsService, Object> {
+public class RecordConverterDefault implements RecordConverter, AnnotatedConfigurable<SensorThingsService, Object> {
 
 	/**
 	 * The logger for this class.
 	 */
-	private static final Logger LOGGER = LoggerFactory.getLogger(RecordConverterCSV.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(RecordConverterDefault.class);
 	private boolean verbose = false;
 
 	@ConfigurableField(editor = EditorInt.class,
@@ -109,32 +111,33 @@ public class RecordConverterCSV implements AnnotatedConfigurable<SensorThingsSer
 	@EditorString.EdOptsString(lines = 4)
 	private String parametersTemplate;
 
-	public RecordConverterCSV() {
+	public RecordConverterDefault() {
 	}
 
-	public RecordConverterCSV setVerbose(boolean verbose) {
+	@Override
+	public void setVerbose(boolean verbose) {
 		this.verbose = verbose;
-		return this;
 	}
 
-	public Observation convert(CSVRecord record) throws ImportException {
+	@Override
+	public List<Observation> convert(CSVRecord record) throws ImportException {
 		Object result;
 		Observation obs;
 		StringBuilder log;
 		if (colResult >= record.size()) {
-			return null;
+			return Collections.emptyList();
 		}
 		String resultString = record.get(colResult);
 		result = parseResult(resultString);
 		if (result == null) {
 			LOGGER.debug("No result found in column {}.", colResult);
-			return null;
+			return Collections.emptyList();
 		}
 
 		Datastream datastream = dsm.getDatastreamFor(record);
 		if (datastream == null) {
 			LOGGER.debug("No datastream found for column {}", record);
-			return null;
+			return Collections.emptyList();
 		}
 		if (colUnit >= 0) {
 			String unitFrom = record.get(colUnit);
@@ -142,7 +145,7 @@ public class RecordConverterCSV implements AnnotatedConfigurable<SensorThingsSer
 			result = convertResult(unitFrom, unitTo, result);
 			if (result == null) {
 				LOGGER.error("Failed to convert from {} to {}.", unitFrom, unitTo);
-				return null;
+				return Collections.emptyList();
 			}
 		}
 		obs = new Observation(result, datastream);
@@ -167,7 +170,7 @@ public class RecordConverterCSV implements AnnotatedConfigurable<SensorThingsSer
 			LOGGER.debug(log.toString());
 		}
 		LOGGER.trace("Record: {}", record);
-		return obs;
+		return Arrays.asList(obs);
 	}
 
 	private Object convertResult(String unitFrom, String unitTo, Object result) {

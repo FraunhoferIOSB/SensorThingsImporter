@@ -23,7 +23,6 @@ import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
@@ -61,13 +60,13 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 	private SensorThingsService service;
 	private boolean verbose;
 
-	private final List<RecordConverterCSV> rcCsvs = new ArrayList<>();
+	private final List<RecordConverter> recordConverters = new ArrayList<>();
 
 	@ConfigurableField(editor = EditorList.class,
 			label = "Converters", description = "The classes that convert columns into observations.")
-	@EditorList.EdOptsList(editor = EditorClass.class, minCount = 1, labelText = "Add a Converter")
-	@EditorClass.EdOptsClass(clazz = RecordConverterCSV.class)
-	private List<RecordConverterCSV> recordConvertors;
+	@EditorList.EdOptsList(editor = EditorSubclass.class, minCount = 1, labelText = "Add a Converter")
+	@EditorSubclass.EdOptsSubclass(iface = RecordConverter.class)
+	private List<RecordConverter> recordConvertors;
 
 	@ConfigurableField(editor = EditorInt.class, optional = true,
 			label = "Row Limit", description = "The maximum number of rows to insert as observations (0=no limit).")
@@ -93,6 +92,11 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 			label = "Delimiter", description = "The character to use as delimiter ('\\t' for tab, default ',').")
 	@EditorString.EdOptsString(dflt = ",")
 	private String delimiter;
+
+	@ConfigurableField(editor = EditorBoolean.class, optional = true,
+			label = "Tab Delimited", description = "Is the TAB character a delimeter?")
+	@EditorBoolean.EdOptsBool()
+	private boolean tabIsDelimeter;
 
 	@ConfigurableField(editor = EditorBoolean.class, optional = true,
 			label = "Has Header", description = "Check if the CSV file has a header line.")
@@ -122,14 +126,18 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 
 	private void init() throws ImportException, ConfigurationException {
 
-		rcCsvs.clear();
-		rcCsvs.addAll(recordConvertors);
-		for (RecordConverterCSV rcCsv : rcCsvs) {
+		recordConverters.clear();
+		recordConverters.addAll(recordConvertors);
+		for (RecordConverter rcCsv : recordConverters) {
 			rcCsv.setVerbose(verbose);
+			rcCsv.init(service);
 		}
 
 		format = CSVFormat.DEFAULT
 				.withDelimiter(delimiter.charAt(0));
+		if (tabIsDelimeter) {
+			format = format.withDelimiter('\t');
+		}
 		if (hasHeader) {
 			format = format.withFirstRecordAsHeader();
 		}
@@ -191,13 +199,11 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 					return Collections.emptyList();
 				}
 				List<Observation> result = new ArrayList<>();
-				for (RecordConverterCSV rcCsv : rcCsvs) {
-					Observation obs;
+				for (RecordConverter rcCsv : recordConverters) {
+					List<Observation> obs;
 					try {
 						obs = rcCsv.convert(record);
-						if (obs != null) {
-							result.add(obs);
-						}
+						result.addAll(obs);
 					} catch (ImportException ex) {
 						LOGGER.debug("Failed to import.", ex);
 					}
@@ -216,18 +222,16 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 				try {
 					CSVParser parser;
 					if (inUrl != null) {
-						if (inUrl.getProtocol().startsWith("http")) {
-							String data = UrlUtils.fetchFromUrl(inUrl.toString(), charset);
-							parser = CSVParser.parse(data, format);
-						} else if (inUrl.getProtocol().startsWith("ftp")) {
+						final String protocol = inUrl.getProtocol();
+						if (protocol.startsWith("ftp")) {
 							URLConnection connection = inUrl.openConnection();
 							try (InputStream stream = connection.getInputStream()) {
 								String data = IOUtils.toString(stream, "UTF-8");
 								parser = CSVParser.parse(data, format);
 							}
 						} else {
-							LOGGER.error("Unsupported scheme: {}.", inUrl.getProtocol());
-							throw new ImportException("Unsupported scheme: " + inUrl.getProtocol());
+							String data = UrlUtils.fetchFromUrl(inUrl.toString(), charset);
+							parser = CSVParser.parse(data, format);
 						}
 					} else {
 						LOGGER.error("No valid input url or file.");

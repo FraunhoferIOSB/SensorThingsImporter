@@ -59,7 +59,7 @@ public class UrlUtils {
 	public static String fetchFromUrl(String targetUrl, Charset charset) throws ImportException {
 		LOGGER.info("Fetching: {}", targetUrl);
 		try {
-			if (targetUrl.startsWith("file://")) {
+			if (targetUrl.startsWith("file:/")) {
 				return readFileUrl(targetUrl, charset);
 			}
 			return readNormalUrl(targetUrl, charset);
