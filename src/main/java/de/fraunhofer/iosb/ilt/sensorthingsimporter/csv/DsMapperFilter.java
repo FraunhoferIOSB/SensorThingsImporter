@@ -101,21 +101,28 @@ public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<S
 		if (ds != null) {
 			return ds;
 		}
+		if (datastreamCache.containsKey(filter)) {
+			// We previously had found nothing. Don't search again.
+			return null;
+		}
 		Query<Datastream> query = service.datastreams().query().filter(filter);
 		EntityList<Datastream> streams = query.list();
 		if (streams.size() > 1) {
 			LOGGER.error("Found incorrect number of datastreams: {} for filter: {}", streams.size(), filter);
-			throw new IllegalArgumentException("Found incorrect number of datastreams: " + streams.size());
+			throw new ImportException("Found incorrect number of datastreams: " + streams.size() + " for filter: " + filter);
 		} else if (streams.isEmpty()) {
 			if (dsGenerator != null) {
 				ds = dsGenerator.createDatastreamFor(record);
-				LOGGER.info("Created datastream {} for query {}.", ds.getId(), filter);
-			} else {
-				throw new IllegalArgumentException("Found no datastreams for filter: " + filter);
+				if (ds != null) {
+					LOGGER.info("Created datastream {} for filter {}.", ds, filter);
+				}
 			}
 		} else {
 			ds = streams.iterator().next();
-			LOGGER.debug("Found datastream {} for query {}.", ds.getId(), filter);
+			LOGGER.debug("Found datastream {} for filter {}.", ds.getId(), filter);
+		}
+		if (ds == null) {
+			LOGGER.error("Found no datastreams for filter: {}.", filter);
 		}
 		datastreamCache.put(filter, ds);
 		return ds;

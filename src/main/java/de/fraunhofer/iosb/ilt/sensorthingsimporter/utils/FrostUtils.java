@@ -446,7 +446,7 @@ public final class FrostUtils {
 		if (cached != null) {
 			ds = cached;
 		} else {
-			final Query<Datastream> query = service.datastreams().query();
+			final Query<Datastream> query = t.datastreams().query();
 			final EntityList<Datastream> datastreamList = addOrCreateFilter(query, filter, name).list();
 			if (datastreamList.size() > 1) {
 				throw new IllegalStateException("More than one datastream matches filter " + filter);
@@ -662,6 +662,9 @@ public final class FrostUtils {
 		for (final Map.Entry<String, Object> entry : source.entrySet()) {
 			final String key = entry.getKey();
 			final Object value = entry.getValue();
+			if ((value == null || String.valueOf(value).isEmpty()) && !target.containsKey(key)) {
+				continue;
+			}
 			if (!target.containsKey(key)) {
 				target.put(key, value);
 				updated = true;
@@ -838,6 +841,7 @@ public final class FrostUtils {
 			transform.transform(sourcePoint, targetPoint);
 			return new Point(targetPoint.x, targetPoint.y);
 		} catch (FactoryException | MismatchedDimensionException | TransformException ex) {
+			LOGGER.error("Failed to convert coordinates: {}", ex.getMessage());
 			throw new ImportException(ex);
 		}
 	}
@@ -861,6 +865,29 @@ public final class FrostUtils {
 
 	public static String afterLastSlash(String input) {
 		return input.substring(input.lastIndexOf('/') + 1);
+	}
+
+	public static PropertyBuilder propertiesBuilder() {
+		return new PropertyBuilder();
+	}
+
+	public static class PropertyBuilder {
+
+		Map<String, Object> properties = new HashMap<>();
+
+		public PropertyBuilder addItem(String key, Object value) {
+			properties.put(key, value);
+			return this;
+		}
+
+		public PropertyBuilder addPath(String path, Object value) {
+			CollectionsHelper.setOn(properties, path, value);
+			return this;
+		}
+
+		public Map<String, Object> build() {
+			return properties;
+		}
 	}
 
 }

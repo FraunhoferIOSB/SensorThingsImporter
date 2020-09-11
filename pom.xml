@@ -16,7 +16,7 @@
 		<maven.compiler.source>8</maven.compiler.source>
 		<maven.compiler.target>8</maven.compiler.target>
 
-		<FROST-Client.version>0.29</FROST-Client.version>
+		<FROST-Client.version>0.32</FROST-Client.version>
 		<commons-collections.version>4.1</commons-collections.version>
 		<commons-csv.version>1.4</commons-csv.version>
 		<commons-io.version>2.5</commons-io.version>
@@ -24,6 +24,7 @@
 		<configurable.version>0.23</configurable.version>
 		<dockerfile-maven-plugin.version>1.4.13</dockerfile-maven-plugin.version>
 		<geotools.version>22.2</geotools.version>
+		<groovy.version>2.5.13</groovy.version>
 		<git-commit-id-plugin.version>4.0.0</git-commit-id-plugin.version>
 		<javax-activation.version>1.1.1</javax-activation.version>
 		<junit.version>4.13</junit.version>
@@ -128,7 +129,7 @@
 		<repository>
 			<id>osgeo</id>
 			<name>Open Source Geospatial Foundation Repository</name>
-			<url>http://download.osgeo.org/webdav/geotools/</url>
+			<url>https://repo.osgeo.org/repository/release/</url>
 		</repository>
 	</repositories>
 
@@ -203,6 +204,11 @@
 			<artifactId>junit</artifactId>
 			<version>${junit.version}</version>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.codehaus.groovy</groupId>
+			<artifactId>groovy</artifactId>
+			<version>${groovy.version}</version>
 		</dependency>
 	</dependencies>
 </project>

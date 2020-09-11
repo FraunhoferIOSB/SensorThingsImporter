@@ -79,7 +79,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 	/**
 	 * StationLocalid/SamplingPointLocalId
 	 */
-	private static final Map<String, Map<String, EeaStationRecord>> STATIONS = new HashMap<>();
+	private static final Map<String, Map<String, Map<String, EeaStationRecord>>> STATIONS = new HashMap<>();
 	private final EntityCache<Integer, ObservedProperty> observedPropertyCache = EeaObservedProperty.createObservedPropertyCache();
 
 	@Override
@@ -92,7 +92,6 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 	public Datastream createDatastreamFor(CSVRecord record) throws ImportException {
 		EeaStationRecord stationRecord = findStation(record);
 		if (stationRecord == null) {
-			LOGGER.error("Could not find station metadata.");
 			return null;
 		}
 		return importEntities(stationRecord, record);
@@ -139,6 +138,10 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 		dsProps.put(TAG_NAMESPACE, sr.namespace);
 		dsProps.put(TAG_METADATA, stationsUrl);
 
+		if (Utils.isNullOrEmpty(sr.samplingProces)) {
+			LOGGER.error("Station with empty samplingProcess.");
+			return null;
+		}
 		try {
 			String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(sr.airQualityStation);
 			Location location = frostUtils.findOrCreateLocation(
@@ -177,6 +180,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 					uom, thing, observedProperty, sensor, null);
 			return ds;
 		} catch (ServiceFailureException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException(ex);
 		}
 	}
@@ -196,10 +200,12 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 		loadStationData();
 		loadObservedProperties();
 		String stationLocalId = getFromRecord(record, "station_localid", "AirQualityStation");
-		String sppLocalId = getFromRecord(record, "samplingpoint_localid", "SamplingPoint");
+		String pointLocalId = getFromRecord(record, "samplingpoint_localid", "SamplingPoint");
+		String processLocalId = getFromRecord(record, "samplingprocess_localid", "SamplingProcess");
 		return STATIONS
 				.getOrDefault(stationLocalId, Collections.emptyMap())
-				.get(sppLocalId);
+				.getOrDefault(pointLocalId, Collections.emptyMap())
+				.get(processLocalId);
 	}
 
 	private void loadObservedProperties() throws ImportException {
@@ -214,6 +220,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 					"");
 			EeaObservedProperty.importObservedProperties(frostUtils, observedPropertyCache);
 		} catch (ServiceFailureException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Failed to load observed properties", ex);
 		}
 
@@ -223,6 +230,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 		if (!STATIONS.isEmpty()) {
 			return;
 		}
+		LOGGER.info("Loading station MetaData from {}", stationsUrl);
 		String data = UrlUtils.fetchFromUrl(stationsUrl);
 		try {
 			CSVParser stationParser = CSVParser.parse(
@@ -235,10 +243,12 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 				CSVRecord record = iterator.next();
 				EeaStationRecord station = new EeaStationRecord(record);
 				STATIONS.computeIfAbsent(station.airQualityStation, (t) -> new HashMap<>())
-						.put(station.samplingPoint, station);
+						.computeIfAbsent(station.samplingPoint, (t) -> new HashMap<>())
+						.put(station.samplingProces, station);
 			}
 
 		} catch (IOException ex) {
+			LOGGER.debug("IOException parsing CSV file: {}", ex.getMessage());
 			throw new ImportException("Failed to parse station CSV file", ex);
 		}
 	}
@@ -297,7 +307,10 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 			inletHeight = record.get("InletHeight");
 			buildingDistance = record.get("BuildingDistance");
 			kerbDistance = record.get("KerbDistance");
-		}
 
+			if (Utils.isNullOrEmpty(samplingProces)) {
+				samplingProces = "Unknown";
+			}
+		}
 	}
 }

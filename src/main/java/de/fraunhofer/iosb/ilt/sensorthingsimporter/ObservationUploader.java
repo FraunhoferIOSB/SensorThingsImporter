@@ -20,6 +20,7 @@ import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableClass;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
@@ -48,6 +49,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
+@ConfigurableClass
 public class ObservationUploader implements AnnotatedConfigurable<SensorThingsService, Object> {
 
 	/**

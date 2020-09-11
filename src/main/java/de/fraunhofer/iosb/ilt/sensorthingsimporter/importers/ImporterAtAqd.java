@@ -267,7 +267,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 	}
 
 	private void loadCache() throws ServiceFailureException {
-		LOGGER.info("Caching entities");
+		LOGGER.debug("Caching entities");
 
 		String filter = "properties/" + TAG_OWNER + " eq " + FrostUtils.quoteForUrl(entityOwner);
 		final int observedPropertyCount = observedPropertyCache.load(
@@ -275,49 +275,58 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				filter,
 				"id,name,description,definition,properties",
 				"");
-		LOGGER.info("Loaded {} ObservedProperties", observedPropertyCount);
+		LOGGER.debug("Loaded {} ObservedProperties", observedPropertyCount);
 
 		final int locationCount = locationsCache.load(
 				service.locations(),
 				filter,
 				"id,name,description,properties,encodingType,location",
 				"");
-		LOGGER.info("Loaded {} Locations", locationCount);
+		LOGGER.debug("Loaded {} Locations", locationCount);
 
 		final int thingCount = thingsCache.load(
 				service.things(),
 				filter,
 				"id,name,description,properties",
 				"Locations($select=id)");
-		LOGGER.info("Loaded {} Things", thingCount);
+		LOGGER.debug("Loaded {} Things", thingCount);
 
 		final int sensorCount = sensorCache.load(
 				service.sensors(),
 				filter,
 				"id,name,description,encodingtype,metadata,properties",
 				"");
-		LOGGER.info("Loaded {} Sensors", sensorCount);
+		LOGGER.debug("Loaded {} Sensors", sensorCount);
 
 		final int foiCount = foiCache.load(
 				service.featuresOfInterest(),
 				filter,
 				"id,name,description,encodingtype,feature,properties",
 				"");
-		LOGGER.info("Loaded {} FeaturesOfInterest", foiCount);
+		LOGGER.debug("Loaded {} FeaturesOfInterest", foiCount);
 
 		final int datastreamCount = datastreamCache.load(
 				service.datastreams(),
 				filter,
 				"id,name,description,unitOfMeasurement,observationType,properties,phenomenonTime",
 				"");
-		LOGGER.info("Loaded {} Datastreams", datastreamCount);
+		LOGGER.debug("Loaded {} Datastreams", datastreamCount);
+		LOGGER.info("Cached {} OP, {} Loc, {} Thngs, {} Snsrs, {} FoIs, {} DS",
+				observedPropertyCount,
+				locationCount,
+				thingCount,
+				sensorCount,
+				foiCount,
+				datastreamCount);
 	}
 
 	private void importThings() throws ImportException {
-		LOGGER.info("Fetching Stations from {}", thingsUrl);
+		LOGGER.debug("Fetching Stations from {}", thingsUrl);
 		String stationFeatureXml = UrlUtils.fetchFromUrl(thingsUrl);
-		LOGGER.info("Fetched {} characters.", stationFeatureXml.length());
+		LOGGER.debug("Fetched {} characters.", stationFeatureXml.length());
 
+		int imported = 0;
+		int total = 0;
 		try {
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 			factory.setNamespaceAware(true);
@@ -344,12 +353,11 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			XPathExpression exprLocationPos = xpath.compile("ef:geometry/gml:Point/gml:pos");
 
 			NodeList stationList = (NodeList) exprStationsList.evaluate(doc, XPathConstants.NODESET);
-			int count = stationList.getLength();
-			LOGGER.info("Found {} stations.", count);
+			total = stationList.getLength();
+			LOGGER.info("Found {} stations.", total);
 
-			for (int i = 0; i < count; i++) {
-				Node stationNode = stationList.item(i);
-				stationNode.getParentNode().removeChild(stationNode);
+			for (int i = 0; i < total; i++) {
+				Node stationNode = stationList.item(i).cloneNode(true);
 
 				String stationId = exprStationId.evaluate(stationNode);
 				String stationName = exprStationName.evaluate(stationNode);
@@ -394,14 +402,19 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				locationsCache.put(stationId, location);
 				thingsCache.put(stationId, thing);
 
+				imported++;
 				LOGGER.debug("Station: {}: {}.", stationId, stationName);
 			}
+			LOGGER.info("Done with stations, imported {} of {}.", imported, total);
 
 		} catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("XML problem.", ex);
 		} catch (FactoryException | MismatchedDimensionException | TransformException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Coordinate conversion problem.", ex);
 		} catch (ServiceFailureException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Failed to communicate with SensorThings API service.", ex);
 		}
 	}
@@ -410,9 +423,9 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		int imported = 0;
 		int total = 0;
 		Set<String> handledProcesses = new HashSet<>();
-		LOGGER.info("Fetching Processes from {}", sensorsUrl);
+		LOGGER.debug("Fetching Processes from {}", sensorsUrl);
 		String processFeatureXml = UrlUtils.fetchFromUrl(sensorsUrl);
-		LOGGER.info("Fetched {} characters.", processFeatureXml.length());
+		LOGGER.debug("Fetched {} characters.", processFeatureXml.length());
 		try {
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 			factory.setNamespaceAware(true);
@@ -444,11 +457,10 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 
 			NodeList processList = (NodeList) exprList.evaluate(doc, XPathConstants.NODESET);
 			total = processList.getLength();
-			LOGGER.info("Found {} processes.", total);
+			LOGGER.debug("Found {} processes.", total);
 
 			for (int i = 0; i < total; i++) {
-				Node processNode = processList.item(i);
-				processNode.getParentNode().removeChild(processNode);
+				Node processNode = processList.item(i).cloneNode(true);
 
 				String rawProcessId = exprId.evaluate(processNode);
 				Matcher matcher = SENSOR_ID_PATTERN.matcher(rawProcessId);
@@ -508,20 +520,25 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				Sensor cachedSensor = sensorCache.get(processId);
 				Sensor sensor = frostUtils.findOrCreateSensor(filter, processName, processDescription, "application/pdf", processMeta, properties, cachedSensor);
 				sensorCache.put(processId, sensor);
+				LOGGER.debug("Process: {}.", processId);
 				imported++;
 			}
 		} catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("XML problem.", ex);
 		} catch (ServiceFailureException | NumberFormatException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Failed to communicate with SensorThings API service.", ex);
 		}
 		LOGGER.info("Done with processes, imported {} of {}.", imported, total);
 	}
 
 	private void importFeaturesOfInterest() throws ImportException {
-		LOGGER.info("Fetching Samples from {}", samplesUrl);
+		int imported = 0;
+		int total = 0;
+		LOGGER.debug("Fetching Samples from {}", samplesUrl);
 		String samplesFeatureXml = UrlUtils.fetchFromUrl(samplesUrl);
-		LOGGER.info("Fetched {} characters.", samplesFeatureXml.length());
+		LOGGER.debug("Fetched {} characters.", samplesFeatureXml.length());
 		try {
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 			factory.setNamespaceAware(true);
@@ -542,12 +559,11 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			String featureMetaData = "http://luft.umweltbundesamt.at/inspire/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=aqd:AQD_Sample";
 
 			NodeList samplesList = (NodeList) exprSamplesList.evaluate(doc, XPathConstants.NODESET);
-			int count = samplesList.getLength();
-			LOGGER.info("Found {} samples.", count);
+			total = samplesList.getLength();
+			LOGGER.debug("Found {} samples.", total);
 
-			for (int i = 0; i < count; i++) {
-				Node sampleNode = samplesList.item(i);
-				sampleNode.getParentNode().removeChild(sampleNode);
+			for (int i = 0; i < total; i++) {
+				Node sampleNode = samplesList.item(i).cloneNode(true);
 
 				String sampleId = exprId.evaluate(sampleNode);
 				String sampleName = sampleId;
@@ -568,22 +584,28 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				Point geoJson = new Point(targetPoint.x, targetPoint.y);
 				FeatureOfInterest foi = frostUtils.findOrCreateFeature(filter, sampleName, sampleDescription, geoJson, properties, cachedFoi);
 				foiCache.put(sampleId, foi);
+				LOGGER.debug("Sample: {}.", sampleId);
+				imported++;
 			}
 		} catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("XML problem.", ex);
 		} catch (FactoryException | MismatchedDimensionException | TransformException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Coordinate conversion problem.", ex);
 		} catch (ServiceFailureException | NumberFormatException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Failed to communicate with SensorThings API service.", ex);
 		}
+		LOGGER.info("Done with samples, imported {} of {}.", imported, total);
 	}
 
 	private void importDatastreams() throws ImportException {
 		int imported = 0;
 		int total = 0;
-		LOGGER.info("Fetching SamplingPoints from {}", samplingPointsUrl);
+		LOGGER.debug("Fetching SamplingPoints from {}", samplingPointsUrl);
 		String samplingPointsFeatureXml = UrlUtils.fetchFromUrl(samplingPointsUrl);
-		LOGGER.info("Fetched {} characters.", samplingPointsFeatureXml.length());
+		LOGGER.debug("Fetched {} characters.", samplingPointsFeatureXml.length());
 		try {
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 			factory.setNamespaceAware(true);
@@ -608,11 +630,10 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 
 			NodeList featureList = (NodeList) exprList.evaluate(doc, XPathConstants.NODESET);
 			total = featureList.getLength();
-			LOGGER.info("Found {} SamplingPoints.", total);
+			LOGGER.debug("Found {} SamplingPoints.", total);
 
 			for (int i = 0; i < total; i++) {
-				Node feature = featureList.item(i);
-				feature.getParentNode().removeChild(feature);
+				Node feature = featureList.item(i).cloneNode(true);
 
 				String dsId = exprId.evaluate(feature);
 				String dsName = dsId;
@@ -668,11 +689,14 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				}
 				Datastream ds = frostUtils.findOrCreateDatastream(filter, dsName, dsDescription, properties, uom, thing, observedProperty, sensor, cachedDs);
 				datastreamCache.put(dsId, ds);
+				LOGGER.debug("SamplingPoints: {}.", dsId);
 				imported++;
 			}
 		} catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("XML problem.", ex);
 		} catch (ServiceFailureException | NumberFormatException ex) {
+			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Failed to communicate with SensorThings API service.", ex);
 		}
 		LOGGER.info("Done with SamplingPoints, imported {} of {}.", imported, total);
@@ -695,6 +719,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			this.startTime = startTime;
 			datastreamIterator = datastreamCache.values().iterator();
 			count = datastreamCache.values().size();
+			LOGGER.info("Importing Observations for {} Datastreams.", count);
 		}
 
 		private List<Observation> importDatastream(Datastream ds) throws ImportException, ServiceFailureException {
@@ -725,7 +750,10 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				String featureId = exprFeatureId.evaluate(doc);
 				String samplingPointId = exprSamplingPointId.evaluate(doc);
 				if (!samplingPointId.endsWith(dsLocalId)) {
-					LOGGER.error("Returned data has sampling point {}, but expected data for {}", samplingPointId, dsLocalId);
+					LOGGER.debug("Returned data has sampling point {}, but expected data for {}", samplingPointId, dsLocalId);
+				}
+				if (Utils.isNullOrEmpty(featureId)) {
+					return result;
 				}
 				FeatureOfInterest foi = foiCache.get(FrostUtils.afterLastSlash(featureId));
 				if (foi == null) {
@@ -742,7 +770,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				sweValueExtractor.addRequestedField(timeEnd);
 				sweValueExtractor.addRequestedField(value);
 				sweValueExtractor.parse();
-				LOGGER.info("Parsing {} Observations", sweValueExtractor.getElementCount());
+				LOGGER.debug("Parsing {} Observations", sweValueExtractor.getElementCount());
 
 				if (FrostUtils.NULL_UNIT.equals(ds.getUnitOfMeasurement()) && sweValueExtractor.hasNext()) {
 					sweValueExtractor.next();
@@ -774,6 +802,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				return result;
 
 			} catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
+				LOGGER.debug("Exception: {}", ex.getMessage());
 				throw new ImportException("XML problem.", ex);
 			}
 		}
@@ -897,8 +926,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 
 			int fieldCount = fieldList.getLength();
 			for (int i = 0; i < fieldCount; i++) {
-				Node fieldNode = fieldList.item(i);
-				fieldNode.getParentNode().removeChild(fieldNode);
+				Node fieldNode = fieldList.item(i).cloneNode(true);
 
 				String fieldName = exprFieldName.evaluate(fieldNode);
 				Field field = requestedFields.get(fieldName);

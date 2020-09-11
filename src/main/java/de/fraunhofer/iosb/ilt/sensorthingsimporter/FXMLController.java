@@ -68,6 +68,7 @@ public class FXMLController implements Initializable {
 
 	private ImporterWrapper wrapper;
 	private ImporterScheduler scheduler;
+	private ImporterScheduler schedulerActive;
 
 	private EditorMap<?> configEditorImport;
 	private EditorMap<?> configEditorSchedule;
@@ -185,12 +186,13 @@ public class FXMLController implements Initializable {
 
 	private void runImport(ProgressTracker tracker) throws ConfigurationException {
 		if (toggleScheduler.isSelected()) {
-			scheduler.setNoAct(toggleNoAct.isSelected());
+			schedulerActive = new ImporterScheduler();
+			schedulerActive.setNoAct(toggleNoAct.isSelected());
 			JsonElement json = configEditorSchedule.getConfig();
 			String config = new Gson().toJson(json);
-			scheduler.setConfig(config);
+			schedulerActive.setConfig(config);
 			try {
-				scheduler.start();
+				schedulerActive.start();
 			} catch (SchedulerException ex) {
 				LOGGER.error("Exception starting scheduler", ex);
 			}

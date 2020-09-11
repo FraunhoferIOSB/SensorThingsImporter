@@ -136,7 +136,7 @@ public class UrlGeneratorCombinations implements UrlGenerator, AnnotatedConfigur
 
 	@ConfigurableField(editor = EditorList.class,
 			label = "ReplaceSets", description = "The sets of replacements for each placeholder in the Base URL.")
-	@EditorList.EdOptsList(editor = EditorClass.class, minCount = 1, labelText = "Add Replace Set")
+	@EditorList.EdOptsList(editor = EditorClass.class, minCount = 0, labelText = "Add Replace Set")
 	@EditorClass.EdOptsClass(clazz = ReplaceSet.class)
 	private List<ReplaceSet> replaceSets = new ArrayList<>();
 
@@ -169,7 +169,7 @@ public class UrlGeneratorCombinations implements UrlGenerator, AnnotatedConfigur
 
 		@Override
 		public boolean hasNext() {
-			return start.hasNext();
+			return start != null && start.hasNext();
 		}
 
 		@Override
