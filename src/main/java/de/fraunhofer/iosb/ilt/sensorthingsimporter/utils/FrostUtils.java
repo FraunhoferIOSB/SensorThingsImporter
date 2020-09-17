@@ -253,7 +253,7 @@ public final class FrostUtils {
 			update = true;
 			cached.setMetadata(metadata);
 		}
-		if (cached.getProperties() == null && properties != null) {
+		if (cached.getProperties() == null && properties != null && !properties.isEmpty()) {
 			cached.setProperties(properties);
 			update = true;
 		} else if (addProperties(cached.getProperties(), properties, 5)) {
@@ -424,6 +424,10 @@ public final class FrostUtils {
 		}
 		if (!uom.equals(cached.getUnitOfMeasurement())) {
 			cached.setUnitOfMeasurement(uom);
+			update = true;
+		}
+		if (!cached.getObservedProperty().getId().equals(op.getId())) {
+			cached.setObservedProperty(op.withOnlyId());
 			update = true;
 		}
 		if (update) {
