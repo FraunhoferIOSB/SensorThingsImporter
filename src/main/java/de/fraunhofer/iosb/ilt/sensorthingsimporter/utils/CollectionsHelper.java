@@ -56,6 +56,7 @@ public class CollectionsHelper {
 			Map<String, Object> subMap = new HashMap<>();
 			map.put(key, subMap);
 			setOn(subMap, path, idx + 1, value);
+			return;
 		}
 		if (subEntry instanceof Map) {
 			setOn((Map) subEntry, path, idx + 1, value);
