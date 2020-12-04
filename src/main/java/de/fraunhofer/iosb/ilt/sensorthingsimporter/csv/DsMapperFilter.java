@@ -75,7 +75,7 @@ public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<S
 	@Override
 	public Datastream getDatastreamFor(CSVRecord record) throws ImportException {
 		try {
-			String filter = Translator.fillTemplate(filterTemplate, record);
+			String filter = Translator.fillTemplate(filterTemplate, record, true, false, true);
 			Datastream ds = getDatastreamFor(filter, record);
 			return ds;
 		} catch (ServiceFailureException ex) {
@@ -87,7 +87,7 @@ public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<S
 	@Override
 	public MultiDatastream getMultiDatastreamFor(CSVRecord record) {
 		try {
-			String filter = Translator.fillTemplate(filterTemplate, record);
+			String filter = Translator.fillTemplate(filterTemplate, record, true, false, true);
 			MultiDatastream ds = getMultiDatastreamFor(filter, record);
 			return ds;
 		} catch (ServiceFailureException ex) {

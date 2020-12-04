@@ -163,7 +163,7 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
 			log.append(", validTime: ").append(obs.getValidTime());
 		}
 		if (!Utils.isNullOrEmpty(parametersTemplate)) {
-			String filledTemplate = Translator.fillTemplate(parametersTemplate, record);
+			String filledTemplate = Translator.fillTemplate(parametersTemplate, record, false, true, false);
 			obs.setParameters(JsonUtils.jsonToMap(filledTemplate));
 		}
 		if (verbose) {

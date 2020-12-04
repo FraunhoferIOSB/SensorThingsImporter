@@ -24,6 +24,7 @@ import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.sta.Utils;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -32,6 +33,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +47,7 @@ public class Translator extends AbstractConfigurable<Void, Void> {
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(Translator.class);
-	private static final Pattern PLACE_HOLDER_PATTERN = Pattern.compile("\\{([0-9]+)\\}");
+	private static final Pattern PLACE_HOLDER_PATTERN = Pattern.compile("\\{([0-9a-zA-Z_]+)\\}");
 
 	private static final TypeReference<Map<String, String>> TYPE_REF_MAP_STRING_STRING = new TypeReference<Map<String, String>>() {
 		// Empty by design.
@@ -116,7 +118,14 @@ public class Translator extends AbstractConfigurable<Void, Void> {
 		return result.toString();
 	}
 
-	public static String fillTemplate(String template, CSVRecord record) {
+	public static String fillTemplate(String template, CSVRecord record, boolean escapeForUrl, boolean escapeForJson, boolean removeNewlines) {
+		if (removeNewlines) {
+			return fillTemplate(StringUtils.remove(template, "\n"), record, escapeForUrl, escapeForJson);
+		}
+		return fillTemplate(template, record, escapeForUrl, escapeForJson);
+	}
+
+	public static String fillTemplate(String template, CSVRecord record, boolean escapeForUrl, boolean escapeForJson) {
 		Matcher matcher = PLACE_HOLDER_PATTERN.matcher(template);
 		matcher.reset();
 		StringBuilder filter = new StringBuilder();
@@ -124,8 +133,22 @@ public class Translator extends AbstractConfigurable<Void, Void> {
 		while (matcher.find()) {
 			int start = matcher.start();
 			filter.append(template.substring(pos, start));
-			int colNr = Integer.parseInt(matcher.group(1));
-			filter.append(record.get(colNr));
+			String value;
+			try {
+				int colNr = Integer.parseInt(matcher.group(1));
+				value = record.get(colNr);
+			} catch (NumberFormatException ex) {
+				String colName = matcher.group(1);
+				value = record.get(colName);
+			}
+			if (escapeForUrl) {
+				value = Utils.escapeForStringConstant(value);
+			}
+			if (escapeForJson) {
+				value = StringUtils.replace(value, "\\", "\\\\");
+				value = StringUtils.replace(value, "\n", "\\n");
+			}
+			filter.append(value);
 			pos = matcher.end();
 		}
 		filter.append(template.substring(pos));
