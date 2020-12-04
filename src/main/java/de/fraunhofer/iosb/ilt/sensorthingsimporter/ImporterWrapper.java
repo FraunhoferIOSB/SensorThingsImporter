@@ -37,7 +37,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.io.FileUtils;
@@ -126,7 +128,23 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 		int nextMessage = messageIntervalStart;
 		Calendar start = Calendar.getInstance();
 
+		// Map of Obs per Ds/MDs
+		Map<Object, List<Observation>> obsPerDs = new HashMap<>();
+
 		for (List<Observation> observations : importer) {
+			for (Observation observation : observations) {
+				Object key = observation.getDatastream();
+				if (key == null) {
+					key = observation.getMultiDatastream();
+				}
+				List<Observation> obsList = obsPerDs.computeIfAbsent(key, t -> new ArrayList<>());
+				obsList.add(observation);
+				generated++;
+			}
+		}
+		LOGGER.info("Read {} Observations.", generated);
+		generated = 0;
+		for (List<Observation> observations : obsPerDs.values()) {
 			for (Observation observation : observations) {
 				generated++;
 				if (validator.isValid(observation)) {
