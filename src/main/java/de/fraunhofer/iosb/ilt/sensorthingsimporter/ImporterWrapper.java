@@ -102,6 +102,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 			validator = editorValidator.getValue();
 			if (!editorName.isDefault()) {
 				name = editorName.getValue();
+				logStatus.setName(name);
 			}
 
 			if (validator == null) {
