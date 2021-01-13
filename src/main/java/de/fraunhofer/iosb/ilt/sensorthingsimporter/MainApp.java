@@ -62,7 +62,9 @@ public class MainApp {
 				scheduler.start();
 			} else {
 				ImporterWrapper wrapper = new ImporterWrapper();
+				ImporterScheduler.STATUS_LOGGER.start();
 				wrapper.doImport(options);
+				ImporterScheduler.STATUS_LOGGER.stop();
 			}
 		}
 	}
