@@ -26,6 +26,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
  */
 public class Schedule extends AbstractConfigurable<Void, Void> {
 
+	public static final String UNNAMED = "unnamed";
 	@ConfigurableField(editor = EditorString.class,
 			label = "Cron",
 			description = "A cron-compatible scheduling definition. See http://www.quartz-scheduler.org/api/2.2.1/org/quartz/CronExpression.html")
@@ -37,6 +38,12 @@ public class Schedule extends AbstractConfigurable<Void, Void> {
 			description = "The ImporterConfig for this cron job.")
 	@EditorString.EdOptsString(dflt = "importer.json")
 	private String fileName;
+
+	@ConfigurableField(editor = EditorString.class,
+			label = "Name",
+			description = "The name for this cron job in log messages.")
+	@EditorString.EdOptsString(dflt = UNNAMED)
+	private String name;
 
 	/**
 	 * @return the cronLine
@@ -65,4 +72,13 @@ public class Schedule extends AbstractConfigurable<Void, Void> {
 	public void setFileName(String fileName) {
 		this.fileName = fileName;
 	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
 }

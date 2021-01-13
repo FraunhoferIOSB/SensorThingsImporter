@@ -24,6 +24,7 @@ import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ChangingStatusLogger;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -61,6 +62,8 @@ public class ImporterScheduler extends AbstractConfigurable<Void, Void> {
 	private Scheduler scheduler;
 	private File basePath;
 
+	public static final ChangingStatusLogger STATUS_LOGGER = new ChangingStatusLogger(LOGGER).setLogIntervalMs(10000);
+
 	private Thread shutdownHook;
 
 	public void loadOptions(Options options) throws IOException, ConfigurationException {
@@ -83,6 +86,7 @@ public class ImporterScheduler extends AbstractConfigurable<Void, Void> {
 		scheduler = StdSchedulerFactory.getDefaultScheduler();
 		addShutdownHook();
 		scheduler.start();
+		STATUS_LOGGER.start();
 
 		int i = 0;
 		for (final Schedule schedule : schedules) {
@@ -113,6 +117,7 @@ public class ImporterScheduler extends AbstractConfigurable<Void, Void> {
 		if (this.shutdownHook == null) {
 			this.shutdownHook = new Thread(() -> {
 				LOGGER.info("Shutting down...");
+				STATUS_LOGGER.stop();
 				try {
 					if (scheduler != null) {
 						scheduler.shutdown();

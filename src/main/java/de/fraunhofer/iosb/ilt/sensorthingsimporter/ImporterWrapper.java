@@ -26,11 +26,15 @@ import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler.ImporterScheduler;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ChangingStatusLogger;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.Validator;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.StatusCodeException;
+import de.fraunhofer.iosb.ilt.sta.Utils;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.File;
@@ -38,6 +42,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
@@ -63,6 +68,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 	private EditorClass<SensorThingsService, Object, ObservationUploader> editorUploader;
 	private EditorInt editorSleepTime;
 	private EditorInt editorMsgInterval;
+	private EditorString editorName;
 
 	private SensorThingsService service;
 	private boolean noAct = false;
@@ -73,6 +79,18 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 	private int messageIntervalStart;
 	private boolean doSleep;
 	private long sleepTime;
+	private final LoggingStatus logStatus = new LoggingStatus();
+
+	private long generated = 0;
+	private long validated = 0;
+	private long inserted;
+	private long nextMessage;
+
+	// Don't cache too many observations.
+	private final long maxSend = 100000;
+	private long nextSend = maxSend;
+
+	private String name;
 
 	@Override
 	public void configure(JsonElement config, Object context, Object edtCtx, ConfigEditor<?> configEditor) {
@@ -82,6 +100,9 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 			importer = editorImporter.getValue();
 			uploader = editorUploader.getValue();
 			validator = editorValidator.getValue();
+			if (!editorName.isDefault()) {
+				name = editorName.getValue();
+			}
 
 			if (validator == null) {
 				validator = new Validator.ValidatorNull();
@@ -117,15 +138,22 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 
 			editorMsgInterval = new EditorInt(0, Integer.MAX_VALUE, 1, 10000, "Message Interval", "Output a progress message every [interval] records. Defaults to 10000");
 			editor.addOption("msgInterval", editorMsgInterval, true);
+
+			editorName = new EditorString("", 1, "Name", "The name to use in log messages");
+			editor.addOption("name", editorName, true);
 		}
 		return editor;
 	}
 
+	public void setName(String name) {
+		if (Utils.isNullOrEmpty(this.name)) {
+			this.name = name;
+			logStatus.setName(name);
+		}
+	}
+
 	private void doImport() throws ImportException, ServiceFailureException {
-		int generated = 0;
-		int validated = 0;
-		int inserted;
-		int nextMessage = messageIntervalStart;
+		nextMessage = messageIntervalStart;
 		Calendar start = Calendar.getInstance();
 
 		// Map of Obs per Ds/MDs
@@ -139,37 +167,43 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 				}
 				List<Observation> obsList = obsPerDs.computeIfAbsent(key, t -> new ArrayList<>());
 				obsList.add(observation);
-				generated++;
+				logStatus.setGeneratedCount(++generated);
+				nextSend--;
+			}
+			if (nextSend <= 0) {
+				validateAndSendObservations(obsPerDs);
+				nextSend = maxSend;
 			}
 		}
-		LOGGER.info("Read {} Observations.", generated);
-		generated = 0;
-		for (List<Observation> observations : obsPerDs.values()) {
-			for (Observation observation : observations) {
-				generated++;
-				if (validator.isValid(observation)) {
-					validated++;
-					uploader.addObservation(observation);
-				}
-				nextMessage--;
-				if (nextMessage == 0) {
-					inserted = uploader.sendDataArray();
-
-					nextMessage = messageIntervalStart;
-					Calendar now = Calendar.getInstance();
-					double seconds = 1e-3 * (now.getTimeInMillis() - start.getTimeInMillis());
-					double rowsPerSec = inserted / seconds;
-					LOGGER.info("Genereated {}, Validated {}, Inserted {}, Updated {} Observations in {}s: {}/s.", generated, validated, inserted, uploader.getUpdated(), String.format("%.1f", seconds), String.format("%.1f", rowsPerSec));
-				}
-				maybeSleep();
-			}
-		}
+		LOGGER.info("{}: Read {} Observations.", name, generated);
+		validateAndSendObservations(obsPerDs);
 		inserted = uploader.sendDataArray();
 
 		Calendar now = Calendar.getInstance();
 		double seconds = 1e-3 * (now.getTimeInMillis() - start.getTimeInMillis());
 		double rowsPerSec = inserted / seconds;
-		LOGGER.info("Genereated {}, Validated {}, Inserted {}, Updated {} observations in {}s ({}/s).", generated, validated, inserted, uploader.getUpdated(), String.format("%.1f", seconds), String.format("%.1f", rowsPerSec));
+		LOGGER.info("{}: Genereated {}, Validated {}, Inserted {}, Updated {} observations in {}s ({}/s).", name, generated, validated, inserted, uploader.getUpdated(), String.format("%.1f", seconds), String.format("%.1f", rowsPerSec));
+	}
+
+	private void validateAndSendObservations(Map<Object, List<Observation>> obsPerDs) throws ServiceFailureException, ImportException {
+		for (List<Observation> observations : obsPerDs.values()) {
+			for (Observation observation : observations) {
+				if (validator.isValid(observation)) {
+					validated++;
+					uploader.addObservation(observation);
+					logStatus.setValidatedCount(validated);
+				}
+				nextMessage--;
+				if (nextMessage <= 0) {
+					inserted = uploader.sendDataArray();
+					nextMessage = messageIntervalStart;
+					logStatus.setInsertedCount(inserted);
+					logStatus.setUpdatedCount(Long.valueOf(uploader.getUpdated()));
+				}
+				maybeSleep();
+			}
+		}
+		obsPerDs.clear();
 	}
 
 	private void maybeSleep() {
@@ -200,6 +234,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 			tracker = (p, t) -> {
 			};
 		}
+		ImporterScheduler.STATUS_LOGGER.addLogStatus(logStatus);
 		try {
 			JsonElement json = JsonParser.parseString(config);
 			configure(json, null, null, null);
@@ -216,9 +251,10 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 			LOGGER.error("Code: " + exc.getStatusCode() + " " + exc.getStatusMessage());
 			LOGGER.error("Data: " + exc.getReturnedContent());
 			LOGGER.error("Failed to import.", exc);
-		} catch (ImportException | ServiceFailureException exc) {
+		} catch (ImportException | ServiceFailureException | RuntimeException exc) {
 			LOGGER.error("Failed to import.", exc);
 		}
+		ImporterScheduler.STATUS_LOGGER.removeLogStatus(logStatus);
 	}
 
 	public static void importConfig(String config, boolean noAct, ProgressTracker tracker) {
@@ -233,4 +269,42 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 		wrapper.doImport(options);
 	}
 
+	private static class LoggingStatus extends ChangingStatusLogger.ChangingStatusDefault {
+
+		public static final String MESSAGE = "{}: Genereated {}, Validated {}, Inserted {}, Updated {} Observations";
+		public final Object[] status;
+
+		public LoggingStatus() {
+			super(MESSAGE, new Object[5]);
+			status = getCurrentParams();
+			Arrays.setAll(status, (int i) -> Long.valueOf(0));
+			status[0] = "unnamed";
+		}
+
+		public LoggingStatus setName(String name) {
+			status[0] = name;
+			return this;
+		}
+
+		public LoggingStatus setGeneratedCount(Long count) {
+			status[1] = count;
+			return this;
+		}
+
+		public LoggingStatus setValidatedCount(Long count) {
+			status[2] = count;
+			return this;
+		}
+
+		public LoggingStatus setInsertedCount(Long count) {
+			status[3] = count;
+			return this;
+		}
+
+		public LoggingStatus setUpdatedCount(Long count) {
+			status[4] = count;
+			return this;
+		}
+
+	}
 }

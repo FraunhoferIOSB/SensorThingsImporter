@@ -197,6 +197,7 @@ public class FXMLController implements Initializable {
 				LOGGER.error("Exception starting scheduler", ex);
 			}
 		} else {
+			ImporterScheduler.STATUS_LOGGER.start();
 			JsonElement json = configEditorImport.getConfig();
 			String config = new Gson().toJson(json);
 			ImporterWrapper.importConfig(config, toggleNoAct.isSelected(), tracker);

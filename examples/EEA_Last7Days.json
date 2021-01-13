@@ -5,30 +5,33 @@
 			"hasHeader": true,
 			"recordConvertors": [
 				{
-					"colResult": 11,
-					"resultParser": {
-						"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.ParserBigdecimal",
-						"classConfig": {
-							"dropTailingZeroes": true
-						}
-					},
-					"timeParser": {
-						"format": "yyyy-MM-dd HH:mm:ss XXX"
-					},
-					"colPhenTime": [
-						13,
-						14
-					],
-					"dsm": {
-						"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
-						"classConfig": {
-							"dsGenerator": {
-								"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.DataStreamGeneratorEea",
-								"classConfig": {
-									"stationsUrl": "http://discomap.eea.europa.eu/map/fme/metadata/PanEuropean_metadata.csv"
-								}
-							},
-							"filterTemplate": "Thing/properties/localId eq \u0027{3}\u0027 and ObservedProperty/name eq \u0027{8}\u0027"
+					"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterDefault",
+					"classConfig": {
+						"colResult": 11,
+						"resultParser": {
+							"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.ParserBigdecimal",
+							"classConfig": {
+								"dropTailingZeroes": true
+							}
+						},
+						"timeParser": {
+							"format": "yyyy-MM-dd HH:mm:ss XXX"
+						},
+						"colPhenTime": [
+							13,
+							14
+						],
+						"dsm": {
+							"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+							"classConfig": {
+								"dsGenerator": {
+									"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.DataStreamGeneratorEea",
+									"classConfig": {
+										"stationsUrl": "http://discomap.eea.europa.eu/map/fme/metadata/PanEuropean_metadata.csv"
+									}
+								},
+								"filterTemplate": "Thing/properties/localId eq \u0027{3}\u0027 and ObservedProperty/name eq \u0027{8}\u0027"
+							}
 						}
 					}
 				}
@@ -72,7 +75,7 @@
 		}
 	},
 	"uploader": {
-	"serviceUrl": "http://localhost:8080/FROST-Server/v1.1",
+		"serviceUrl": "http://localhost:8080/FROST-Server/v1.1",
 		"authMethod": {
 			"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthBasic",
 			"classConfig": {
