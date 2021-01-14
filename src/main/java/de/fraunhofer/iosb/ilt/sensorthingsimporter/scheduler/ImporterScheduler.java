@@ -23,6 +23,7 @@ import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorLong;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ChangingStatusLogger;
 import java.io.File;
@@ -51,6 +52,9 @@ public class ImporterScheduler extends AbstractConfigurable<Void, Void> {
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(ImporterScheduler.class);
 
+	public static final long DEFAULT_LOG_INTERVAL = 10000;
+	public static final ChangingStatusLogger STATUS_LOGGER = new ChangingStatusLogger(LOGGER).setLogIntervalMs(DEFAULT_LOG_INTERVAL);
+
 	@ConfigurableField(editor = EditorList.class,
 			label = "Schedules",
 			description = "The schedules to schedule.")
@@ -58,11 +62,15 @@ public class ImporterScheduler extends AbstractConfigurable<Void, Void> {
 	@EditorClass.EdOptsClass(clazz = Schedule.class)
 	private List<Schedule> schedules;
 
+	@ConfigurableField(editor = EditorLong.class, optional = true,
+			label = "LogInterval",
+			description = "Delay in ms between log messages")
+	@EditorLong.EdOptsLong(dflt = DEFAULT_LOG_INTERVAL)
+	private long logInterval = DEFAULT_LOG_INTERVAL;
+
 	private boolean noAct = false;
 	private Scheduler scheduler;
 	private File basePath;
-
-	public static final ChangingStatusLogger STATUS_LOGGER = new ChangingStatusLogger(LOGGER).setLogIntervalMs(10000);
 
 	private Thread shutdownHook;
 
@@ -86,6 +94,7 @@ public class ImporterScheduler extends AbstractConfigurable<Void, Void> {
 		scheduler = StdSchedulerFactory.getDefaultScheduler();
 		addShutdownHook();
 		scheduler.start();
+		STATUS_LOGGER.setLogIntervalMs(logInterval);
 		STATUS_LOGGER.start();
 
 		int i = 0;
@@ -142,6 +151,14 @@ public class ImporterScheduler extends AbstractConfigurable<Void, Void> {
 	 */
 	public void setNoAct(boolean noAct) {
 		this.noAct = noAct;
+	}
+
+	public long getLogInterval() {
+		return logInterval;
+	}
+
+	public void setLogInterval(long logInterval) {
+		this.logInterval = logInterval;
 	}
 
 }

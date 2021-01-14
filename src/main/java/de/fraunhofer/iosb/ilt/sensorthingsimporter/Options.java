@@ -20,6 +20,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.Option;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.OptionSingle;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.OptionToggle;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.ParameterLong;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.ParameterString;
 import de.fraunhofer.iosb.ilt.sta.Utils;
 import java.util.ArrayList;
@@ -55,6 +56,7 @@ public class Options {
 	private final OptionToggle noAct;
 	private final OptionSingle<String> fileName;
 	private final OptionToggle useScheduler;
+	private final OptionSingle<Long> logInterval;
 
 	public Options() {
 		noAct = addOption(
@@ -70,6 +72,11 @@ public class Options {
 				new OptionToggle("-scheduler", "-s")
 						.setEnvironmentName("useScheduler")
 						.setDescription("Use the scheduler to start imports. The config file must be a scheduler config in this case."));
+		logInterval = addOption(
+				new OptionSingle<Long>("-loginterval", "-i")
+						.setParam(new ParameterLong("interval", 10000l))
+						.setEnvironmentName("logInterval")
+						.setDescription("The delay between log messages."));
 	}
 
 	public List<Option> getOptions() {
@@ -128,6 +135,10 @@ public class Options {
 
 	public OptionToggle getUseScheduler() {
 		return useScheduler;
+	}
+
+	public OptionSingle<Long> getLogInterval() {
+		return logInterval;
 	}
 
 	public static boolean getEnv(String name, boolean dflt) {

@@ -172,21 +172,25 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 				nextSend--;
 			}
 			if (nextSend <= 0) {
-				validateAndSendObservations(obsPerDs);
+				validateAndSendObservations(obsPerDs, start);
 				nextSend = maxSend;
 			}
 		}
-		LOGGER.info("{}: Read {} Observations.", name, generated);
-		validateAndSendObservations(obsPerDs);
-		inserted = uploader.sendDataArray();
 
-		Calendar now = Calendar.getInstance();
-		double seconds = 1e-3 * (now.getTimeInMillis() - start.getTimeInMillis());
-		double rowsPerSec = inserted / seconds;
-		LOGGER.info("{}: Genereated {}, Validated {}, Inserted {}, Updated {} observations in {}s ({}/s).", name, generated, validated, inserted, uploader.getUpdated(), String.format("%.1f", seconds), String.format("%.1f", rowsPerSec));
+		validateAndSendObservations(obsPerDs, start);
+		inserted = uploader.sendDataArray();
+		logStatus.setInsertedCount(inserted);
+		logStatus.setUpdatedCount(Long.valueOf(uploader.getUpdated()));
+		logStatus.setSpeed(getSpeed(start, inserted));
 	}
 
-	private void validateAndSendObservations(Map<Object, List<Observation>> obsPerDs) throws ServiceFailureException, ImportException {
+	private double getSpeed(Calendar since, long inserted) {
+		Calendar now = Calendar.getInstance();
+		double seconds = 1e-3 * (now.getTimeInMillis() - since.getTimeInMillis());
+		return inserted / seconds;
+	}
+
+	private void validateAndSendObservations(Map<Object, List<Observation>> obsPerDs, Calendar start) throws ServiceFailureException, ImportException {
 		for (List<Observation> observations : obsPerDs.values()) {
 			for (Observation observation : observations) {
 				if (validator.isValid(observation)) {
@@ -200,6 +204,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 					nextMessage = messageIntervalStart;
 					logStatus.setInsertedCount(inserted);
 					logStatus.setUpdatedCount(Long.valueOf(uploader.getUpdated()));
+					logStatus.setSpeed(getSpeed(start, inserted));
 				}
 				maybeSleep();
 			}
@@ -272,14 +277,15 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 
 	private static class LoggingStatus extends ChangingStatusLogger.ChangingStatusDefault {
 
-		public static final String MESSAGE = "{}: Genereated {}, Validated {}, Inserted {}, Updated {} Observations";
+		public static final String MESSAGE = "{}: Genereated {}, Validated {}, Inserted {}, Updated {}, {}/s";
 		public final Object[] status;
 
 		public LoggingStatus() {
-			super(MESSAGE, new Object[5]);
+			super(MESSAGE, new Object[6]);
 			status = getCurrentParams();
 			Arrays.setAll(status, (int i) -> Long.valueOf(0));
 			status[0] = "unnamed";
+			status[5] = "0.0";
 		}
 
 		public LoggingStatus setName(String name) {
@@ -304,6 +310,11 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 
 		public LoggingStatus setUpdatedCount(Long count) {
 			status[4] = count;
+			return this;
+		}
+
+		public LoggingStatus setSpeed(Double speed) {
+			status[5] = String.format("%.1f", speed);
 			return this;
 		}
 
