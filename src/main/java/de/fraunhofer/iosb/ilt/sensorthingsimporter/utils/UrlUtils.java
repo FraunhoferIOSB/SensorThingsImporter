@@ -16,16 +16,26 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sta.Utils;
+import de.fraunhofer.iosb.ilt.sta.jackson.ObjectMapperFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
 import org.apache.http.ParseException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
@@ -38,11 +48,14 @@ import org.slf4j.LoggerFactory;
  */
 public class UrlUtils {
 
+	public static final TypeReference<List<Map<String, Map<String, Object>>>> TYPE_LIST_MAP_MAP = new TypeReference<List<Map<String, Map<String, Object>>>>() {
+	};
+
 	/**
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(UrlUtils.class);
-	private static final Charset UTF8 = Charset.forName("UTF-8");
+	private static final Charset UTF8 = StandardCharsets.UTF_8;
 
 	private UrlUtils() {
 		// Utility class.
@@ -89,4 +102,26 @@ public class UrlUtils {
 		}
 	}
 
+	public static String postJsonToUrl(String targetUrl, Object body, String username, String password) throws IOException {
+		String queryBody = ObjectMapperFactory.get().writeValueAsString(body);
+		try (CloseableHttpClient client = HttpClients.createSystem()) {
+			HttpPost post = new HttpPost(targetUrl);
+			if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
+				String auth = username + ":" + password;
+				byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
+				String authHeader = "Basic " + new String(encodedAuth);
+				post.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
+			}
+			post.addHeader("Content-Type", "application/json");
+			post.setEntity(new StringEntity(queryBody));
+			CloseableHttpResponse response = client.execute(post);
+			HttpEntity entity = response.getEntity();
+			if (entity == null) {
+				return "";
+			}
+			String data = EntityUtils.toString(entity, UTF8);
+			return data;
+		}
+
+	}
 }

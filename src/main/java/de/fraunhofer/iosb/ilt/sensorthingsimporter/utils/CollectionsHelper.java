@@ -72,6 +72,10 @@ public class CollectionsHelper {
 		return getFrom((Object) list, path);
 	}
 
+	public static Object getFrom(final Map<String, Object> map, final String... path) {
+		return getFrom((Object) map, Arrays.asList(path));
+	}
+
 	public static Object getFrom(final Map<String, Object> map, final List<String> path) {
 		return getFrom((Object) map, path);
 	}
