@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.slf4j.LoggerFactory;
+import org.threeten.extra.Interval;
 
 /**
  *
@@ -53,6 +54,10 @@ public class TimeGenNewer implements TimeGen {
 
 	@Override
 	public Instant getInstant(Datastream ds) {
+		if (ds.getPhenomenonTime() != null) {
+			Interval phenomenonTime = ds.getPhenomenonTime();
+			return phenomenonTime.getEnd().plusSeconds(1);
+		}
 		if (!ds.getObservations().toList().isEmpty()) {
 			TimeObject phenomenonTime = ds.getObservations().toList().get(0).getPhenomenonTime();
 			if (phenomenonTime.isInterval()) {
@@ -77,6 +82,10 @@ public class TimeGenNewer implements TimeGen {
 
 	@Override
 	public Instant getInstant(MultiDatastream mds) {
+		if (mds.getPhenomenonTime() != null) {
+			Interval phenomenonTime = mds.getPhenomenonTime();
+			return phenomenonTime.getEnd();
+		}
 		if (mds.getObservations().toList().isEmpty()) {
 			return ZonedDateTime.parse(startTime).toInstant();
 		} else {
