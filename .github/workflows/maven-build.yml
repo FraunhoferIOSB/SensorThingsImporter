@@ -34,7 +34,7 @@ jobs:
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       run: |
-        mvn -B dockerfile:build
-        mvn -B dockerfile:tag@tag-version
-        mvn -B dockerfile:push@push-latest -Ddockerfile.useMavenSettingsForAuth=true --settings maven-ci-settings.xml
-        mvn -B dockerfile:push@push-version -Ddockerfile.useMavenSettingsForAuth=true --settings maven-ci-settings.xml
+        mvn -B dockerfile:build -P release
+        mvn -B dockerfile:tag@tag-version -P release
+        mvn -B dockerfile:push@push-latest -P release -Ddockerfile.useMavenSettingsForAuth=true --settings maven-ci-settings.xml
+        mvn -B dockerfile:push@push-version -P release -Ddockerfile.useMavenSettingsForAuth=true --settings maven-ci-settings.xml
