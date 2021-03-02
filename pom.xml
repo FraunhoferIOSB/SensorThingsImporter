@@ -16,30 +16,91 @@
 		<maven.compiler.source>8</maven.compiler.source>
 		<maven.compiler.target>8</maven.compiler.target>
 
-		<FROST-Client.version>0.32</FROST-Client.version>
+		<dockerfile-maven-plugin.version>1.4.13</dockerfile-maven-plugin.version>
+		<maven-compiler-plugin.version>3.8.0</maven-compiler-plugin.version>
+		<maven-gpg-plugin>1.6</maven-gpg-plugin>
+		<maven-javadoc-plugin.version>3.2.0</maven-javadoc-plugin.version>
+		<maven-nexus-staging-plugin>1.6.8</maven-nexus-staging-plugin>
+		<maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
+		<maven-source-plugin.version>3.2.1</maven-source-plugin.version>
+
+		<FROST-Client.version>0.34</FROST-Client.version>
 		<commons-collections.version>4.1</commons-collections.version>
 		<commons-csv.version>1.4</commons-csv.version>
 		<commons-io.version>2.5</commons-io.version>
 		<commons-dbcp2.version>2.4.0</commons-dbcp2.version>
-		<configurable.version>0.23</configurable.version>
-		<dockerfile-maven-plugin.version>1.4.13</dockerfile-maven-plugin.version>
+		<configurable.version>0.30</configurable.version>
 		<geotools.version>22.2</geotools.version>
 		<groovy.version>2.5.14</groovy.version>
 		<git-commit-id-plugin.version>4.0.0</git-commit-id-plugin.version>
 		<javax-activation.version>1.1.1</javax-activation.version>
 		<junit.version>4.13.1</junit.version>
 		<logback.version>1.1.8</logback.version>
-		<maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
 		<openjfx.version>11.0.2</openjfx.version>
 		<postgresql.version>42.2.2</postgresql.version>
 		<quartz.version>2.3.2</quartz.version>
 	</properties>
 
+	<licenses>
+		<license>
+			<name>GNU General Public License v3, or (at your option) any later version</name>
+			<url>https://www.gnu.org/licenses/gpl-3.0.txt</url>
+			<comments>For more information see the LICENSE.txt included with the sources.</comments>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<name>Hylke van der Schaaf</name>
+			<email>hylke.vanderschaaf@iosb.fraunhofer.de</email>
+			<organization>Fraunhofer IOSB</organization>
+			<organizationUrl>https://www.iosb.fraunhofer.de</organizationUrl>
+		</developer>
+	</developers>
+
 	<organization>
 		<name>Fraunhofer IOSB</name>
+		<url>http://iosb.fraunhofer.de</url>
 	</organization>
+
+	<scm>
+		<connection>scm:git:git://github.com/FraunhoferIOSB/SensorThingsImporter.git</connection>
+		<developerConnection>scm:git:ssh://github.com:FraunhoferIOSB/SensorThingsImporter.git</developerConnection>
+		<url>https://github.com/FraunhoferIOSB/SensorThingsImporter/tree/master</url>
+		<tag>HEAD</tag>
+	</scm>
+
+	<issueManagement>
+		<system>GitHub</system>
+		<url>https://github.com/FraunhoferIOSB/SensorThingsImporter/issues</url>
+	</issueManagement>
+
+	<distributionManagement>
+		<snapshotRepository>
+			<id>ossrh</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+		</snapshotRepository>
+		<repository>
+			<id>ossrh</id>
+			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+		</repository>
+	</distributionManagement>
+
+	<repositories>
+		<repository>
+			<id>osgeo</id>
+			<name>Open Source Geospatial Foundation Repository</name>
+			<url>https://repo.osgeo.org/repository/release/</url>
+		</repository>
+	</repositories>
+
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven-compiler-plugin.version}</version>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
@@ -66,25 +127,6 @@
 						</configuration>
 					</execution>
 				</executions>
-			</plugin>
-			<plugin>
-				<groupId>com.spotify</groupId>
-				<artifactId>dockerfile-maven-plugin</artifactId>
-				<version>${dockerfile-maven-plugin.version}</version>
-				<configuration>
-					<repository>${docker-image-name}</repository>
-					<buildArgs>
-						<JAR_FILE>${project.build.finalName}-shaded.jar</JAR_FILE>
-					</buildArgs>
-				</configuration>
-				<dependencies>
-					<!-- Java 9 support -->
-					<dependency>
-						<groupId>javax.activation</groupId>
-						<artifactId>activation</artifactId>
-						<version>${javax-activation.version}</version>
-					</dependency>
-				</dependencies>
 			</plugin>
 			<plugin>
 				<groupId>pl.project13.maven</groupId>
@@ -115,23 +157,118 @@
 		</plugins>
 	</build>
 
-	<repositories>
-		<repository>
-			<id>bintray-fraunhoferiosb-Maven</id>
-			<url>https://dl.bintray.com/fraunhoferiosb/Maven</url>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
-		<repository>
-			<id>osgeo</id>
-			<name>Open Source Geospatial Foundation Repository</name>
-			<url>https://repo.osgeo.org/repository/release/</url>
-		</repository>
-	</repositories>
+	<profiles>
+		<profile>
+			<id>release</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-source-plugin</artifactId>
+						<version>${maven-source-plugin.version}</version>
+						<executions>
+							<execution>
+								<id>attach-sources</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>jar-no-fork</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-javadoc-plugin</artifactId>
+						<version>${maven-javadoc-plugin.version}</version>
+						<configuration>
+							<excludePackageNames>de.fraunhofer.iosb.ilt.frostserver.parser.path:de.fraunhofer.iosb.ilt.frostserver.parser.query</excludePackageNames>
+							<quiet>true</quiet>
+						</configuration>
+						<executions>
+							<execution>
+								<id>attach-javadocs</id>
+								<goals>
+									<goal>jar</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-gpg-plugin</artifactId>
+						<version>${maven-gpg-plugin}</version>
+						<executions>
+							<execution>
+								<id>sign-artifacts</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>sign</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>com.spotify</groupId>
+						<artifactId>dockerfile-maven-plugin</artifactId>
+						<version>${dockerfile-maven-plugin.version}</version>
+						<executions>
+							<execution>
+								<id>build-and-tag-latest</id>
+								<phase>none</phase>
+								<goals>
+									<goal>build</goal>
+								</goals>
+							</execution>
+							<execution>
+								<id>tag-version</id>
+								<phase>none</phase>
+								<goals>
+									<goal>tag</goal>
+								</goals>
+								<configuration>
+									<tag>${project.version}</tag>
+								</configuration>
+							</execution>
+							<execution>
+								<id>push-latest</id>
+								<phase>none</phase>
+								<goals>
+									<goal>push</goal>
+								</goals>
+								<configuration>
+									<tag>latest</tag>
+								</configuration>
+							</execution>
+							<execution>
+								<id>push-version</id>
+								<phase>none</phase>
+								<goals>
+									<goal>push</goal>
+								</goals>
+								<configuration>
+									<tag>${project.version}</tag>
+								</configuration>
+							</execution>
+						</executions>
+						<configuration>
+							<repository>${docker-image-name}</repository>
+							<buildArgs>
+								<JAR_FILE>${project.build.finalName}-shaded.jar</JAR_FILE>
+							</buildArgs>
+						</configuration>
+						<dependencies>
+							<!-- Java 9 support -->
+							<dependency>
+								<groupId>javax.activation</groupId>
+								<artifactId>activation</artifactId>
+								<version>${javax-activation.version}</version>
+							</dependency>
+						</dependencies>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 
 	<dependencies>
 		<dependency>
