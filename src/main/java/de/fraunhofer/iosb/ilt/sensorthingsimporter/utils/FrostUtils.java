@@ -49,6 +49,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.geojson.GeoJsonObject;
 import org.geojson.Point;
 import org.geotools.geometry.DirectPosition2D;
@@ -116,6 +120,34 @@ public final class FrostUtils {
 		} else {
 			service.create(entity);
 		}
+	}
+
+	public void delete(List<? extends Entity> entities, int threads) throws ServiceFailureException {
+		if (threads == 0) {
+			for (Entity entity : entities) {
+				service.delete(entity);
+			}
+			return;
+		}
+		ExecutorService executor = Executors.newFixedThreadPool(threads);
+		List<Future<?>> futures = new ArrayList<>();
+		for (Entity entity : entities) {
+			futures.add(executor.submit(() -> {
+				try {
+					service.delete(entity);
+				} catch (ServiceFailureException ex) {
+					LOGGER.error("Failed to delete {}", entity, ex);
+				}
+			}));
+		}
+		for (Future<?> f : futures) {
+			try {
+				f.get();
+			} catch (InterruptedException | ExecutionException ex) {
+				LOGGER.error("Maybe Failed to delete?", ex);
+			}
+		}
+		executor.shutdownNow();
 	}
 
 	public Thing findOrCreateThing(
@@ -629,7 +661,7 @@ public final class FrostUtils {
 		if (in instanceof Number) {
 			return in.toString();
 		}
-		return "'" + Utils.escapeForStringConstant(in.toString()) + "'";
+		return "'" + Utils.escapeForStringConstant(String.valueOf(in)) + "'";
 	}
 
 	public static <Q extends Entity<Q>> Query<Q> addOrCreateFilter(final Query<Q> query, final String filter, final String name) {

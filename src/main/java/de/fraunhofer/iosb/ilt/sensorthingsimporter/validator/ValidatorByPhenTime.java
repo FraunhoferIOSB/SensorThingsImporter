@@ -21,6 +21,7 @@ import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.dao.BaseDao;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
@@ -185,9 +186,7 @@ public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<Sen
 		}
 		if (!Utils.isNullOrEmpty(toDelete)) {
 			LOGGER.warn("Deleting {} duplicates.", toDelete.size());
-			for (Observation delete : toDelete) {
-				observations.delete(delete);
-			}
+			new FrostUtils(toDelete.get(0).getService()).delete(toDelete, 100);
 		}
 
 		return cache.get(checkTime);
