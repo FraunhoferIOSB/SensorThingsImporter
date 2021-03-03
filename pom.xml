@@ -34,7 +34,7 @@
 		<configurable.version>0.30</configurable.version>
 		<geotools.version>22.2</geotools.version>
 		<groovy.version>2.5.14</groovy.version>
-		<git-commit-id-plugin.version>4.0.0</git-commit-id-plugin.version>
+		<git-commit-id-plugin.version>4.0.3</git-commit-id-plugin.version>
 		<javax-activation.version>1.1.1</javax-activation.version>
 		<junit.version>4.13.2</junit.version>
 		<logback.version>1.2.3</logback.version>
