@@ -6,9 +6,6 @@ on:
       - master
       - develop
       - develop-*
-  pull_request:
-    branches:
-      - master
   workflow_dispatch:
 
 jobs:
@@ -38,3 +35,4 @@ jobs:
         mvn -B dockerfile:tag@tag-version -P release
         mvn -B dockerfile:push@push-latest -P release -Ddockerfile.useMavenSettingsForAuth=true --settings maven-ci-settings.xml
         mvn -B dockerfile:push@push-version -P release -Ddockerfile.useMavenSettingsForAuth=true --settings maven-ci-settings.xml
+
