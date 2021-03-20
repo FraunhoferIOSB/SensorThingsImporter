@@ -61,12 +61,12 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
 
 	@ConfigurableField(editor = EditorInt.class,
 			label = "Result Col", description = "The column # that holds the result (first is 0).")
-	@EditorInt.EdOptsInt(dflt = -1, min = 0, max = 99, step = 1)
+	@EditorInt.EdOptsInt(dflt = -1, min = -1, max = 99, step = 1)
 	private Integer colResult;
 
 	@ConfigurableField(editor = EditorInt.class, optional = true,
 			label = "Unit Col", description = "The column # that holds the unit of measurement (first is 0).")
-	@EditorInt.EdOptsInt(dflt = -1, min = 0, max = 99, step = 1)
+	@EditorInt.EdOptsInt(dflt = -1, min = -1, max = 99, step = 1)
 	private Integer colUnit;
 
 	@ConfigurableField(editor = EditorClass.class, optional = true,
@@ -77,18 +77,18 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
 	@ConfigurableField(editor = EditorList.class,
 			label = "PhenomenonTime Col", description = "The column(s) # that holds the phenomenonTime (first is 0).")
 	@EditorList.EdOptsList(editor = EditorInt.class, minCount = 1, maxCount = 2)
-	@EditorInt.EdOptsInt(dflt = -1, min = 0, max = 99, step = 1)
+	@EditorInt.EdOptsInt(dflt = -1, min = -1, max = 99, step = 1)
 	private List<Integer> colPhenTime;
 
 	@ConfigurableField(editor = EditorInt.class, optional = true,
 			label = "ResultTime Column", description = "The column # that holds the resultTime (first is 0).")
-	@EditorInt.EdOptsInt(dflt = -1, max = 99, min = 0, step = 1)
+	@EditorInt.EdOptsInt(dflt = -1, min = -1, max = 99, step = 1)
 	private int colResultTime;
 
 	@ConfigurableField(editor = EditorList.class, optional = true,
 			label = "ValidTime Column", description = "The column(s) # that holds the validTime (first is 0).")
-	@EditorList.EdOptsList(editor = EditorInt.class, minCount = 1, maxCount = 2)
-	@EditorInt.EdOptsInt(dflt = -1, min = 0, max = 99, step = 1)
+	@EditorList.EdOptsList(editor = EditorInt.class, minCount = 0, maxCount = 2)
+	@EditorInt.EdOptsInt(dflt = -1, min = -1, max = 99, step = 1)
 	private List<Integer> colValidTime;
 
 	@ConfigurableField(editor = EditorSubclass.class,
