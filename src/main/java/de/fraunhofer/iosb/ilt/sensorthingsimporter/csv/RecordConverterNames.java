@@ -87,7 +87,7 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 
 	@ConfigurableField(editor = EditorList.class, optional = true,
 			label = "ValidTime Column", description = "The column names that holds the validTime.")
-	@EditorList.EdOptsList(editor = EditorString.class, minCount = 1, maxCount = 2)
+	@EditorList.EdOptsList(editor = EditorString.class, minCount = 0, maxCount = 2)
 	@EditorString.EdOptsString()
 	private List<String> colValidTime;
 
