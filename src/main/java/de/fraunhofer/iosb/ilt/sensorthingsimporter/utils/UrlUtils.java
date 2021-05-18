@@ -17,7 +17,6 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sta.Utils;
 import de.fraunhofer.iosb.ilt.sta.jackson.ObjectMapperFactory;
 import java.io.IOException;
