@@ -153,33 +153,43 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 		}
 	}
 
-	private void doImport() throws ImportException, ServiceFailureException {
+	private void doImport() {
 		logStatus.setName("⏵" + name);
 		nextMessage = messageIntervalStart;
 		Calendar start = Calendar.getInstance();
 
-		// Map of Obs per Ds/MDs
-		Map<Object, List<Observation>> obsPerDs = new HashMap<>();
+		try {
+			// Map of Obs per Ds/MDs
+			Map<Object, List<Observation>> obsPerDs = new HashMap<>();
 
-		for (List<Observation> observations : importer) {
-			for (Observation observation : observations) {
-				Object key = observation.getDatastream();
-				if (key == null) {
-					key = observation.getMultiDatastream();
+			for (List<Observation> observations : importer) {
+				for (Observation observation : observations) {
+					Object key = observation.getDatastream();
+					if (key == null) {
+						key = observation.getMultiDatastream();
+					}
+					List<Observation> obsList = obsPerDs.computeIfAbsent(key, t -> new ArrayList<>());
+					obsList.add(observation);
+					logStatus.setGeneratedCount(++generated);
+					nextSend--;
 				}
-				List<Observation> obsList = obsPerDs.computeIfAbsent(key, t -> new ArrayList<>());
-				obsList.add(observation);
-				logStatus.setGeneratedCount(++generated);
-				nextSend--;
+				if (nextSend <= 0) {
+					validateAndSendObservations(obsPerDs, start);
+					nextSend = maxSend;
+				}
 			}
-			if (nextSend <= 0) {
-				validateAndSendObservations(obsPerDs, start);
-				nextSend = maxSend;
-			}
-		}
 
-		validateAndSendObservations(obsPerDs, start);
-		inserted = uploader.sendDataArray();
+			validateAndSendObservations(obsPerDs, start);
+			inserted = uploader.sendDataArray();
+		} catch (StatusCodeException exc) {
+			LOGGER.error("URL: " + exc.getUrl());
+			LOGGER.error("Code: " + exc.getStatusCode() + " " + exc.getStatusMessage());
+			LOGGER.error("Data: " + exc.getReturnedContent());
+			LOGGER.debug("Failed to import.", exc);
+		} catch (ImportException | ServiceFailureException | RuntimeException exc) {
+			LOGGER.error("Failed to import.", exc.getMessage());
+			LOGGER.debug("Details:", exc);
+		}
 		logStatus.setInsertedCount(inserted);
 		logStatus.setUpdatedCount(Long.valueOf(uploader.getUpdated()));
 		logStatus.setSpeed(getSpeed(start, inserted));
@@ -254,13 +264,6 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 		} catch (JsonSyntaxException exc) {
 			LOGGER.error("Failed to parse {}", config);
 			LOGGER.debug("Failed to parse.", exc);
-		} catch (StatusCodeException exc) {
-			LOGGER.error("URL: " + exc.getUrl());
-			LOGGER.error("Code: " + exc.getStatusCode() + " " + exc.getStatusMessage());
-			LOGGER.error("Data: " + exc.getReturnedContent());
-			LOGGER.error("Failed to import.", exc);
-		} catch (ImportException | ServiceFailureException | RuntimeException exc) {
-			LOGGER.error("Failed to import.", exc);
 		}
 		ImporterScheduler.STATUS_LOGGER.removeLogStatus(logStatus);
 	}
