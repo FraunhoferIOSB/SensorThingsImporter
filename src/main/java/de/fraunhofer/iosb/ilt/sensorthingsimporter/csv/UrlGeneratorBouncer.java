@@ -22,12 +22,14 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,18 +100,24 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
 		private void nextParent() throws ImportException {
 			if (parentIterator.hasNext()) {
 				URL nextParentUrl = parentIterator.next();
-				String fetchFromUrl = UrlUtils.fetchFromUrl(nextParentUrl.toString().trim());
-				String[] split = StringUtils.split(fetchFromUrl, "\n\r ");
-				List<String> asList;
-				if (fetchFromUrl.isEmpty() || split.length == 0) {
-					asList = Collections.emptyList();
-				} else {
-					asList = Arrays.asList(split);
+				String fetchedFromUrl;
+				final String inUrl = nextParentUrl.toString().trim();
+				try {
+					fetchedFromUrl = UrlUtils.fetchFromUrl(inUrl);
+					String[] split = StringUtils.split(fetchedFromUrl, "\n\r ");
+					List<String> asList;
+					if (fetchedFromUrl.isEmpty() || split.length == 0) {
+						asList = Collections.emptyList();
+					} else {
+						asList = Arrays.asList(split);
+					}
+					if (sort) {
+						asList.sort(null);
+					}
+					currentIterator = asList.iterator();
+				} catch (IOException exc) {
+					LOGGER.error("Failed to handle URL: {}; {}", inUrl, exc.getMessage());
 				}
-				if (sort) {
-					asList.sort(null);
-				}
-				currentIterator = asList.iterator();
 			}
 		}
 

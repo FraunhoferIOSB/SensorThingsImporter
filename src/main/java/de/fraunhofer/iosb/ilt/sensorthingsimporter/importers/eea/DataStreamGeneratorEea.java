@@ -54,6 +54,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.logging.Level;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -231,7 +232,13 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 			return;
 		}
 		LOGGER.info("Loading station MetaData from {}", stationsUrl);
-		String data = UrlUtils.fetchFromUrl(stationsUrl);
+		String data;
+		try {
+			data = UrlUtils.fetchFromUrl(stationsUrl);
+		} catch (IOException ex) {
+			LOGGER.error("Failed to handle URL: {}; {}", stationsUrl, ex.getMessage());
+			throw new ImportException(ex);
+		}
 		try {
 			CSVParser stationParser = CSVParser.parse(
 					data,

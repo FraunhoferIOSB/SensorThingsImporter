@@ -70,6 +70,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.xml.namespace.NamespaceContext;
@@ -322,7 +324,12 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 
 	private void importThings() throws ImportException {
 		LOGGER.debug("Fetching Stations from {}", thingsUrl);
-		String stationFeatureXml = UrlUtils.fetchFromUrl(thingsUrl);
+		String stationFeatureXml;
+		try {
+			stationFeatureXml = UrlUtils.fetchFromUrl(thingsUrl);
+		} catch (IOException ex) {
+			throw new ImportException(ex);
+		}
 		LOGGER.debug("Fetched {} characters.", stationFeatureXml.length());
 
 		int imported = 0;
@@ -424,7 +431,12 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		int total = 0;
 		Set<String> handledProcesses = new HashSet<>();
 		LOGGER.debug("Fetching Processes from {}", sensorsUrl);
-		String processFeatureXml = UrlUtils.fetchFromUrl(sensorsUrl);
+		String processFeatureXml;
+		try {
+			processFeatureXml = UrlUtils.fetchFromUrl(sensorsUrl);
+		} catch (IOException ex) {
+			throw new ImportException(ex);
+		}
 		LOGGER.debug("Fetched {} characters.", processFeatureXml.length());
 		try {
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -537,7 +549,12 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		int imported = 0;
 		int total = 0;
 		LOGGER.debug("Fetching Samples from {}", samplesUrl);
-		String samplesFeatureXml = UrlUtils.fetchFromUrl(samplesUrl);
+		String samplesFeatureXml;
+		try {
+			samplesFeatureXml = UrlUtils.fetchFromUrl(samplesUrl);
+		} catch (IOException ex) {
+			throw new ImportException(ex);
+		}
 		LOGGER.debug("Fetched {} characters.", samplesFeatureXml.length());
 		try {
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -604,7 +621,12 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		int imported = 0;
 		int total = 0;
 		LOGGER.debug("Fetching SamplingPoints from {}", samplingPointsUrl);
-		String samplingPointsFeatureXml = UrlUtils.fetchFromUrl(samplingPointsUrl);
+		String samplingPointsFeatureXml;
+		try {
+			samplingPointsFeatureXml = UrlUtils.fetchFromUrl(samplingPointsUrl);
+		} catch (IOException ex) {
+			throw new ImportException(ex);
+		}
 		LOGGER.debug("Fetched {} characters.", samplingPointsFeatureXml.length());
 		try {
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -730,7 +752,12 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			String dsLocalId = ds.getProperties().get(TAG_LOCAL_ID).toString();
 			String finalUrl = observationsUrl.replace("{datastreamLocalId}", dsLocalId);
 			finalUrl = finalUrl.replace("{phenomenonTimeInterval}", interval.toString());
-			String observationsXml = UrlUtils.fetchFromUrl(finalUrl);
+			String observationsXml;
+			try {
+				observationsXml = UrlUtils.fetchFromUrl(finalUrl);
+			} catch (IOException ex) {
+				throw new ImportException(ex);
+			}
 
 			try {
 				DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
