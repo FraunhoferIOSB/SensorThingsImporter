@@ -182,12 +182,12 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 			validateAndSendObservations(obsPerDs, start);
 			inserted = uploader.sendDataArray();
 		} catch (StatusCodeException exc) {
-			LOGGER.error("URL: " + exc.getUrl());
-			LOGGER.error("Code: " + exc.getStatusCode() + " " + exc.getStatusMessage());
-			LOGGER.error("Data: " + exc.getReturnedContent());
+			LOGGER.error("URL: {}", exc.getUrl());
+			LOGGER.error("Code: {} {}", exc.getStatusCode(), exc.getStatusMessage());
+			LOGGER.error("Data: {}", exc.getReturnedContent());
 			LOGGER.debug("Failed to import.", exc);
 		} catch (ImportException | ServiceFailureException | RuntimeException exc) {
-			LOGGER.error("Failed to import.", exc.getMessage());
+			LOGGER.error("Failed to import: {}", exc.getMessage());
 			LOGGER.debug("Details:", exc);
 		}
 		logStatus.setInsertedCount(inserted);
