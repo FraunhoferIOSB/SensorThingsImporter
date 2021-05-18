@@ -45,9 +45,10 @@ public class ImporterJob implements Job {
 
 	@Override
 	public void execute(JobExecutionContext context) throws JobExecutionException {
+		String importerFileName = "unknown";
 		try {
 			JobDataMap jobDataMap = context.getJobDetail().getJobDataMap();
-			String importerFileName = jobDataMap.getString(KEY_FILENAME);
+			importerFileName = jobDataMap.getString(KEY_FILENAME);
 			boolean noAct = jobDataMap.getBooleanValue(KEY_NO_ACT);
 
 			String config = loadFile(importerFileName);
@@ -57,6 +58,8 @@ public class ImporterJob implements Job {
 		} catch (IOException ex) {
 			LOGGER.error("Failed to load configuration.", ex);
 			throw new JobExecutionException("Failed to load configuration", ex);
+		} catch (Exception exc) {
+			LOGGER.error("ImporterJob " + importerFileName + " caused an exception!", exc);
 		}
 	}
 
