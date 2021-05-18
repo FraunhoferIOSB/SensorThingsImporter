@@ -149,11 +149,12 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 	public void setName(String name) {
 		if (Utils.isNullOrEmpty(this.name)) {
 			this.name = name;
-			logStatus.setName(name);
+			logStatus.setName("⏸" + name);
 		}
 	}
 
 	private void doImport() throws ImportException, ServiceFailureException {
+		logStatus.setName("⏵" + name);
 		nextMessage = messageIntervalStart;
 		Calendar start = Calendar.getInstance();
 
@@ -182,6 +183,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 		logStatus.setInsertedCount(inserted);
 		logStatus.setUpdatedCount(Long.valueOf(uploader.getUpdated()));
 		logStatus.setSpeed(getSpeed(start, inserted));
+		logStatus.setName("⏹" + name);
 	}
 
 	private double getSpeed(Calendar since, long inserted) {
