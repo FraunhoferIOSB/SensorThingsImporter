@@ -61,25 +61,20 @@ public class UrlUtils {
 		// Utility class.
 	}
 
-	public static String fetchFromUrl(String targetUrl) throws ImportException {
+	public static String fetchFromUrl(String targetUrl) throws IOException {
 		return fetchFromUrl(targetUrl, UTF8);
 	}
 
-	public static String fetchFromUrl(String targetUrl, String charset) throws ImportException {
+	public static String fetchFromUrl(String targetUrl, String charset) throws IOException {
 		return fetchFromUrl(targetUrl, Charset.forName(charset));
 	}
 
-	public static String fetchFromUrl(String targetUrl, Charset charset) throws ImportException {
+	public static String fetchFromUrl(String targetUrl, Charset charset) throws IOException {
 		LOGGER.info("Fetching: {}", targetUrl);
-		try {
-			if (targetUrl.startsWith("file:/")) {
-				return readFileUrl(targetUrl, charset);
-			}
-			return readNormalUrl(targetUrl, charset);
-		} catch (IOException ex) {
-			LOGGER.error("Failed to fetch url {}: {}", targetUrl, ex.getMessage());
-			throw new ImportException("Failed to fetch url " + targetUrl, ex);
+		if (targetUrl.startsWith("file:/")) {
+			return readFileUrl(targetUrl, charset);
 		}
+		return readNormalUrl(targetUrl, charset);
 	}
 
 	private static String readNormalUrl(String targetUrl, Charset charset) throws IOException, ParseException {
