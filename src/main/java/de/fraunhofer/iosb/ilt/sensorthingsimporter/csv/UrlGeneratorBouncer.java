@@ -17,18 +17,22 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
+import de.fraunhofer.iosb.ilt.configurable.Utils;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.regex.Pattern;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,18 +57,44 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
 	@EditorBoolean.EdOptsBool()
 	private boolean sort;
 
+	@ConfigurableField(editor = EditorString.class,
+			label = "Filter", description = "The regular expression filter to use.")
+	@EditorString.EdOptsString(dflt = ".*")
+	private String filterRegex;
+
+	@ConfigurableField(editor = EditorBoolean.class,
+			label = "Filter Removes", description = "If true, the filter removes matching item from the set. If false, the filter allows matching items.")
+	@EditorBoolean.EdOptsBool()
+	private boolean filterRemoves;
+
+	@ConfigurableField(editor = EditorString.class, optional = true,
+			label = "Splitter", description = "The characters to use to split the input into urls.")
+	@EditorString.EdOptsString(dflt = "\\n\\r ")
+	private String splitter;
+
 	@Override
 	public Iterator<URL> iterator() {
-		return new proxyIterator(inputUrl.iterator());
+		return new proxyIterator(this, inputUrl.iterator());
 	}
 
-	private class proxyIterator implements Iterator<URL> {
+	private static class proxyIterator implements Iterator<URL> {
 
+		private final UrlGeneratorBouncer bouncer;
 		private final Iterator<URL> parentIterator;
 		private Iterator<String> currentIterator;
+		private Pattern filter;
+		private String splitter;
 
-		public proxyIterator(Iterator<URL> parentIterator) {
+		public proxyIterator(UrlGeneratorBouncer bouncer, Iterator<URL> parentIterator) {
+			this.bouncer = bouncer;
 			this.parentIterator = parentIterator;
+			this.splitter = StringUtils.replaceEach(
+					bouncer.splitter,
+					new String[]{"\\n", "\\r", "\\t"},
+					new String[]{"\n", "\r", "\t"});
+			if (!Utils.isNullOrEmpty(bouncer.filterRegex)) {
+				filter = Pattern.compile(bouncer.filterRegex);
+			}
 			try {
 				nextParent();
 			} catch (ImportException ex) {
@@ -103,23 +133,36 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
 				final String inUrl = nextParentUrl.toString().trim();
 				try {
 					fetchedFromUrl = UrlUtils.fetchFromUrl(inUrl);
-					String[] split = StringUtils.split(fetchedFromUrl, "\n\r ");
-					List<String> asList;
-					if (fetchedFromUrl.isEmpty() || split.length == 0) {
-						asList = Collections.emptyList();
+					String[] split = StringUtils.split(fetchedFromUrl, splitter);
+					List<String> inList = new ArrayList<>(split.length);
+					for (String item : split) {
+						item = item.trim();
+						item = StringUtils.replace(item, " ", "%20");
+						if (!item.isEmpty()) {
+							inList.add(item.trim());
+						}
+					}
+					List<String> outList;
+					if (filter == null) {
+						outList = inList;
 					} else {
-						asList = Arrays.asList(split);
+						outList = new ArrayList<>();
+						for (String item : inList) {
+							final boolean matches = filter.matcher(item).matches();
+							if (matches != bouncer.filterRemoves) {
+								outList.add(item);
+							}
+						}
 					}
-					if (sort) {
-						asList.sort(null);
+					if (bouncer.sort) {
+						outList.sort(null);
 					}
-					currentIterator = asList.iterator();
+					currentIterator = outList.iterator();
 				} catch (IOException exc) {
 					LOGGER.error("Failed to handle URL: {}; {}", inUrl, exc.getMessage());
 				}
 			}
 		}
-
 	}
 
 }

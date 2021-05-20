@@ -50,6 +50,7 @@ import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -170,6 +171,9 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 			ObservedProperty observedProperty = observedPropertyCache.get(Integer.parseInt(FrostUtils.afterLastSlash(sr.airPollutantCode)));
 
 			String valueUnit = getFromRecord(record, "value_unit", "UnitOfMeasurement");
+			if (valueUnit == null) {
+				throw new ImportException("Could not find unit in record.");
+			}
 			UnitOfMeasurement uom = new UnitOfMeasurement(valueUnit, valueUnit, valueUnit);
 			filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(sr.samplingPoint);
 			Datastream ds = frostUtils.findOrCreateDatastream(
@@ -193,7 +197,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 				// It's fine
 			}
 		}
-		throw new IllegalArgumentException("Could not find any of names in record: " + names);
+		return null;
 	}
 
 	private EeaStationRecord findStation(CSVRecord record) throws ImportException {

@@ -13,8 +13,8 @@
 			the rollover logs are placed in the working directory. -->
 			<fileNamePattern>logs/SensorThingsImporter_%d{yyyy-MM-dd}.%i.log</fileNamePattern>
 			<maxFileSize>50MB</maxFileSize>
-			<!-- keep 30 days' worth of history -->
-			<maxHistory>30</maxHistory>
+			<!-- keep 7 days' worth of history -->
+			<maxHistory>7</maxHistory>
 			<totalSizeCap>1GB</totalSizeCap>
 		</rollingPolicy>
 

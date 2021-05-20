@@ -80,6 +80,13 @@ public class UrlUtils {
 		try (CloseableHttpClient client = HttpClients.createSystem()) {
 			HttpGet get = new HttpGet(targetUrl);
 			CloseableHttpResponse response = client.execute(get);
+			final int statusCode = response.getStatusLine().getStatusCode();
+			if (statusCode < 200) {
+				return "";
+			}
+			if (statusCode >= 400) {
+				return "";
+			}
 			HttpEntity entity = response.getEntity();
 			if (entity == null) {
 				return "";
