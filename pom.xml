@@ -39,7 +39,7 @@
 		<junit.version>4.13.2</junit.version>
 		<logback.version>1.2.3</logback.version>
 		<openjfx.version>16</openjfx.version>
-		<postgresql.version>42.2.20</postgresql.version>
+		<postgresql.version>42.2.21</postgresql.version>
 		<quartz.version>2.3.2</quartz.version>
 	</properties>
 
