@@ -26,7 +26,7 @@
 		<maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
 		<maven-source-plugin.version>3.2.1</maven-source-plugin.version>
 
-		<FROST-Client.version>0.34</FROST-Client.version>
+		<FROST-Client.version>0.35</FROST-Client.version>
 		<commons-collections.version>4.4</commons-collections.version>
 		<commons-csv.version>1.8</commons-csv.version>
 		<commons-io.version>2.10.0</commons-io.version>
