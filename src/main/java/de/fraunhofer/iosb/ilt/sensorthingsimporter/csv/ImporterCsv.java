@@ -21,6 +21,7 @@ import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
+import de.fraunhofer.iosb.ilt.configurable.Utils;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
@@ -93,6 +94,11 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 	@EditorString.EdOptsString(dflt = ",")
 	private String delimiter;
 
+	@ConfigurableField(editor = EditorString.class, optional = true,
+			label = "Comment Marker", description = "Lines starting with this character are ignored.")
+	@EditorString.EdOptsString(dflt = "")
+	private String commentMarker;
+
 	@ConfigurableField(editor = EditorBoolean.class, optional = true,
 			label = "Tab Delimited", description = "Is the TAB character a delimeter?")
 	@EditorBoolean.EdOptsBool()
@@ -137,6 +143,9 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 				.withDelimiter(delimiter.charAt(0));
 		if (tabIsDelimeter) {
 			format = format.withDelimiter('\t');
+		}
+		if (!Utils.isNullOrEmpty(commentMarker)) {
+			format = format.withCommentMarker(commentMarker.charAt(0));
 		}
 		if (hasHeader) {
 			format = format.withFirstRecordAsHeader();
