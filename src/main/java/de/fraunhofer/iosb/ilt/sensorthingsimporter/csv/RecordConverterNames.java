@@ -67,6 +67,11 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 	private String colResult;
 
 	@ConfigurableField(editor = EditorString.class, optional = true,
+			label = "Missing Value", description = "The value that is a placeholder for 'no value'.")
+	@EditorString.EdOptsString(dflt = "")
+	private String resultMissing;
+
+	@ConfigurableField(editor = EditorString.class, optional = true,
 			label = "Unit Col", description = "The column name that holds the unit of measurement.")
 	@EditorString.EdOptsString()
 	private String colUnit;
@@ -127,6 +132,9 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 		Observation obs;
 		StringBuilder log;
 		String resultString = record.get(colResult);
+		if (resultString.equals(resultMissing)) {
+			return Collections.emptyList();
+		}
 		result = parseResult(resultString);
 		if (result == null) {
 			LOGGER.debug("No result found in column {}.", colResult);

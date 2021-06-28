@@ -36,8 +36,10 @@ import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
@@ -63,6 +65,11 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
 			label = "Result Col", description = "The column # that holds the result (first is 0).")
 	@EditorInt.EdOptsInt(dflt = -1, min = -1, max = 99, step = 1)
 	private Integer colResult;
+
+	@ConfigurableField(editor = EditorString.class, optional = true,
+			label = "Missing Value", description = "The value that is a placeholder for 'no value'.")
+	@EditorString.EdOptsString(dflt = "")
+	private String resultMissing;
 
 	@ConfigurableField(editor = EditorInt.class, optional = true,
 			label = "Unit Col", description = "The column # that holds the unit of measurement (first is 0).")
@@ -128,6 +135,9 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
 			return Collections.emptyList();
 		}
 		String resultString = record.get(colResult);
+		if (resultString.equals(resultMissing)) {
+			return Collections.emptyList();
+		}
 		result = parseResult(resultString);
 		if (result == null) {
 			LOGGER.debug("No result found in column {}.", colResult);
