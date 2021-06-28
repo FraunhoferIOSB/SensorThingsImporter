@@ -35,8 +35,10 @@ import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
@@ -188,15 +190,55 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 	}
 
 	private TimeObject listToTimeObject(List<String> colList, CSVRecord record) throws ImportException {
+		final String firstCol = colList.get(0);
+		final String secondCol = colList.get(1);
 		if (colList.size() == 2) {
-			String start = record.get(colList.get(0));
-			String end = record.get(colList.get(1));
-			ZonedDateTime startTime = parseTime(start).withZoneSameInstant(ZONE_Z);
-			ZonedDateTime endTime = parseTime(end).withZoneSameInstant(ZONE_Z);
-			Interval interval = Interval.of(startTime.toInstant(), endTime.toInstant());
+			Duration startDuration = null;
+			String start = null;
+			try {
+				start = record.get(firstCol);
+			} catch (IllegalArgumentException ex) {
+				try {
+					startDuration = Duration.parse(firstCol);
+				} catch (DateTimeParseException ex2) {
+					LOGGER.error("Column {} does not exist and is not a duration.", firstCol);
+				}
+			}
+			Duration endDuration = null;
+			String end = null;
+			try {
+				end = record.get(secondCol);
+			} catch (IllegalArgumentException ex) {
+				try {
+					endDuration = Duration.parse(secondCol);
+				} catch (DateTimeParseException ex2) {
+					LOGGER.error("Column {} does not exist and is not a duration.", secondCol);
+				}
+			}
+			if (endDuration != null && startDuration != null) {
+				throw new IllegalArgumentException("Can not have start and end be a duration.");
+			}
+			ZonedDateTime startTime = null;
+			if (start != null) {
+				startTime = parseTime(start).withZoneSameInstant(ZONE_Z);
+			}
+			ZonedDateTime endTime = null;
+			if (end != null) {
+				endTime = parseTime(end).withZoneSameInstant(ZONE_Z);
+			}
+			Interval interval;
+			if (startTime != null && endTime != null) {
+				interval = Interval.of(startTime.toInstant(), endTime.toInstant());
+			} else if (startTime != null && endDuration != null) {
+				interval = Interval.of(startTime.toInstant(), endDuration);
+			} else if (startDuration != null && endTime != null) {
+				interval = Interval.of(endTime.toInstant().minus(startDuration), startDuration);
+			} else {
+				throw new IllegalArgumentException("Don't know how to deal with this combination of time and duration.");
+			}
 			return new TimeObject(interval);
 		} else {
-			return new TimeObject(parseTime(record.get(colList.get(0))).withZoneSameInstant(ZONE_Z));
+			return new TimeObject(parseTime(record.get(firstCol)).withZoneSameInstant(ZONE_Z));
 		}
 	}
 
