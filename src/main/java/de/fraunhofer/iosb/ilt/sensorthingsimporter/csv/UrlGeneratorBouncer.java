@@ -84,6 +84,7 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
 		private Iterator<String> currentIterator;
 		private Pattern filter;
 		private String splitter;
+		private URL currentParent;
 
 		public proxyIterator(UrlGeneratorBouncer bouncer, Iterator<URL> parentIterator) {
 			this.bouncer = bouncer;
@@ -112,8 +113,11 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
 			try {
 				if (currentIterator.hasNext()) {
 					String next = currentIterator.next();
-					next = next.substring(next.indexOf("http"));
-					return new URL(next);
+					final int hasHttp = next.indexOf("http");
+					if (hasHttp >= 0) {
+						next = next.substring(hasHttp);
+					}
+					return new URL(currentParent, next);
 				} else {
 					if (!parentIterator.hasNext()) {
 						return null;
@@ -130,9 +134,9 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
 			if (parentIterator.hasNext()) {
 				URL nextParentUrl = parentIterator.next();
 				String fetchedFromUrl;
-				final String inUrl = nextParentUrl.toString().trim();
 				try {
-					fetchedFromUrl = UrlUtils.fetchFromUrl(inUrl);
+					currentParent = new URL(nextParentUrl.toString().trim());
+					fetchedFromUrl = UrlUtils.fetchFromUrl(currentParent.toString());
 					String[] split = StringUtils.split(fetchedFromUrl, splitter);
 					List<String> inList = new ArrayList<>(split.length);
 					for (String item : split) {
@@ -159,7 +163,7 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
 					}
 					currentIterator = outList.iterator();
 				} catch (IOException exc) {
-					LOGGER.error("Failed to handle URL: {}; {}", inUrl, exc.getMessage());
+					LOGGER.error("Failed to handle URL: {}; {}", currentParent, exc.getMessage());
 				}
 			}
 		}
