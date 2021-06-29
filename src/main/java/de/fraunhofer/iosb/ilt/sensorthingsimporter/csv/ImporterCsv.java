@@ -148,7 +148,8 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 			format = format.withCommentMarker(commentMarker.charAt(0));
 		}
 		if (hasHeader) {
-			format = format.withFirstRecordAsHeader();
+			format = format.withFirstRecordAsHeader()
+					.withAllowMissingColumnNames();
 		}
 	}
 

@@ -239,11 +239,6 @@ public class FXMLController implements Initializable {
 	public void close() {
 		LOGGER.info("Received close, shutting down executor.");
 		ImporterScheduler.STATUS_LOGGER.stop();
-		try {
-			executor.awaitTermination(5, TimeUnit.SECONDS);
-		} catch (InterruptedException ex) {
-			LOGGER.info("Interrupted while waiting...");
-		}
 		List<Runnable> remaining = executor.shutdownNow();
 		LOGGER.info("Remaining threads: {}", remaining.size());
 	}

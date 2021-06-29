@@ -20,6 +20,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.Utils;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
@@ -199,8 +200,8 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 
 	private TimeObject listToTimeObject(List<String> colList, CSVRecord record) throws ImportException {
 		final String firstCol = colList.get(0);
-		final String secondCol = colList.get(1);
 		if (colList.size() == 2) {
+			final String secondCol = colList.get(1);
 			Duration startDuration = null;
 			String start = null;
 			try {
