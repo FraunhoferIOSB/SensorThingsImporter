@@ -22,6 +22,7 @@ import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  *
@@ -33,6 +34,11 @@ public class ParserBigdecimal implements Parser<BigDecimal>, AnnotatedConfigurab
 			label = "Truncate 0s", description = "Drop trailing zeroes from results.")
 	@EditorBoolean.EdOptsBool()
 	private boolean dropTailingZeroes;
+
+	@ConfigurableField(editor = EditorBoolean.class,
+			label = "Decimal Comma", description = "If set, numbers use a decimal comma instead of a decimal point.")
+	@EditorBoolean.EdOptsBool()
+	private boolean decimalComma;
 
 	@Override
 	public BigDecimal parse(JsonNode value) {
@@ -48,9 +54,14 @@ public class ParserBigdecimal implements Parser<BigDecimal>, AnnotatedConfigurab
 	}
 
 	@Override
-	public BigDecimal parse(String value) {
+	public BigDecimal parse(final String value) {
+		String valueString = value.trim();
+		if (decimalComma) {
+			valueString = StringUtils.replace(valueString, ".", "");
+			valueString = StringUtils.replace(valueString, ",", ".");
+		}
 		try {
-			BigDecimal bigDecimal = new BigDecimal(value);
+			BigDecimal bigDecimal = new BigDecimal(valueString);
 			if (dropTailingZeroes) {
 				return bigDecimal.stripTrailingZeros();
 			}
