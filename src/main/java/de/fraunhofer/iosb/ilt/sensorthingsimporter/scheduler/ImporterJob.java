@@ -41,6 +41,7 @@ public class ImporterJob implements Job {
 	 */
 	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ImporterJob.class);
 	public static final String KEY_FILENAME = "fileName";
+	public static final String KEY_SHELLSCRIPT = "shellScript";
 	public static final String KEY_NO_ACT = "noAct";
 
 	@Override
@@ -49,18 +50,32 @@ public class ImporterJob implements Job {
 		try {
 			JobDataMap jobDataMap = context.getJobDetail().getJobDataMap();
 			importerFileName = jobDataMap.getString(KEY_FILENAME);
+			boolean shellScript = jobDataMap.getBoolean(KEY_SHELLSCRIPT);
 			boolean noAct = jobDataMap.getBooleanValue(KEY_NO_ACT);
-
-			String config = loadFile(importerFileName);
-			ImporterWrapper importer = new ImporterWrapper();
-			importer.setName(importerFileName);
-			importer.doImport(config, noAct, null);
+			if (shellScript) {
+				executeShellScript(importerFileName);
+			} else {
+				executeImport(importerFileName, noAct);
+			}
 		} catch (IOException ex) {
 			LOGGER.error("Failed to load configuration.", ex);
 			throw new JobExecutionException("Failed to load configuration", ex);
 		} catch (Exception exc) {
 			LOGGER.error("ImporterJob " + importerFileName + " caused an exception!", exc);
 		}
+	}
+
+	private void executeShellScript(String importerFileName) throws IOException {
+		LOGGER.info("Starting {}", importerFileName);
+		ProcessBuilder pb = new ProcessBuilder(importerFileName);
+		pb.start();
+	}
+
+	private void executeImport(String importerFileName, boolean noAct) throws IOException {
+		String config = loadFile(importerFileName);
+		ImporterWrapper importer = new ImporterWrapper();
+		importer.setName(importerFileName);
+		importer.doImport(config, noAct, null);
 	}
 
 	public static String loadFile(String fileName) throws IOException {

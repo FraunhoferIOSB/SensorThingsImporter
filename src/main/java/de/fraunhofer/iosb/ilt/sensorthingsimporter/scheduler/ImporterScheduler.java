@@ -108,6 +108,7 @@ public class ImporterScheduler extends AbstractConfigurable<Void, Void> {
 			JobDetail jobDetail = JobBuilder.newJob(ImporterJob.class)
 					.withIdentity(jobName)
 					.usingJobData(ImporterJob.KEY_FILENAME, fileName)
+					.usingJobData(ImporterJob.KEY_SHELLSCRIPT, schedule.isShellScript())
 					.usingJobData(ImporterJob.KEY_NO_ACT, noAct)
 					.build();
 

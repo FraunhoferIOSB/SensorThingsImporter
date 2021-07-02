@@ -18,6 +18,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler;
 
 import de.fraunhofer.iosb.ilt.configurable.AbstractConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 
 /**
@@ -27,6 +28,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 public class Schedule extends AbstractConfigurable<Void, Void> {
 
 	public static final String UNNAMED = "unnamed";
+
 	@ConfigurableField(editor = EditorString.class,
 			label = "Cron",
 			description = "A cron-compatible scheduling definition. See http://www.quartz-scheduler.org/api/2.2.1/org/quartz/CronExpression.html")
@@ -44,6 +46,11 @@ public class Schedule extends AbstractConfigurable<Void, Void> {
 			description = "The name for this cron job in log messages.")
 	@EditorString.EdOptsString(dflt = UNNAMED)
 	private String name;
+
+	@ConfigurableField(editor = EditorBoolean.class, optional = true,
+			label = "Is Shell Script", description = "If set, the file is executed as if it is a shell script.")
+	@EditorBoolean.EdOptsBool()
+	private boolean shellScript;
 
 	/**
 	 * @return the cronLine
@@ -79,6 +86,24 @@ public class Schedule extends AbstractConfigurable<Void, Void> {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	/**
+	 * If true, the file is executed as if it is a shell script.
+	 *
+	 * @return if true file is executed as if it is a shell script.
+	 */
+	public boolean isShellScript() {
+		return shellScript;
+	}
+
+	/**
+	 * If true, the file is executed as if it is a shell script.
+	 *
+	 * @param shellScript the shellScript flag to set
+	 */
+	public void setShellScript(boolean shellScript) {
+		this.shellScript = shellScript;
 	}
 
 }
