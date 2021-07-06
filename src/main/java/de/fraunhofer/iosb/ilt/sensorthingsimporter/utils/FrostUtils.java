@@ -53,6 +53,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 import org.geojson.GeoJsonObject;
 import org.geojson.Point;
 import org.geotools.geometry.DirectPosition2D;
@@ -70,6 +72,8 @@ import org.threeten.extra.Interval;
  * @author scf
  */
 public final class FrostUtils {
+
+	public static final ZoneId ZONE_ID_Z = ZoneId.of("Z");
 
 	/**
 	 * The NULL unit to use for "empty" units.
@@ -92,13 +96,17 @@ public final class FrostUtils {
 	private static final Logger LOGGER = LoggerFactory.getLogger(FrostUtils.class);
 
 	private final SensorThingsService service;
-	private boolean dryRun = false;
 
-	public FrostUtils(SensorThingsService service) {
+	private boolean dryRun;
+
+	private int countInsert;
+	private int countUpdate;
+
+	public FrostUtils(final SensorThingsService service) {
 		this.service = service;
 	}
 
-	public void setDryRun(boolean dryRun) {
+	public void setDryRun(final boolean dryRun) {
 		this.dryRun = dryRun;
 	}
 
@@ -106,20 +114,46 @@ public final class FrostUtils {
 		return service;
 	}
 
-	public <T extends Entity<T>> void update(T entity) throws ServiceFailureException {
+	public static String camelCase(final String name) {
+		final String[] parts = StringUtils.split(name, '_');
+		final StringBuilder result = new StringBuilder(parts[0].toLowerCase());
+		for (int idx = 1; idx < parts.length; idx++) {
+			final String part = parts[idx];
+			result.append(part.substring(0, 1).toUpperCase());
+			result.append(part.substring(1).toLowerCase());
+		}
+		return result.toString();
+	}
+
+	public <T extends Entity<T>> void update(final T entity) throws ServiceFailureException {
 		if (dryRun) {
-			LOGGER.info("Dry Run: Not updating entity " + entity);
+			LOGGER.info("Dry Run: Not updating entity {}", entity);
 		} else {
 			service.update(entity);
+			countUpdate++;
 		}
 	}
 
-	public <T extends Entity<T>> void create(T entity) throws ServiceFailureException {
+	public <T extends Entity<T>> void create(final T entity) throws ServiceFailureException {
 		if (dryRun) {
-			LOGGER.info("Dry Run: Not creating entity " + entity);
+			LOGGER.info("Dry Run: Not creating entity {}", entity);
 		} else {
 			service.create(entity);
+			countInsert++;
 		}
+	}
+
+	public int getCountInsert() {
+		return countInsert;
+	}
+
+	public int getCountUpdate() {
+		return countUpdate;
+	}
+
+	public void resetCounts() {
+		countInsert = 0;
+		countUpdate = 0;
 	}
 
 	public void delete(List<? extends Entity> entities, int threads) throws ServiceFailureException {
@@ -150,19 +184,21 @@ public final class FrostUtils {
 		executor.shutdownNow();
 	}
 
-	public Thing findOrCreateThing(
-			final String filter,
-			final String name,
-			final String description,
-			final Map<String, Object> properties,
-			final Location location,
-			final Thing cachedThing) throws ServiceFailureException {
+	public Thing findOrCreateThing(final String filter, final String name, final String description, final Map<String, Object> properties, final Location location, final Thing cachedThing) throws ServiceFailureException {
+		final Thing thing = new Thing(name, description);
+		thing.setProperties(properties);
+		if (location != null) {
+			thing.getLocations().add(location.withOnlyId());
+		}
+		return findOrCreateThing(filter, thing, cachedThing);
+	}
+
+	public Thing findOrCreateThing(final String filter, final Thing newThing, final Thing cachedThing) throws ServiceFailureException {
 		Thing thing = null;
 		if (cachedThing != null) {
 			thing = cachedThing;
 		} else {
-			EntityList<Thing> thingList;
-			thingList = addOrCreateFilter(service.things().query(), filter, name).expand("Locations($select=id)").list();
+			final EntityList<Thing> thingList = addOrCreateFilter(service.things().query(), filter, newThing.getName()).expand("Locations($select=id)").list();
 			if (thingList.size() > 1) {
 				throw new IllegalStateException("More than one thing found with filter " + filter);
 			}
@@ -171,79 +207,64 @@ public final class FrostUtils {
 			}
 		}
 		if (thing == null) {
-			LOGGER.info("Creating Thing {}.", name);
-			thing = new Thing(name, description);
-			thing.setProperties(properties);
-			if (location != null) {
-				thing.getLocations().add(location.withOnlyId());
-			}
+			LOGGER.info("Creating Thing {}.", newThing.getName());
+			thing = newThing;
 			create(thing);
 		} else {
-			maybeUpdateThing(name, description, properties, location, thing);
+			maybeUpdateThing(newThing, thing);
 		}
 		return thing;
 	}
 
-	public boolean maybeUpdateThing(
-			final String name,
-			final String description,
-			final Map<String, Object> properties,
-			final Location location,
-			final Thing cached) throws ServiceFailureException {
+	public boolean maybeUpdateThing(final Thing newThing, final Thing thingToUpdate) throws ServiceFailureException {
 		boolean updated = false;
-		if (!name.equals(cached.getName())) {
+		if (!newThing.getName().equals(thingToUpdate.getName())) {
 			updated = true;
-			cached.setName(name);
+			thingToUpdate.setName(newThing.getName());
 		}
-		if (!description.equals(cached.getDescription())) {
+		if (!newThing.getDescription().equals(thingToUpdate.getDescription())) {
 			updated = true;
-			cached.setDescription(description);
+			thingToUpdate.setDescription(newThing.getDescription());
 		}
-		if (addProperties(cached.getProperties(), properties, 5)) {
+		if (addProperties(thingToUpdate.getProperties(), newThing.getProperties(), 5)) {
 			updated = true;
 		}
-		if (location != null) {
-			final List<Location> locationList = cached.getLocations().toList();
+		if (!newThing.getLocations().isEmpty()) {
+			final Location location = newThing.getLocations().toList().get(0);
+			final List<Location> locationList = thingToUpdate.getLocations().toList();
 			if (locationList.isEmpty()) {
-				cached.getLocations().add(location.withOnlyId());
+				thingToUpdate.getLocations().add(location.withOnlyId());
 				updated = true;
 			} else {
-				boolean found = false;
-				for (Location loc : locationList) {
-					if (loc.getId().equals(location.getId())) {
-						found = true;
-						break;
-					}
-				}
+				final boolean found = locationList.stream().anyMatch(loc -> loc.getId().equals(location.getId()));
 				if (!found) {
-					cached.getLocations().clear();
-					cached.getLocations().add(location.withOnlyId());
+					thingToUpdate.getLocations().clear();
+					thingToUpdate.getLocations().add(location.withOnlyId());
 					updated = true;
 				}
 			}
 		}
 		if (updated) {
-			update(cached);
+			update(thingToUpdate);
 		}
 		return updated;
 	}
 
-	public Sensor findOrCreateSensor(
-			final String filter,
-			final String name,
-			final String description,
-			final String encodingType,
-			final Object metadata,
-			final Map<String, Object> properties,
-			final Sensor cached) throws ServiceFailureException {
+	public Sensor findOrCreateSensor(final String filter, final String name, final String description, final String encodingType, final Object metadata, final Map<String, Object> properties, final Sensor cached) throws ServiceFailureException {
+		final Sensor sensor = new Sensor(name, description, encodingType, metadata);
+		sensor.setProperties(properties);
+		return findOrCreateSensor(filter, sensor, cached);
+	}
+
+	public Sensor findOrCreateSensor(final String filter, final Sensor newSensor, final Sensor cachedSensor) throws ServiceFailureException {
 		Sensor sensor = null;
-		if (cached != null) {
-			sensor = cached;
+		if (cachedSensor != null) {
+			sensor = cachedSensor;
 		} else {
 			final Query<Sensor> query = service.sensors().query();
-			final EntityList<Sensor> sensorList = addOrCreateFilter(query, filter, name).list();
+			final EntityList<Sensor> sensorList = addOrCreateFilter(query, filter, newSensor.getName()).list();
 			if (sensorList.size() > 1) {
-				throw new IllegalStateException("More than one sensor with name " + name);
+				throw new IllegalStateException("More than one sensor with name " + newSensor.getName());
 			}
 
 			if (sensorList.size() == 1) {
@@ -251,44 +272,37 @@ public final class FrostUtils {
 			}
 		}
 		if (sensor == null) {
-			LOGGER.info("Creating Sensor {}.", name);
-			sensor = new Sensor(name, description, encodingType, metadata);
-			sensor.setProperties(properties);
+			LOGGER.info("Creating Sensor {}.", newSensor.getName());
+			sensor = newSensor;
 			create(sensor);
 		} else {
-			mayeUpdateSensor(name, description, encodingType, metadata, properties, sensor);
+			mayeUpdateSensor(newSensor, sensor);
 		}
 		return sensor;
 	}
 
-	public boolean mayeUpdateSensor(
-			final String name,
-			final String description,
-			final String encodingType,
-			final Object metadata,
-			final Map<String, Object> properties,
-			final Sensor cached) throws ServiceFailureException {
+	public boolean mayeUpdateSensor(final Sensor newSensor, final Sensor cached) throws ServiceFailureException {
 		boolean update = false;
-		if (!name.equals(cached.getName())) {
+		if (!newSensor.getName().equals(cached.getName())) {
 			update = true;
-			cached.setName(name);
+			cached.setName(newSensor.getName());
 		}
-		if (!description.equals(cached.getDescription())) {
+		if (!newSensor.getDescription().equals(cached.getDescription())) {
 			update = true;
-			cached.setDescription(description);
+			cached.setDescription(newSensor.getDescription());
 		}
-		if (!encodingType.equals(cached.getEncodingType())) {
+		if (!newSensor.getEncodingType().equals(cached.getEncodingType())) {
 			update = true;
-			cached.setEncodingType(encodingType);
+			cached.setEncodingType(newSensor.getEncodingType());
 		}
-		if (!Objects.equals(metadata, cached.getMetadata())) {
+		if (!Objects.equals(newSensor.getMetadata(), cached.getMetadata())) {
 			update = true;
-			cached.setMetadata(metadata);
+			cached.setMetadata(newSensor.getMetadata());
 		}
-		if (cached.getProperties() == null && properties != null && !properties.isEmpty()) {
-			cached.setProperties(properties);
+		if (cached.getProperties() == null && newSensor.getProperties() != null && !newSensor.getProperties().isEmpty()) {
+			cached.setProperties(newSensor.getProperties());
 			update = true;
-		} else if (addProperties(cached.getProperties(), properties, 5)) {
+		} else if (addProperties(cached.getProperties(), newSensor.getProperties(), 5)) {
 			update = true;
 		}
 		if (update) {
@@ -297,173 +311,119 @@ public final class FrostUtils {
 		return update;
 	}
 
-	public FeatureOfInterest findOrCreateFeature(
-			final String filter,
-			final String name,
-			final String description,
-			final GeoJsonObject geoJson,
-			final Map<String, Object> properties,
-			final FeatureOfInterest cached) throws ServiceFailureException {
+	public FeatureOfInterest findOrCreateFeature(final String filter, final String name, final String description, final GeoJsonObject geoJson, final Map<String, Object> properties, final FeatureOfInterest cached) throws ServiceFailureException {
+		final FeatureOfInterest foi = new FeatureOfInterest(name, description, CONTENT_TYPE_GEOJSON, geoJson);
+		foi.setProperties(properties);
+		return findOrCreateFeature(filter, foi, cached);
+	}
+
+	public FeatureOfInterest findOrCreateFeature(final String filter, final FeatureOfInterest newFeature, final FeatureOfInterest cachedFeature) throws ServiceFailureException {
 		FeatureOfInterest foi = null;
-		if (cached != null) {
-			foi = cached;
+		if (cachedFeature != null) {
+			foi = cachedFeature;
 		} else {
 			final Query<FeatureOfInterest> query = service.featuresOfInterest().query();
-			final EntityList<FeatureOfInterest> foiList = addOrCreateFilter(query, filter, name).list();
+			final EntityList<FeatureOfInterest> foiList = addOrCreateFilter(query, filter, newFeature.getName()).list();
 			if (foiList.size() > 1) {
-				throw new IllegalStateException("More than one FeatureOfInterest with name " + name);
+				throw new IllegalStateException("More than one FeatureOfInterest with name " + newFeature.getName());
 			}
 			if (foiList.size() == 1) {
 				foi = foiList.iterator().next();
 			}
 		}
 		if (foi == null) {
-			LOGGER.info("Creating Feature {}.", name);
-			foi = new FeatureOfInterest(name, description, CONTENT_TYPE_GEOJSON, geoJson);
-			foi.setProperties(properties);
+			LOGGER.info("Creating Feature {}.", newFeature.getName());
+			foi = newFeature;
 			create(foi);
 		} else {
-			maybeUpdateFeatureOfInterest(name, description, geoJson, properties, foi);
+			maybeUpdateFeatureOfInterest(newFeature, foi);
 		}
 		return foi;
 	}
 
-	public boolean maybeUpdateFeatureOfInterest(
-			final String name,
-			final String description,
-			final GeoJsonObject geoJson,
-			final Map<String, Object> properties,
-			final FeatureOfInterest cached) throws ServiceFailureException {
+	public boolean maybeUpdateFeatureOfInterest(final FeatureOfInterest newFeature, final FeatureOfInterest foiToUpdate) throws ServiceFailureException {
 		boolean update = false;
-		if (!name.equals(cached.getName())) {
+		if (!newFeature.getName().equals(foiToUpdate.getName())) {
 			update = true;
-			cached.setName(name);
+			foiToUpdate.setName(newFeature.getName());
 		}
-		if (!description.equals(cached.getDescription())) {
+		if (!newFeature.getDescription().equals(foiToUpdate.getDescription())) {
 			update = true;
-			cached.setDescription(description);
+			foiToUpdate.setDescription(newFeature.getDescription());
 		}
-		ObjectMapper om = ObjectMapperFactory.get();
+		final ObjectMapper objectMapper = ObjectMapperFactory.get();
 		try {
-			if (!om.writeValueAsString(geoJson).equals(om.writeValueAsString(cached.getFeature()))) {
+			if (!objectMapper.writeValueAsString(newFeature.getFeature()).equals(objectMapper.writeValueAsString(foiToUpdate.getFeature()))) {
 				update = true;
-				LOGGER.debug("Location changed from {} to {}", cached.getFeature(), geoJson);
-				cached.setFeature(geoJson);
+				LOGGER.debug("Location changed from {} to {}", foiToUpdate.getFeature(), newFeature.getFeature());
+				foiToUpdate.setFeature(newFeature.getFeature());
 			}
-		} catch (JsonProcessingException ex) {
-			LOGGER.error("Failed to compare geoJson objects.");
+		} catch (final JsonProcessingException exc) {
+			LOGGER.error("Failed to compare geoJson objects.", exc);
 		}
 
-		if (cached.getProperties() == null && properties != null) {
-			cached.setProperties(properties);
+		if (foiToUpdate.getProperties() == null && newFeature.getProperties() != null) {
+			foiToUpdate.setProperties(newFeature.getProperties());
 			update = true;
 		}
-		if (addProperties(cached.getProperties(), properties, 5)) {
+		if (addProperties(foiToUpdate.getProperties(), newFeature.getProperties(), 5)) {
 			update = true;
 		}
 		if (update) {
-			update(cached);
+			update(foiToUpdate);
 		}
 		return update;
 	}
 
-	public boolean maybeUpdateOp(
-			final String name,
-			final String def,
-			final String description,
-			final Map<String, Object> properties,
-			final ObservedProperty cached) throws ServiceFailureException {
-		boolean update = false;
-		if (!name.equals(cached.getName())) {
-			update = true;
-			cached.setName(name);
-		}
-		if (!description.equals(cached.getDescription())) {
-			update = true;
-			cached.setDescription(description);
-		}
-		if (cached.getProperties() == null && properties != null) {
-			cached.setProperties(properties);
-			update = true;
-		}
-		if (addProperties(cached.getProperties(), properties, 5)) {
-			update = true;
-		}
-		if (update) {
-			update(cached);
-		}
-		return update;
+	public ObservedProperty findOrCreateOp(final String filter, final String name, final String def, final String description, final Map<String, Object> properties, final ObservedProperty cached) throws ServiceFailureException {
+		final ObservedProperty observedProperty = new ObservedProperty(name, def, description);
+		observedProperty.setProperties(properties);
+		return findOrCreateOp(filter, observedProperty, cached);
 	}
 
-	public ObservedProperty findOrCreateOp(
-			final String filter,
-			final String name,
-			final String def,
-			final String description,
-			final Map<String, Object> properties,
-			final ObservedProperty cached) throws ServiceFailureException {
-		ObservedProperty op = null;
-		if (cached != null) {
-			op = cached;
+	public ObservedProperty findOrCreateOp(final String filter, final ObservedProperty newObsProp, final ObservedProperty cachedObsProp) throws ServiceFailureException {
+		ObservedProperty observedProperty = null;
+		if (cachedObsProp != null) {
+			observedProperty = cachedObsProp;
 		} else {
 			final Query<ObservedProperty> query = service.observedProperties().query();
-			final EntityList<ObservedProperty> opList = addOrCreateFilter(query, filter, name).list();
+			final EntityList<ObservedProperty> opList = addOrCreateFilter(query, filter, newObsProp.getName()).list();
 			if (opList.size() > 1) {
-				throw new IllegalStateException("More than one observedProperty with name " + name);
+				throw new IllegalStateException("More than one observedProperty with name " + newObsProp.getName());
 			}
 			if (opList.size() == 1) {
-				op = opList.iterator().next();
+				observedProperty = opList.iterator().next();
 			}
 		}
-		if (op == null) {
-			LOGGER.info("Creating ObservedProperty {}.", name);
-			op = new ObservedProperty();
-			op.setName(name);
-			op.setDefinition(def);
-			op.setDescription(description);
-			op.setProperties(properties);
-			create(op);
+		if (observedProperty == null) {
+			LOGGER.info("Creating ObservedProperty {}.", newObsProp.getName());
+			observedProperty = newObsProp;
+			create(observedProperty);
 		} else {
-			maybeUpdateOp(name, def, description, properties, op);
+			maybeUpdateOp(newObsProp, observedProperty);
 		}
-		return op;
+		return observedProperty;
 	}
 
-	public boolean maybeUpdateDatastream(
-			final String name,
-			final String desc,
-			final Map<String, Object> properties,
-			final UnitOfMeasurement uom,
-			final Thing t,
-			final ObservedProperty op,
-			final Sensor s,
-			final Datastream cached) throws ServiceFailureException {
+	public boolean maybeUpdateOp(final ObservedProperty newObsProp, final ObservedProperty opToUpdate) throws ServiceFailureException {
 		boolean update = false;
-		if (!name.equals(cached.getName())) {
+		if (!newObsProp.getName().equals(opToUpdate.getName())) {
 			update = true;
-			cached.setName(name);
+			opToUpdate.setName(newObsProp.getName());
 		}
-		if (!desc.equals(cached.getDescription())) {
+		if (!newObsProp.getDescription().equals(opToUpdate.getDescription())) {
 			update = true;
-			cached.setDescription(desc);
+			opToUpdate.setDescription(newObsProp.getDescription());
 		}
-		if (cached.getProperties() == null && properties != null) {
-			cached.setProperties(properties);
-			update = true;
-		}
-		if (addProperties(cached.getProperties(), properties, 5)) {
+		if (opToUpdate.getProperties() == null && newObsProp.getProperties() != null && !newObsProp.getProperties().isEmpty()) {
+			opToUpdate.setProperties(newObsProp.getProperties());
 			update = true;
 		}
-		if (!uom.equals(cached.getUnitOfMeasurement())) {
-			cached.setUnitOfMeasurement(uom);
-			update = true;
-		}
-		if (!cached.getObservedProperty().getId().equals(op.getId())) {
-			cached.setObservedProperty(op.withOnlyId());
+		if (addProperties(opToUpdate.getProperties(), newObsProp.getProperties(), 5)) {
 			update = true;
 		}
 		if (update) {
-			update(cached);
+			update(opToUpdate);
 		}
 		return update;
 	}
@@ -478,44 +438,70 @@ public final class FrostUtils {
 			final ObservedProperty op,
 			final Sensor s,
 			final Datastream cached) throws ServiceFailureException {
-		Datastream ds = null;
+		Datastream ds = new Datastream(name, desc, "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement", uom);
+		ds.setProperties(properties);
+		ds.setThing(t);
+		ds.setSensor(s);
+		ds.setObservedProperty(op);
+		return findOrCreateDatastream(filter, ds, cached);
+	}
+
+	public Datastream findOrCreateDatastream(final String filter, final Datastream newDatastream, final Datastream cached) throws ServiceFailureException {
+		Datastream datastream = null;
 		if (cached != null) {
-			ds = cached;
+			datastream = cached;
 		} else {
-			final Query<Datastream> query = t.datastreams().query();
-			final EntityList<Datastream> datastreamList = addOrCreateFilter(query, filter, name).list();
+			final Query<Datastream> query = newDatastream.getThing().datastreams().query();
+			final EntityList<Datastream> datastreamList = addOrCreateFilter(query, filter, newDatastream.getName()).list();
 			if (datastreamList.size() > 1) {
 				throw new IllegalStateException("More than one datastream matches filter " + filter);
 			}
 			if (datastreamList.size() == 1) {
-				ds = datastreamList.iterator().next();
+				datastream = datastreamList.iterator().next();
 			}
 		}
-
-		if (ds == null) {
-			LOGGER.info("Creating Datastream {}.", name);
-			ds = new Datastream(name, desc, "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement", uom);
-			ds.setProperties(properties);
-			ds.setThing(t);
-			ds.setSensor(s);
-			ds.setObservedProperty(op);
-			create(ds);
+		if (datastream == null) {
+			LOGGER.info("Creating Datastream {}.", newDatastream.getName());
+			datastream = newDatastream;
+			create(datastream);
 		} else {
-			maybeUpdateDatastream(name, desc, properties, uom, t, op, s, ds);
+			maybeUpdateDatastream(newDatastream, datastream);
 		}
-		return ds;
+		return datastream;
 	}
 
-	public MultiDatastream findOrCreateMultiDatastream(
-			final String filter,
-			final String name,
-			final String desc,
-			final List<UnitOfMeasurement> uoms,
-			final Thing t,
-			final List<ObservedProperty> ops,
-			final Sensor s,
-			final Map<String, Object> props,
-			final MultiDatastream cached) throws ServiceFailureException {
+	public boolean maybeUpdateDatastream(final Datastream newDatastream, final Datastream dsToUpdate) throws ServiceFailureException {
+		boolean update = false;
+		if (!newDatastream.getName().equals(dsToUpdate.getName())) {
+			dsToUpdate.setName(newDatastream.getName());
+			update = true;
+		}
+		if (!newDatastream.getDescription().equals(dsToUpdate.getDescription())) {
+			dsToUpdate.setDescription(newDatastream.getDescription());
+			update = true;
+		}
+		if (dsToUpdate.getProperties() == null && newDatastream.getProperties() != null && !newDatastream.getProperties().isEmpty()) {
+			dsToUpdate.setProperties(newDatastream.getProperties());
+			update = true;
+		}
+		if (addProperties(dsToUpdate.getProperties(), newDatastream.getProperties(), 5)) {
+			update = true;
+		}
+		if (!newDatastream.getUnitOfMeasurement().equals(dsToUpdate.getUnitOfMeasurement())) {
+			dsToUpdate.setUnitOfMeasurement(newDatastream.getUnitOfMeasurement());
+			update = true;
+		}
+		if (!dsToUpdate.getObservedProperty().getId().equals(newDatastream.getObservedProperty().getId())) {
+			dsToUpdate.setObservedProperty(newDatastream.getObservedProperty().withOnlyId());
+			update = true;
+		}
+		if (update) {
+			update(dsToUpdate);
+		}
+		return update;
+	}
+
+	public MultiDatastream findOrCreateMultiDatastream(final String filter, final String name, final String desc, final List<UnitOfMeasurement> uoms, final Thing thing, final List<ObservedProperty> observedProperties, final Sensor sensor, final Map<String, Object> props, final MultiDatastream cached) throws ServiceFailureException {
 		MultiDatastream mds = null;
 		if (cached != null) {
 			mds = cached;
@@ -532,15 +518,12 @@ public final class FrostUtils {
 		}
 		if (mds == null) {
 			LOGGER.info("Creating multiDatastream {}.", name);
-			final List<String> dataTypes = new ArrayList<>();
-			for (final ObservedProperty op : ops) {
-				dataTypes.add("http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement");
-			}
+			final List<String> dataTypes = observedProperties.stream().map(observedProperty -> "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement").collect(Collectors.toList());
 			mds = new MultiDatastream(name, desc, dataTypes, uoms);
 			mds.setProperties(props);
-			mds.setThing(t);
-			mds.setSensor(s);
-			mds.getObservedProperties().addAll(ops);
+			mds.setThing(thing);
+			mds.setSensor(sensor);
+			mds.getObservedProperties().addAll(observedProperties);
 			create(mds);
 		} else {
 			maybeUpdateMultiDatastream(name, desc, props, mds);
@@ -548,58 +531,41 @@ public final class FrostUtils {
 		return mds;
 	}
 
-	public boolean maybeUpdateMultiDatastream(
-			final String name,
-			final String desc,
-			final Map<String, Object> props,
-			final MultiDatastream cached) throws ServiceFailureException {
+	public boolean maybeUpdateMultiDatastream(final String name, final String desc, final Map<String, Object> props, final MultiDatastream mdsToUpdate) throws ServiceFailureException {
 		boolean update = false;
-		if (!name.equals(cached.getName())) {
+		if (!name.equals(mdsToUpdate.getName())) {
 			update = true;
-			cached.setName(name);
+			mdsToUpdate.setName(name);
 		}
-		if (!desc.equals(cached.getDescription())) {
+		if (!desc.equals(mdsToUpdate.getDescription())) {
 			update = true;
-			cached.setDescription(desc);
+			mdsToUpdate.setDescription(desc);
 		}
-		if (cached.getProperties() == null && props != null) {
-			cached.setProperties(props);
+		if (mdsToUpdate.getProperties() == null && props != null) {
+			mdsToUpdate.setProperties(props);
 			update = true;
 		}
-		if (addProperties(cached.getProperties(), props, 5)) {
+		if (addProperties(mdsToUpdate.getProperties(), props, 5)) {
 			update = true;
 		}
 		if (update) {
-			update(cached);
+			update(mdsToUpdate);
 		}
 		return update;
 	}
 
-	public Location findOrCreateLocation(
-			final String name,
-			final String description,
-			final Map<String, Object> properties,
-			final GeoJsonObject geoJson) throws ServiceFailureException {
-		String filter = "name eq '" + Utils.escapeForStringConstant(name) + "'";
-		return findOrCreateLocation(filter, name, description, properties, geoJson);
-	}
-
-	public Location findOrCreateLocation(
-			final String filter,
-			final String name,
-			final String description,
-			final Map<String, Object> properties,
-			final GeoJsonObject geoJson) throws ServiceFailureException {
+	public Location findOrCreateLocation(final String name, final String description, final Map<String, Object> properties, final GeoJsonObject geoJson) throws ServiceFailureException {
+		final String filter = "name eq '" + Utils.escapeForStringConstant(name) + "'";
 		return findOrCreateLocation(filter, name, description, properties, geoJson, null);
 	}
 
-	public Location findOrCreateLocation(
-			final String filter,
-			final String name,
-			final String description,
-			final Map<String, Object> properties,
-			final GeoJsonObject geoJson,
-			final Location cached) throws ServiceFailureException {
+	public Location findOrCreateLocation(final String filter, final String name, final String description, final Map<String, Object> properties, final GeoJsonObject geoJson, final Location cached) throws ServiceFailureException {
+		final Location location = new Location(name, description, ENCODING_GEOJSON, geoJson);
+		location.setProperties(properties);
+		return findOrCreateLocation(filter, location, cached);
+	}
+
+	public Location findOrCreateLocation(final String filter, final Location newLocation, final Location cached) throws ServiceFailureException {
 		Location location = null;
 		if (cached != null) {
 			location = cached;
@@ -613,46 +579,40 @@ public final class FrostUtils {
 			}
 		}
 		if (location == null) {
-			LOGGER.info("Creating Location {}.", name);
-			location = new Location(name, description, ENCODING_GEOJSON, geoJson);
-			location.setProperties(properties);
+			LOGGER.info("Creating Location {}.", newLocation.getName());
+			location = newLocation;
 			create(location);
 		} else {
-			maybeUpdateLocation(name, description, properties, geoJson, location);
+			maybeUpdateLocation(newLocation, location);
 		}
 		return location;
 	}
 
-	public boolean maybeUpdateLocation(
-			final String name,
-			final String description,
-			final Map<String, Object> properties,
-			final GeoJsonObject geoJson,
-			final Location cached) throws ServiceFailureException {
+	public boolean maybeUpdateLocation(final Location newLocation, final Location locationToUpdate) throws ServiceFailureException {
 		boolean updated = false;
-		if (!cached.getName().equals(name)) {
+		if (!locationToUpdate.getName().equals(newLocation.getName())) {
 			updated = true;
-			cached.setName(name);
+			locationToUpdate.setName(newLocation.getName());
 		}
-		if (!cached.getDescription().equals(description)) {
+		if (!locationToUpdate.getDescription().equals(newLocation.getDescription())) {
 			updated = true;
-			cached.setDescription(description);
+			locationToUpdate.setDescription(newLocation.getDescription());
 		}
-		if (addProperties(cached.getProperties(), properties, 10)) {
+		if (addProperties(locationToUpdate.getProperties(), newLocation.getProperties(), 10)) {
 			updated = true;
 		}
-		ObjectMapper om = ObjectMapperFactory.get();
+		final ObjectMapper objectMapper = ObjectMapperFactory.get();
 		try {
-			if (!om.writeValueAsString(geoJson).equals(om.writeValueAsString(cached.getLocation()))) {
+			if (!objectMapper.writeValueAsString(newLocation.getLocation()).equals(objectMapper.writeValueAsString(locationToUpdate.getLocation()))) {
 				updated = true;
-				LOGGER.debug("Location changed from {} to {}", cached.getLocation(), geoJson);
-				cached.setLocation(geoJson);
+				LOGGER.debug("Location changed from {} to {}", locationToUpdate.getLocation(), newLocation.getLocation());
+				locationToUpdate.setLocation(newLocation.getLocation());
 			}
-		} catch (JsonProcessingException ex) {
-			LOGGER.error("Failed to compare geoJson objects.");
+		} catch (final JsonProcessingException exc) {
+			LOGGER.error("Failed to compare geoJson objects.", exc);
 		}
 		if (updated) {
-			update(cached);
+			update(locationToUpdate);
 		}
 		return updated;
 	}
@@ -667,9 +627,8 @@ public final class FrostUtils {
 	public static <Q extends Entity<Q>> Query<Q> addOrCreateFilter(final Query<Q> query, final String filter, final String name) {
 		if (Utils.isNullOrEmpty(filter)) {
 			return query.filter("name eq '" + Utils.escapeForStringConstant(name) + "'");
-		} else {
-			return query.filter(filter);
 		}
+		return query.filter(filter);
 	}
 
 	public static Instant phenTimeToInstant(final TimeObject phenTime) {
@@ -717,11 +676,9 @@ public final class FrostUtils {
 							updated = true;
 						}
 					}
-				} else {
-					if (!resultCompare(value, tValue)) {
-						updated = true;
-						target.put(key, value);
-					}
+				} else if (!resultCompare(value, tValue)) {
+					target.put(key, value);
+					updated = true;
 				}
 
 			}
@@ -748,10 +705,10 @@ public final class FrostUtils {
 				return ((Long) two).equals(Long.valueOf((Integer) one));
 			}
 			if (one instanceof BigDecimal) {
-				return ((BigDecimal) one).equals(new BigDecimal(two.toString()));
+				return ((BigDecimal) one).compareTo(new BigDecimal(two.toString())) == 0;
 			}
 			if (two instanceof BigDecimal) {
-				return ((BigDecimal) two).equals(new BigDecimal(one.toString()));
+				return ((BigDecimal) two).compareTo(new BigDecimal(one.toString())) == 0;
 			}
 			if (one instanceof BigInteger) {
 				return ((BigInteger) one).equals(new BigInteger(two.toString()));
@@ -764,11 +721,8 @@ public final class FrostUtils {
 				final Collection cTwo = (Collection) two;
 				final Iterator iTwo = cTwo.iterator();
 				for (final Object itemOne : cOne) {
-					if (!iTwo.hasNext()) {
+					if (!iTwo.hasNext() || !resultCompare(itemOne, iTwo.next())) {
 						// Collection one is longer than two
-						return false;
-					}
-					if (!resultCompare(itemOne, iTwo.next())) {
 						return false;
 					}
 				}
@@ -778,8 +732,8 @@ public final class FrostUtils {
 				}
 				return true;
 			}
-		} catch (final NumberFormatException e) {
-			LOGGER.trace("Not both bigdecimal.", e);
+		} catch (final NumberFormatException exc) {
+			LOGGER.trace("Not both bigdecimal.", exc);
 			// not both bigDecimal.
 		}
 		return false;
@@ -864,42 +818,38 @@ public final class FrostUtils {
 		return new TimeObject(interval);
 	}
 
-	public static Point convertCoordinates(Point point, String locationSrsName) throws ImportException {
+	public static Point convertCoordinates(final Point point, final String locationSrsName) throws ImportException {
 		try {
-			CoordinateReferenceSystem sourceCrs = CRS.decode(locationSrsName);
-			CoordinateReferenceSystem targetCrs = CRS.decode("EPSG:4326");
-			MathTransform transform = CRS.findMathTransform(sourceCrs, targetCrs);
-			DirectPosition2D sourcePoint = new DirectPosition2D(
-					sourceCrs,
-					point.getCoordinates().getLongitude(),
-					point.getCoordinates().getLatitude());
-			DirectPosition2D targetPoint = new DirectPosition2D(targetCrs);
+			final CoordinateReferenceSystem sourceCrs = CRS.decode(locationSrsName);
+			final CoordinateReferenceSystem targetCrs = CRS.decode("EPSG:4326");
+			final MathTransform transform = CRS.findMathTransform(sourceCrs, targetCrs);
+			final DirectPosition2D sourcePoint = new DirectPosition2D(sourceCrs, point.getCoordinates().getLongitude(), point.getCoordinates().getLatitude());
+			final DirectPosition2D targetPoint = new DirectPosition2D(targetCrs);
 			transform.transform(sourcePoint, targetPoint);
 			return new Point(targetPoint.x, targetPoint.y);
-		} catch (FactoryException | MismatchedDimensionException | TransformException ex) {
-			LOGGER.error("Failed to convert coordinates: {}", ex.getMessage());
-			throw new ImportException(ex);
+		} catch (FactoryException | MismatchedDimensionException | TransformException exc) {
+			throw new ImportException("Failed to convert coordinates", exc);
 		}
 	}
 
-	public static DirectPosition2D convertCoordinates(String locationPos, String locationSrsName) throws FactoryException, TransformException, NumberFormatException, MismatchedDimensionException {
-		String[] coordinates = locationPos.split(" ");
-		CoordinateReferenceSystem sourceCrs = CRS.decode(locationSrsName);
-		CoordinateReferenceSystem targetCrs = CRS.decode("EPSG:4326");
-		MathTransform transform = CRS.findMathTransform(sourceCrs, targetCrs);
-		DirectPosition2D sourcePoint = new DirectPosition2D(sourceCrs, Double.parseDouble(coordinates[1]), Double.parseDouble(coordinates[0]));
-		DirectPosition2D targetPoint = new DirectPosition2D(targetCrs);
+	public static DirectPosition2D convertCoordinates(final String locationPos, final String locationSrsName) throws FactoryException, TransformException, NumberFormatException, MismatchedDimensionException {
+		final String[] coordinates = locationPos.split(" ");
+		final CoordinateReferenceSystem sourceCrs = CRS.decode(locationSrsName);
+		final CoordinateReferenceSystem targetCrs = CRS.decode("EPSG:4326");
+		final MathTransform transform = CRS.findMathTransform(sourceCrs, targetCrs);
+		final DirectPosition2D sourcePoint = new DirectPosition2D(sourceCrs, Double.parseDouble(coordinates[1]), Double.parseDouble(coordinates[0]));
+		final DirectPosition2D targetPoint = new DirectPosition2D(targetCrs);
 		transform.transform(sourcePoint, targetPoint);
 		return targetPoint;
 	}
 
-	public static Map<String, Object> putIntoSubMap(Map<String, Object> map, String subMapName, String key, Object value) {
-		Map<String, Object> subMap = (Map<String, Object>) map.computeIfAbsent(subMapName, (String t) -> new HashMap<>());
+	public static Map<String, Object> putIntoSubMap(final Map<String, Object> map, final String subMapName, final String key, final Object value) {
+		final Map<String, Object> subMap = (Map<String, Object>) map.computeIfAbsent(subMapName, (final String t) -> new HashMap<>());
 		subMap.put(key, value);
 		return subMap;
 	}
 
-	public static String afterLastSlash(String input) {
+	public static String afterLastSlash(final String input) {
 		return input.substring(input.lastIndexOf('/') + 1);
 	}
 
@@ -911,12 +861,12 @@ public final class FrostUtils {
 
 		Map<String, Object> properties = new HashMap<>();
 
-		public PropertyBuilder addItem(String key, Object value) {
+		public PropertyBuilder addItem(final String key, final Object value) {
 			properties.put(key, value);
 			return this;
 		}
 
-		public PropertyBuilder addPath(String path, Object value) {
+		public PropertyBuilder addPath(final String path, final Object value) {
 			CollectionsHelper.setOn(properties, path, value);
 			return this;
 		}

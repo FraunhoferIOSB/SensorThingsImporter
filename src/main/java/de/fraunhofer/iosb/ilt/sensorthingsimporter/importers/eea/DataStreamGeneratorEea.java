@@ -150,7 +150,8 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 					name,
 					"Location of station " + name,
 					locationProps,
-					point);
+					point,
+					null);
 			Thing thing = frostUtils.findOrCreateThing(
 					filter,
 					name,
