@@ -57,10 +57,6 @@ public class EntityCache<U, T extends Entity<T>> {
 		return entitiesByLocalId.containsKey(localId);
 	}
 
-	public void put(U localId, T entity) {
-		entitiesByLocalId.put(localId, entity);
-	}
-
 	public boolean isEmpty() {
 		return entitiesByLocalId.isEmpty();
 	}
@@ -85,25 +81,41 @@ public class EntityCache<U, T extends Entity<T>> {
 		int count = 0;
 		while (it.hasNext()) {
 			T entitiy = it.next();
-			try {
-				U localId = localIdExtractor.extractFrom(entitiy);
-				if (localId != null) {
-					entitiesByLocalId.put(localId, entitiy);
-					count++;
-				}
-			} catch (RuntimeException ex) {
-				// probably no localId, ignore.
-			}
-			if (nameExtractor != null) {
-				String name = nameExtractor.extractFrom(entitiy);
-				entitiesByName.put(name, entitiy);
+			if (add(entitiy)) {
+				count++;
 			}
 		}
 		return count;
 	}
 
-	public Collection<T> values() {
+	public void add(Collection<T> entities) {
+		entities.stream().forEach(e -> add(e));
+	}
+
+	public boolean add(T entity) {
+		boolean hasLocalId = false;
+		try {
+			U localId = localIdExtractor.extractFrom(entity);
+			if (localId != null) {
+				entitiesByLocalId.put(localId, entity);
+				hasLocalId = true;
+			}
+		} catch (RuntimeException ex) {
+			// probably no localId, ignore.
+		}
+		if (nameExtractor != null) {
+			String name = nameExtractor.extractFrom(entity);
+			entitiesByName.put(name, entity);
+		}
+		return hasLocalId;
+	}
+
+	public Collection<T> valuesWithLocalId() {
 		return entitiesByLocalId.values();
+	}
+
+	public Collection<T> valuesWithName() {
+		return entitiesByName.values();
 	}
 
 	public static interface PropertyExtractor<U, T extends Entity<T>> {

@@ -81,7 +81,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 	 * StationLocalid/SamplingPointLocalId
 	 */
 	private static final Map<String, Map<String, Map<String, EeaStationRecord>>> STATIONS = new HashMap<>();
-	private final EntityCache<Integer, ObservedProperty> observedPropertyCache = EeaObservedProperty.createObservedPropertyCache();
+	private final EntityCache<String, ObservedProperty> observedPropertyCache = EeaObservedProperty.createObservedPropertyCache();
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
@@ -169,7 +169,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 					sr.measurementEquipment,
 					sensorProps,
 					null);
-			ObservedProperty observedProperty = observedPropertyCache.get(Integer.parseInt(FrostUtils.afterLastSlash(sr.airPollutantCode)));
+			ObservedProperty observedProperty = observedPropertyCache.get(FrostUtils.afterLastSlash(sr.airPollutantCode).trim());
 
 			String valueUnit = getFromRecord(record, "value_unit", "UnitOfMeasurement");
 			if (valueUnit == null) {

@@ -184,7 +184,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 	private final EntityCache<String, Thing> thingsCache = new EntityCache<>(
 			(entity) -> Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null),
 			Thing::getName);
-	private final EntityCache<Integer, ObservedProperty> observedPropertyCache = EeaObservedProperty.createObservedPropertyCache();
+	private final EntityCache<String, ObservedProperty> observedPropertyCache = EeaObservedProperty.createObservedPropertyCache();
 	private final EntityCache<String, Sensor> sensorCache = new EntityCache<>(
 			(entity) -> Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null),
 			Sensor::getName);
@@ -404,8 +404,8 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				Location location = frostUtils.findOrCreateLocation(filter, stationName, locationDescription, locationProps, new Point(targetPoint.x, targetPoint.y), cachedLocation);
 				Thing cachedThing = thingsCache.get(stationId);
 				Thing thing = frostUtils.findOrCreateThing(filter, stationName, stationDescription, stationProps, location, cachedThing);
-				locationsCache.put(stationId, location);
-				thingsCache.put(stationId, thing);
+				locationsCache.add(location);
+				thingsCache.add(thing);
 
 				imported++;
 				LOGGER.debug("Station: {}: {}.", stationId, stationName);
@@ -482,7 +482,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 					LOGGER.debug("Ignoring second process: {}", rawProcessId);
 					continue;
 				}
-				if (!observedPropertyCache.containsId(Integer.parseInt(matcher.group(2)))) {
+				if (!observedPropertyCache.containsId(matcher.group(2))) {
 					LOGGER.debug("Ignoring process for unneeded OP: {}", rawProcessId);
 					continue;
 				}
@@ -529,7 +529,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(processId);
 				Sensor cachedSensor = sensorCache.get(processId);
 				Sensor sensor = frostUtils.findOrCreateSensor(filter, processName, processDescription, "application/pdf", processMeta, properties, cachedSensor);
-				sensorCache.put(processId, sensor);
+				sensorCache.add(sensor);
 				LOGGER.debug("Process: {}.", processId);
 				imported++;
 			}
@@ -598,7 +598,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				FeatureOfInterest cachedFoi = foiCache.get(sampleId);
 				Point geoJson = new Point(targetPoint.x, targetPoint.y);
 				FeatureOfInterest foi = frostUtils.findOrCreateFeature(filter, sampleName, sampleDescription, geoJson, properties, cachedFoi);
-				foiCache.put(sampleId, foi);
+				foiCache.add(foi);
 				LOGGER.debug("Sample: {}.", sampleId);
 				imported++;
 			}
@@ -671,7 +671,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				if (!foiCache.containsId(foiLocalId)) {
 					LOGGER.error("Specified FoI ({}) not found for feature {}.", foiLocalId, dsId);
 				}
-				ObservedProperty observedProperty = observedPropertyCache.get(Integer.parseInt(obsPropLocalId));
+				ObservedProperty observedProperty = observedPropertyCache.get(obsPropLocalId);
 				if (observedProperty == null) {
 					LOGGER.debug("Skipping {}, no ObservedProperty.", dsId);
 					continue;
@@ -708,7 +708,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 					uom = cachedDs.getUnitOfMeasurement();
 				}
 				Datastream ds = frostUtils.findOrCreateDatastream(filter, dsName, dsDescription, properties, uom, thing, observedProperty, sensor, cachedDs);
-				datastreamCache.put(dsId, ds);
+				datastreamCache.add(ds);
 				LOGGER.debug("SamplingPoints: {}.", dsId);
 				imported++;
 			}
@@ -737,8 +737,8 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			this.datastreamCache = datastreamCache;
 			this.observationsUrl = observationsUrl;
 			this.startTime = startTime;
-			datastreamIterator = datastreamCache.values().iterator();
-			count = datastreamCache.values().size();
+			datastreamIterator = datastreamCache.valuesWithLocalId().iterator();
+			count = datastreamCache.valuesWithLocalId().size();
 		}
 
 		private List<Observation> importDatastream(Datastream ds) throws ImportException, ServiceFailureException {

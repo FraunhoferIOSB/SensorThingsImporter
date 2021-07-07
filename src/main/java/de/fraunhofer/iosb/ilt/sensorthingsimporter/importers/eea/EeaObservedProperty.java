@@ -28,6 +28,7 @@ import de.fraunhofer.iosb.ilt.sta.model.ObservedProperty;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  *
@@ -65,14 +66,14 @@ public class EeaObservedProperty {
 		}
 	}
 
-	public static EntityCache<Integer, ObservedProperty> createObservedPropertyCache() {
-		EntityCache<Integer, ObservedProperty> observedPropertyCache = new EntityCache<>(
-				(entity) -> Integer.parseInt(entity.getProperties().get(TAG_LOCAL_ID).toString()),
+	public static EntityCache<String, ObservedProperty> createObservedPropertyCache() {
+		EntityCache<String, ObservedProperty> observedPropertyCache = new EntityCache<>(
+				entity -> Objects.toString(entity.getProperties().get(TAG_LOCAL_ID)),
 				ObservedProperty::getName);
 		return observedPropertyCache;
 	}
 
-	public static void importObservedProperties(FrostUtils frostUtils, EntityCache<Integer, ObservedProperty> observedPropertyCache) throws ServiceFailureException {
+	public static void importObservedProperties(FrostUtils frostUtils, EntityCache<String, ObservedProperty> observedPropertyCache) throws ServiceFailureException {
 		EeaOpRegistry opRegistry = new EeaOpRegistry();
 		opRegistry.register(new EeaOp(1, "SO2", "SO2", "µg/m3", "http://dd.eionet.europa.eu/vocabulary/aq/pollutant/1"));
 		opRegistry.register(new EeaOp(5, "PM10", "PM10", "µg/m3", "http://dd.eionet.europa.eu/vocabulary/aq/pollutant/5"));
@@ -91,9 +92,9 @@ public class EeaObservedProperty {
 			properties.put(TAG_RECOMMENDED_UNIT, atop.recommendedUnit);
 
 			String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(atop.localId);
-			ObservedProperty cachedObservedProperty = observedPropertyCache.get(atop.localId);
+			ObservedProperty cachedObservedProperty = observedPropertyCache.get(Integer.toString(atop.localId));
 			ObservedProperty op = frostUtils.findOrCreateOp(filter, atop.name, atop.definition, atop.description, properties, cachedObservedProperty);
-			observedPropertyCache.put(atop.localId, op);
+			observedPropertyCache.add(op);
 		}
 	}
 }
