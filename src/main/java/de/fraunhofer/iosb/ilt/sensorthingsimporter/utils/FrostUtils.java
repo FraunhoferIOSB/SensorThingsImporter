@@ -90,6 +90,8 @@ public final class FrostUtils {
 	 */
 	public static final String CONTENT_TYPE_GEOJSON = ENCODING_GEOJSON;
 
+	public static final String OBS_TYPE_MEASUREMENT = "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement";
+
 	/**
 	 * The logger for this class.
 	 */
@@ -438,7 +440,7 @@ public final class FrostUtils {
 			final ObservedProperty op,
 			final Sensor s,
 			final Datastream cached) throws ServiceFailureException {
-		Datastream ds = new Datastream(name, desc, "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement", uom);
+		Datastream ds = new Datastream(name, desc, OBS_TYPE_MEASUREMENT, uom);
 		ds.setProperties(properties);
 		ds.setThing(t);
 		ds.setSensor(s);
@@ -518,7 +520,7 @@ public final class FrostUtils {
 		}
 		if (mds == null) {
 			LOGGER.info("Creating multiDatastream {}.", name);
-			final List<String> dataTypes = observedProperties.stream().map(observedProperty -> "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement").collect(Collectors.toList());
+			final List<String> dataTypes = observedProperties.stream().map(observedProperty -> OBS_TYPE_MEASUREMENT).collect(Collectors.toList());
 			mds = new MultiDatastream(name, desc, dataTypes, uoms);
 			mds.setProperties(props);
 			mds.setThing(thing);
