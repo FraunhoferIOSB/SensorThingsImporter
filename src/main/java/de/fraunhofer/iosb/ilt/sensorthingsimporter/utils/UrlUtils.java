@@ -24,10 +24,12 @@ import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.ParseException;
@@ -56,7 +58,7 @@ public class UrlUtils {
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(UrlUtils.class);
-	private static final Charset UTF8 = StandardCharsets.UTF_8;
+	public static final Charset UTF8 = StandardCharsets.UTF_8;
 
 	private UrlUtils() {
 		// Utility class.
@@ -78,7 +80,11 @@ public class UrlUtils {
 		return readNormalUrl(targetUrl, charset);
 	}
 
-	private static String readNormalUrl(String targetUrl, Charset charset) throws IOException, ParseException {
+	public static String readNormalUrl(String targetUrl, Charset charset) throws IOException, ParseException {
+		return readNormalUrl(targetUrl, charset, Collections.emptyList(), null, null);
+	}
+
+	public static String readNormalUrl(String targetUrl, Charset charset, List<Header> headers, String username, String password) throws IOException, ParseException {
 		HttpClientBuilder clientBuilder = HttpClientBuilder.create()
 				.useSystemProperties()
 				.setDefaultRequestConfig(
@@ -89,6 +95,13 @@ public class UrlUtils {
 								.build());
 		try (CloseableHttpClient client = clientBuilder.build()) {
 			HttpGet get = new HttpGet(targetUrl);
+			if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
+				String auth = username + ":" + password;
+				byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
+				String authHeader = "Basic " + new String(encodedAuth);
+				get.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
+			}
+			headers.stream().forEach(h -> get.addHeader(h));
 			CloseableHttpResponse response = client.execute(get);
 			final int statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode < 200) {
@@ -114,6 +127,11 @@ public class UrlUtils {
 	}
 
 	public static String postJsonToUrl(String targetUrl, Object body, String username, String password) throws IOException {
+		return postJsonToUrl(targetUrl, body, Collections.emptyList(), username, password);
+	}
+
+	public static String postJsonToUrl(String targetUrl, Object body, List<Header> headers, String username, String password) throws IOException {
+
 		String queryBody = ObjectMapperFactory.get().writeValueAsString(body);
 		try (CloseableHttpClient client = HttpClients.createSystem()) {
 			HttpPost post = new HttpPost(targetUrl);
@@ -123,7 +141,11 @@ public class UrlUtils {
 				String authHeader = "Basic " + new String(encodedAuth);
 				post.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
 			}
-			post.addHeader("Content-Type", "application/json");
+			if (headers.isEmpty()) {
+				post.addHeader("Content-Type", "application/json");
+			} else {
+				headers.stream().forEach(h -> post.addHeader(h));
+			}
 			post.setEntity(new StringEntity(queryBody));
 			CloseableHttpResponse response = client.execute(post);
 			HttpEntity entity = response.getEntity();
