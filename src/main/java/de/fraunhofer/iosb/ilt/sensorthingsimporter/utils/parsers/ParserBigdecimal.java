@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorEnum;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
 import org.apache.commons.lang3.StringUtils;
@@ -30,15 +31,20 @@ import org.apache.commons.lang3.StringUtils;
  */
 public class ParserBigdecimal implements Parser<BigDecimal>, AnnotatedConfigurable<SensorThingsService, Object> {
 
+	public enum DecimalSeparator {
+		POINT,
+		COMMA,
+		DETECT
+	}
 	@ConfigurableField(editor = EditorBoolean.class,
 			label = "Truncate 0s", description = "Drop trailing zeroes from results.")
 	@EditorBoolean.EdOptsBool()
 	private boolean dropTailingZeroes;
 
-	@ConfigurableField(editor = EditorBoolean.class,
-			label = "Decimal Comma", description = "If set, numbers use a decimal comma instead of a decimal point.")
-	@EditorBoolean.EdOptsBool()
-	private boolean decimalComma;
+	@ConfigurableField(editor = EditorEnum.class,
+			label = "Decimal Separator", description = "What decimal separator should be used?")
+	@EditorEnum.EdOptsEnum(sourceType = DecimalSeparator.class, dflt = "DETECT")
+	private DecimalSeparator decimalSeparator;
 
 	@Override
 	public BigDecimal parse(JsonNode value) {
@@ -56,9 +62,22 @@ public class ParserBigdecimal implements Parser<BigDecimal>, AnnotatedConfigurab
 	@Override
 	public BigDecimal parse(final String value) {
 		String valueString = value.trim();
-		if (decimalComma) {
-			valueString = StringUtils.replace(valueString, ".", "");
-			valueString = StringUtils.replace(valueString, ",", ".");
+		switch (decimalSeparator) {
+			case COMMA:
+				valueString = convertFromComma(valueString);
+				break;
+
+			case POINT:
+				// Nothing to do here.
+				break;
+
+			case DETECT:
+				int idxComma = value.indexOf(',');
+				int idxPoint = value.indexOf('.');
+				if (idxComma > idxPoint) {
+					valueString = convertFromComma(valueString);
+				}
+				break;
 		}
 		try {
 			BigDecimal bigDecimal = new BigDecimal(valueString);
@@ -69,5 +88,11 @@ public class ParserBigdecimal implements Parser<BigDecimal>, AnnotatedConfigurab
 		} catch (NumberFormatException ex) {
 			return null;
 		}
+	}
+
+	private String convertFromComma(String valueString) {
+		valueString = StringUtils.replace(valueString, ".", "");
+		valueString = StringUtils.replace(valueString, ",", ".");
+		return valueString;
 	}
 }
