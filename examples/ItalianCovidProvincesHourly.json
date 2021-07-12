@@ -1,0 +1,71 @@
+{
+  "importer": {
+    "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.ImporterCsv",
+    "classConfig": {
+      "hasHeader": true,
+      "recordConvertors": [
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames",
+          "classConfig": {
+            "colResult": "totale_casi",
+            "timeParser": {
+              "zone": "+1",
+              "format": "yyyy-MM-dd\u0027T\u0027HH:mm:ss"
+            },
+            "colPhenTime": [
+              "data"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+              "classConfig": {
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DataStreamGeneratorNames",
+                  "classConfig": {
+                    "filterObsProp": "name eq \u0027total_cases\u0027",
+                    "filterThing": "name eq \u0027{denominazione_provincia}\u0027\n and properties/type eq \u0027NUTS\u0027\n and properties/level eq 3",
+                    "templateUomName": "1",
+                    "templateName": "Total Covid19 Cases {denominazione_provincia}",
+                    "templateProperties": "{}",
+                    "filterSensor": "id eq 2",
+                    "templateDescription": "Total Covid19 Cases in {denominazione_provincia}",
+                    "templateUomDef": "1",
+                    "templateUomSymbol": "1",
+                    "templateObsType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_CountObservation"
+                  }
+                },
+                "filterTemplate": "Thing/name eq \u0027{denominazione_provincia}\u0027\n and Thing/properties/type eq \u0027NUTS\u0027\n and Thing/properties/level eq 3\n and ObservedProperty/name eq \u0027total_cases\u0027"
+              }
+            }
+          }
+        }
+      ],
+      "inputUrl": {
+        "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.UrlGeneratorFixed",
+        "classConfig": {
+          "url": "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-province/dpc-covid19-ita-province-latest.csv"
+        }
+      }
+    }
+  },
+  "uploader": {
+    "serviceUrl": "https://demography.k8s.ilt-dmz.iosb.fraunhofer.de/v1.1",
+    "authMethod": {
+      "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthBasic",
+      "classConfig": {
+        "password": "password Here",
+        "ignoreSslErrors": false,
+        "username": "username Here"
+      }
+    },
+    "useDataArrays": true
+  },
+  "msgInterval": 1000,
+  "validator": {
+    "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.ValidatorByPhenTime",
+    "classConfig": {
+      "deleteDuplicates": true,
+      "update": true,
+      "cacheObservations": true
+    }
+  }
+}

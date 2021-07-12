@@ -1,0 +1,479 @@
+{
+  "importer": {
+    "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.ImporterCsv",
+    "classConfig": {
+      "hasHeader": true,
+      "recordConvertors": [
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames",
+          "classConfig": {
+            "colResult": "totale_casi",
+            "timeParser": {
+              "zone": "+1",
+              "format": "yyyy-MM-dd\u0027T\u0027HH:mm:ss"
+            },
+            "colPhenTime": [
+              "data"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+              "classConfig": {
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DataStreamGeneratorNames",
+                  "classConfig": {
+                    "filterObsProp": "name eq \u0027total_cases\u0027",
+                    "filterThing": "properties/nutsId eq \u0027IT\u0027\n and properties/type eq \u0027NUTS\u0027\n and properties/level eq 0",
+                    "templateUomName": "1",
+                    "templateName": "Total Covid19 Cases Italy",
+                    "templateProperties": "{}",
+                    "filterSensor": "id eq 2",
+                    "templateDescription": "Total Covid19 Cases in Italy",
+                    "templateUomDef": "1",
+                    "templateUomSymbol": "1",
+                    "templateObsType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_CountObservation"
+                  }
+                },
+                "filterTemplate": "Thing/properties/nutsId eq \u0027IT\u0027\n and Thing/properties/type eq \u0027NUTS\u0027\n and Thing/properties/level eq 0\n and ObservedProperty/name eq \u0027total_cases\u0027"
+              }
+            }
+          }
+        },
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames",
+          "classConfig": {
+            "colResult": "ricoverati_con_sintomi",
+            "timeParser": {
+              "zone": "+1",
+              "format": "yyyy-MM-dd\u0027T\u0027HH:mm:ss"
+            },
+            "colPhenTime": [
+              "data"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+              "classConfig": {
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DataStreamGeneratorNames",
+                  "classConfig": {
+                    "filterObsProp": "name eq \u0027hospitalized_with_symptoms\u0027",
+                    "filterThing": "properties/nutsId eq \u0027IT\u0027\n and properties/type eq \u0027NUTS\u0027\n and properties/level eq 0",
+                    "templateUomName": "1",
+                    "templateName": "Cases hospitalized with symptoms of Covid19 in Italy",
+                    "templateProperties": "{}",
+                    "filterSensor": "id eq 2",
+                    "templateDescription": "Cases hospitalized with symptoms of Covid19 in Italy",
+                    "templateUomDef": "1",
+                    "templateUomSymbol": "1",
+                    "templateObsType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_CountObservation"
+                  }
+                },
+                "filterTemplate": "Thing/properties/nutsId eq \u0027IT\u0027\n and Thing/properties/type eq \u0027NUTS\u0027\n and Thing/properties/level eq 0\n and ObservedProperty/name eq \u0027hospitalized_with_symptoms\u0027"
+              }
+            }
+          }
+        },
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames",
+          "classConfig": {
+            "colResult": "terapia_intensiva",
+            "timeParser": {
+              "zone": "+1",
+              "format": "yyyy-MM-dd\u0027T\u0027HH:mm:ss"
+            },
+            "colPhenTime": [
+              "data"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+              "classConfig": {
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DataStreamGeneratorNames",
+                  "classConfig": {
+                    "filterObsProp": "name eq \u0027intensive_care\u0027",
+                    "filterThing": "properties/nutsId eq \u0027IT\u0027\n and properties/type eq \u0027NUTS\u0027\n and properties/level eq 0",
+                    "templateUomName": "1",
+                    "templateName": "Covid19 Cases in intensive care in Italy",
+                    "templateProperties": "{}",
+                    "filterSensor": "id eq 2",
+                    "templateDescription": "Covid19 Cases in intensive care in Italy",
+                    "templateUomDef": "1",
+                    "templateUomSymbol": "1",
+                    "templateObsType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_CountObservation"
+                  }
+                },
+                "filterTemplate": "Thing/properties/nutsId eq \u0027IT\u0027\n and Thing/properties/type eq \u0027NUTS\u0027\n and Thing/properties/level eq 0\n and ObservedProperty/name eq \u0027intensive_care\u0027"
+              }
+            }
+          }
+        },
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames",
+          "classConfig": {
+            "colResult": "isolamento_domiciliare",
+            "timeParser": {
+              "zone": "+1",
+              "format": "yyyy-MM-dd\u0027T\u0027HH:mm:ss"
+            },
+            "colPhenTime": [
+              "data"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+              "classConfig": {
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DataStreamGeneratorNames",
+                  "classConfig": {
+                    "filterObsProp": "name eq \u0027home_isolation\u0027",
+                    "filterThing": "properties/nutsId eq \u0027IT\u0027\n and properties/type eq \u0027NUTS\u0027\n and properties/level eq 0",
+                    "templateUomName": "1",
+                    "templateName": "Covid19 Cases in home isolation in Italy",
+                    "templateProperties": "{}",
+                    "filterSensor": "id eq 2",
+                    "templateDescription": "Covid19 Cases in home isolation in Italy",
+                    "templateUomDef": "1",
+                    "templateUomSymbol": "1",
+                    "templateObsType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_CountObservation"
+                  }
+                },
+                "filterTemplate": "Thing/properties/nutsId eq \u0027IT\u0027\n and Thing/properties/type eq \u0027NUTS\u0027\n and Thing/properties/level eq 0\n and ObservedProperty/name eq \u0027home_isolation\u0027"
+              }
+            }
+          }
+        },
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames",
+          "classConfig": {
+            "colResult": "totale_positivi",
+            "timeParser": {
+              "zone": "+1",
+              "format": "yyyy-MM-dd\u0027T\u0027HH:mm:ss"
+            },
+            "colPhenTime": [
+              "data"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+              "classConfig": {
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DataStreamGeneratorNames",
+                  "classConfig": {
+                    "filterObsProp": "name eq \u0027total_positive\u0027",
+                    "filterThing": "properties/nutsId eq \u0027IT\u0027\n and properties/type eq \u0027NUTS\u0027\n and properties/level eq 0",
+                    "templateUomName": "1",
+                    "templateName": "Total positive Covid19 Cases in Italy",
+                    "templateProperties": "{}",
+                    "filterSensor": "id eq 2",
+                    "templateDescription": "Total positive Covid19 Cases in Italy",
+                    "templateUomDef": "1",
+                    "templateUomSymbol": "1",
+                    "templateObsType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_CountObservation"
+                  }
+                },
+                "filterTemplate": "Thing/properties/nutsId eq \u0027IT\u0027\n and Thing/properties/type eq \u0027NUTS\u0027\n and Thing/properties/level eq 0\n and ObservedProperty/name eq \u0027total_positive\u0027"
+              }
+            }
+          }
+        },
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames",
+          "classConfig": {
+            "colResult": "variazione_totale_positivi",
+            "timeParser": {
+              "zone": "+1",
+              "format": "yyyy-MM-dd\u0027T\u0027HH:mm:ss"
+            },
+            "colPhenTime": [
+              "data"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+              "classConfig": {
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DataStreamGeneratorNames",
+                  "classConfig": {
+                    "filterObsProp": "name eq \u0027total_positive_variation\u0027",
+                    "filterThing": "properties/nutsId eq \u0027IT\u0027\n and properties/type eq \u0027NUTS\u0027\n and properties/level eq 0",
+                    "templateUomName": "1",
+                    "templateName": "Total positive variation Covid19 Cases in Italy",
+                    "templateProperties": "{}",
+                    "filterSensor": "id eq 2",
+                    "templateDescription": "Total positive variation Covid19 Cases in Italy",
+                    "templateUomDef": "1",
+                    "templateUomSymbol": "1",
+                    "templateObsType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_CountObservation"
+                  }
+                },
+                "filterTemplate": "Thing/properties/nutsId eq \u0027IT\u0027\n and Thing/properties/type eq \u0027NUTS\u0027\n and Thing/properties/level eq 0\n and ObservedProperty/name eq \u0027total_positive_variation\u0027"
+              }
+            }
+          }
+        },
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames",
+          "classConfig": {
+            "colResult": "nuovi_positivi",
+            "timeParser": {
+              "zone": "+1",
+              "format": "yyyy-MM-dd\u0027T\u0027HH:mm:ss"
+            },
+            "colPhenTime": [
+              "data"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+              "classConfig": {
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DataStreamGeneratorNames",
+                  "classConfig": {
+                    "filterObsProp": "name eq \u0027new_positives\u0027",
+                    "filterThing": "properties/nutsId eq \u0027IT\u0027\n and properties/type eq \u0027NUTS\u0027\n and properties/level eq 0",
+                    "templateUomName": "1",
+                    "templateName": "New positive Covid19 Cases in Italy",
+                    "templateProperties": "{}",
+                    "filterSensor": "id eq 2",
+                    "templateDescription": "New positive Covid19 Cases in Italy",
+                    "templateUomDef": "1",
+                    "templateUomSymbol": "1",
+                    "templateObsType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_CountObservation"
+                  }
+                },
+                "filterTemplate": "Thing/properties/nutsId eq \u0027IT\u0027\n and Thing/properties/type eq \u0027NUTS\u0027\n and Thing/properties/level eq 0\n and ObservedProperty/name eq \u0027new_positives\u0027"
+              }
+            }
+          }
+        },
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames",
+          "classConfig": {
+            "colResult": "dimessi_guariti",
+            "timeParser": {
+              "zone": "+1",
+              "format": "yyyy-MM-dd\u0027T\u0027HH:mm:ss"
+            },
+            "colPhenTime": [
+              "data"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+              "classConfig": {
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DataStreamGeneratorNames",
+                  "classConfig": {
+                    "filterObsProp": "name eq \u0027recovered_healed\u0027",
+                    "filterThing": "properties/nutsId eq \u0027IT\u0027\n and properties/type eq \u0027NUTS\u0027\n and properties/level eq 0",
+                    "templateUomName": "1",
+                    "templateName": "Recovered Covid19 Cases in Italy",
+                    "templateProperties": "{}",
+                    "filterSensor": "id eq 2",
+                    "templateDescription": "Recovered Covid19 Cases in Italy",
+                    "templateUomDef": "1",
+                    "templateUomSymbol": "1",
+                    "templateObsType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_CountObservation"
+                  }
+                },
+                "filterTemplate": "Thing/properties/nutsId eq \u0027IT\u0027\n and Thing/properties/type eq \u0027NUTS\u0027\n and Thing/properties/level eq 0\n and ObservedProperty/name eq \u0027recovered_healed\u0027"
+              }
+            }
+          }
+        },
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames",
+          "classConfig": {
+            "colResult": "deceduti",
+            "timeParser": {
+              "zone": "+1",
+              "format": "yyyy-MM-dd\u0027T\u0027HH:mm:ss"
+            },
+            "colPhenTime": [
+              "data"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+              "classConfig": {
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DataStreamGeneratorNames",
+                  "classConfig": {
+                    "filterObsProp": "name eq \u0027deceased\u0027",
+                    "filterThing": "properties/nutsId eq \u0027IT\u0027\n and properties/type eq \u0027NUTS\u0027\n and properties/level eq 0",
+                    "templateUomName": "1",
+                    "templateName": "Deceased Covid19 Cases in Italy",
+                    "templateProperties": "{}",
+                    "filterSensor": "id eq 2",
+                    "templateDescription": "Deceased Covid19 Cases in Italy",
+                    "templateUomDef": "1",
+                    "templateUomSymbol": "1",
+                    "templateObsType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_CountObservation"
+                  }
+                },
+                "filterTemplate": "Thing/properties/nutsId eq \u0027IT\u0027\n and Thing/properties/type eq \u0027NUTS\u0027\n and Thing/properties/level eq 0\n and ObservedProperty/name eq \u0027deceased\u0027"
+              }
+            }
+          }
+        },
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames",
+          "classConfig": {
+            "colResult": "casi_da_sospetto_diagnostico",
+            "timeParser": {
+              "zone": "+1",
+              "format": "yyyy-MM-dd\u0027T\u0027HH:mm:ss"
+            },
+            "colPhenTime": [
+              "data"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+              "classConfig": {
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DataStreamGeneratorNames",
+                  "classConfig": {
+                    "filterObsProp": "name eq \u0027cases_from_suspected_diagnostic\u0027",
+                    "filterThing": "properties/nutsId eq \u0027IT\u0027\n and properties/type eq \u0027NUTS\u0027\n and properties/level eq 0",
+                    "templateUomName": "1",
+                    "templateName": "Covid19 Cases from suspected diagnostic in Italy",
+                    "templateProperties": "{}",
+                    "filterSensor": "id eq 2",
+                    "templateDescription": "Covid19 Cases from suspected diagnostic in Italy",
+                    "templateUomDef": "1",
+                    "templateUomSymbol": "1",
+                    "templateObsType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_CountObservation"
+                  }
+                },
+                "filterTemplate": "Thing/properties/nutsId eq \u0027IT\u0027\n and Thing/properties/type eq \u0027NUTS\u0027\n and Thing/properties/level eq 0\n and ObservedProperty/name eq \u0027cases_from_suspected_diagnostic\u0027"
+              }
+            }
+          }
+        },
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames",
+          "classConfig": {
+            "colResult": "casi_da_screening",
+            "timeParser": {
+              "zone": "+1",
+              "format": "yyyy-MM-dd\u0027T\u0027HH:mm:ss"
+            },
+            "colPhenTime": [
+              "data"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+              "classConfig": {
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DataStreamGeneratorNames",
+                  "classConfig": {
+                    "filterObsProp": "name eq \u0027cases_from_screening\u0027",
+                    "filterThing": "properties/nutsId eq \u0027IT\u0027\n and properties/type eq \u0027NUTS\u0027\n and properties/level eq 0",
+                    "templateUomName": "1",
+                    "templateName": "Covid19 Cases from screening in Italy",
+                    "templateProperties": "{}",
+                    "filterSensor": "id eq 2",
+                    "templateDescription": "Covid19 Cases from screening in Italy",
+                    "templateUomDef": "1",
+                    "templateUomSymbol": "1",
+                    "templateObsType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_CountObservation"
+                  }
+                },
+                "filterTemplate": "Thing/properties/nutsId eq \u0027IT\u0027\n and Thing/properties/type eq \u0027NUTS\u0027\n and Thing/properties/level eq 0\n and ObservedProperty/name eq \u0027cases_from_screening\u0027"
+              }
+            }
+          }
+        },
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames",
+          "classConfig": {
+            "colResult": "tamponi",
+            "timeParser": {
+              "zone": "+1",
+              "format": "yyyy-MM-dd\u0027T\u0027HH:mm:ss"
+            },
+            "colPhenTime": [
+              "data"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+              "classConfig": {
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DataStreamGeneratorNames",
+                  "classConfig": {
+                    "filterObsProp": "name eq \u0027swabs\u0027",
+                    "filterThing": "properties/nutsId eq \u0027IT\u0027\n and properties/type eq \u0027NUTS\u0027\n and properties/level eq 0",
+                    "templateUomName": "1",
+                    "templateName": "Swabs Italy",
+                    "templateProperties": "{}",
+                    "filterSensor": "id eq 2",
+                    "templateDescription": "Swabs taken in Italy",
+                    "templateUomDef": "1",
+                    "templateUomSymbol": "1",
+                    "templateObsType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_CountObservation"
+                  }
+                },
+                "filterTemplate": "Thing/properties/nutsId eq \u0027IT\u0027\n and Thing/properties/type eq \u0027NUTS\u0027\n and Thing/properties/level eq 0\n and ObservedProperty/name eq \u0027swabs\u0027"
+              }
+            }
+          }
+        },
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames",
+          "classConfig": {
+            "colResult": "casi_testati",
+            "timeParser": {
+              "zone": "+1",
+              "format": "yyyy-MM-dd\u0027T\u0027HH:mm:ss"
+            },
+            "colPhenTime": [
+              "data"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+              "classConfig": {
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DataStreamGeneratorNames",
+                  "classConfig": {
+                    "filterObsProp": "name eq \u0027cases_tested\u0027",
+                    "filterThing": "properties/nutsId eq \u0027IT\u0027\n and properties/type eq \u0027NUTS\u0027\n and properties/level eq 0",
+                    "templateUomName": "1",
+                    "templateName": "Covid19 tests Italy",
+                    "templateProperties": "{}",
+                    "filterSensor": "id eq 2",
+                    "templateDescription": "Covid19 tests taken in Italy",
+                    "templateUomDef": "1",
+                    "templateUomSymbol": "1",
+                    "templateObsType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_CountObservation"
+                  }
+                },
+                "filterTemplate": "Thing/properties/nutsId eq \u0027IT\u0027\n and Thing/properties/type eq \u0027NUTS\u0027\n and Thing/properties/level eq 0\n and ObservedProperty/name eq \u0027cases_tested\u0027"
+              }
+            }
+          }
+        }
+      ],
+      "inputUrl": {
+        "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.UrlGeneratorFixed",
+        "classConfig": {
+          "url": "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale-latest.csv"
+        }
+      }
+    }
+  },
+  "uploader": {
+    "serviceUrl": "https://demography.k8s.ilt-dmz.iosb.fraunhofer.de/v1.1",
+    "authMethod": {
+      "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthBasic",
+      "classConfig": {
+        "password": "password Here",
+        "ignoreSslErrors": false,
+        "username": "username Here"
+      }
+    },
+    "useDataArrays": true
+  },
+  "msgInterval": 1000,
+  "validator": {
+    "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.ValidatorByPhenTime",
+    "classConfig": {
+      "deleteDuplicates": true,
+      "update": true,
+      "cacheObservations": true
+    }
+  }
+}
