@@ -36,7 +36,7 @@
 		<git-commit-id-plugin.version>4.0.5</git-commit-id-plugin.version>
 		<javax-activation.version>1.1.1</javax-activation.version>
 		<junit.version>4.13.2</junit.version>
-		<logback.version>1.2.3</logback.version>
+		<logback.version>1.2.4</logback.version>
 		<openjfx.version>16</openjfx.version>
 		<quartz.version>2.3.2</quartz.version>
 	</properties>
