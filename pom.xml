@@ -28,7 +28,7 @@
 
 		<FROST-Client.version>0.35</FROST-Client.version>
 		<commons-collections.version>4.4</commons-collections.version>
-		<commons-csv.version>1.8</commons-csv.version>
+		<commons-csv.version>1.9.0</commons-csv.version>
 		<commons-io.version>2.11.0</commons-io.version>
 		<configurable.version>0.30</configurable.version>
 		<geotools.version>25.2</geotools.version>
