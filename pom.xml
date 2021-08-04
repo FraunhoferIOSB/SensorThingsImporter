@@ -18,7 +18,9 @@
 		<maven.compiler.source>11</maven.compiler.source>
 		<maven.compiler.target>11</maven.compiler.target>
 
+        <!-- maven plugin versions -->
 		<dockerfile-maven-plugin.version>1.4.13</dockerfile-maven-plugin.version>
+		<git-commit-id-plugin.version>5.0.0</git-commit-id-plugin.version>
 		<maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
 		<maven-gpg-plugin>3.0.1</maven-gpg-plugin>
 		<maven-javadoc-plugin.version>3.3.0</maven-javadoc-plugin.version>
@@ -26,6 +28,7 @@
 		<maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
 		<maven-source-plugin.version>3.2.1</maven-source-plugin.version>
 
+        <!-- Dependency versions -->
 		<FROST-Client.version>0.35</FROST-Client.version>
 		<commons-collections.version>4.4</commons-collections.version>
 		<commons-csv.version>1.9.0</commons-csv.version>
@@ -33,7 +36,6 @@
 		<configurable.version>0.30</configurable.version>
 		<geotools.version>25.2</geotools.version>
 		<groovy.version>3.0.8</groovy.version>
-		<git-commit-id-plugin.version>5.0.0</git-commit-id-plugin.version>
 		<javax-activation.version>1.1.1</javax-activation.version>
 		<junit.version>4.13.2</junit.version>
 		<logback.version>1.2.5</logback.version>

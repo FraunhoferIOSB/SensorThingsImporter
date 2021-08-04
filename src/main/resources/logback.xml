@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+    <variable name="FROST_LL" value="${FROST_LL:-INFO}" />
+    <variable name="FROST_LL_URLUTILS" value="${FROST_LL_URLUTILS:-WARN}" />
+    <variable name="FROST_LL_STA" value="${FROST_LL_STA:-INFO}" />
+    <variable name="FROST_LL_REFLECTIONS" value="${FROST_LL_REFLECTIONS:-ERROR}" />
+
 	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
 		<encoder>
 			<pattern>%d{HH:mm:ss.SSS} [%.8thread] %-5level %30logger{30} - %msg%n</pattern>
@@ -24,11 +29,11 @@
 		</encoder>
 	</appender>
 
-	<logger name="de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils" level="WARN"/>
-	<logger name="de.fraunhofer.iosb.ilt.sta" level="INFO"/>
-	<logger name="org.reflections8.Reflections" level="ERROR"/>
+	<logger name="de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils" level="${FROST_LL_URLUTILS}"/>
+	<logger name="de.fraunhofer.iosb.ilt.sta" level="${FROST_LL_STA}"/>
+	<logger name="org.reflections8.Reflections" level="${FROST_LL_REFLECTIONS}"/>
 
-	<root level="INFO">
+	<root level="${FROST_LL}">
 		<appender-ref ref="STDOUT" />
 		<appender-ref ref="FILE" />
 	</root>

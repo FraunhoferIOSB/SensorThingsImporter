@@ -229,6 +229,7 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 			rowSkip = rowSkipBase;
 			while (urlIterator.hasNext()) {
 				URL inUrl = urlIterator.next();
+				LOGGER.debug("Next URL: {}", inUrl);
 				try {
 					CSVParser parser;
 					if (inUrl != null) {
