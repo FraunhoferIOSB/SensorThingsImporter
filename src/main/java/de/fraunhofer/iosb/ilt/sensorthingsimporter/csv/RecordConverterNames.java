@@ -17,7 +17,10 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
+import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
+import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.Utils;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
@@ -43,6 +46,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,6 +122,8 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 	@EditorString.EdOptsString(lines = 4)
 	private String parametersTemplate;
 
+	private Pattern patternMissingResult;
+
 	public RecordConverterNames() {
 	}
 
@@ -127,12 +133,18 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 	}
 
 	@Override
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+		AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
+		patternMissingResult = Pattern.compile(resultMissing);
+	}
+
+	@Override
 	public List<Observation> convert(CSVRecord record) throws ImportException {
 		Object result;
 		Observation obs;
 		StringBuilder log;
 		String resultString = record.get(colResult);
-		if (resultString.equals(resultMissing)) {
+		if (patternMissingResult.matcher(resultString).matches()) {
 			return Collections.emptyList();
 		}
 		result = parseResult(resultString);
