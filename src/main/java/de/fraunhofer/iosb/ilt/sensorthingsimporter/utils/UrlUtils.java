@@ -73,7 +73,6 @@ public class UrlUtils {
 	}
 
 	public static String fetchFromUrl(String targetUrl, Charset charset) throws IOException {
-		LOGGER.info("Fetching: {}", targetUrl);
 		if (targetUrl.startsWith("file:/")) {
 			return readFileUrl(targetUrl, charset);
 		}
@@ -85,6 +84,7 @@ public class UrlUtils {
 	}
 
 	public static String readNormalUrl(String targetUrl, Charset charset, List<Header> headers, String username, String password) throws IOException, ParseException {
+		LOGGER.info("Fetching: {}", targetUrl);
 		HttpClientBuilder clientBuilder = HttpClientBuilder.create()
 				.useSystemProperties()
 				.setDefaultRequestConfig(
@@ -120,6 +120,7 @@ public class UrlUtils {
 	}
 
 	private static String readFileUrl(String targetUrl, Charset charset) throws IOException {
+		LOGGER.info("Loading: {}", targetUrl);
 		try (InputStream input = new URL(targetUrl).openStream()) {
 			String string = IOUtils.toString(input, charset);
 			return string;
@@ -131,7 +132,7 @@ public class UrlUtils {
 	}
 
 	public static String postJsonToUrl(String targetUrl, Object body, List<Header> headers, String username, String password) throws IOException {
-
+		LOGGER.info("Posting: {}", targetUrl);
 		String queryBody = ObjectMapperFactory.get().writeValueAsString(body);
 		try (CloseableHttpClient client = HttpClients.createSystem()) {
 			HttpPost post = new HttpPost(targetUrl);
