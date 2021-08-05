@@ -324,7 +324,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		LOGGER.debug("Fetching Stations from {}", thingsUrl);
 		String stationFeatureXml;
 		try {
-			stationFeatureXml = UrlUtils.fetchFromUrl(thingsUrl);
+			stationFeatureXml = UrlUtils.fetchFromUrl(thingsUrl).data;
 		} catch (IOException ex) {
 			throw new ImportException(ex);
 		}
@@ -431,7 +431,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		LOGGER.debug("Fetching Processes from {}", sensorsUrl);
 		String processFeatureXml;
 		try {
-			processFeatureXml = UrlUtils.fetchFromUrl(sensorsUrl);
+			processFeatureXml = UrlUtils.fetchFromUrl(sensorsUrl).data;
 		} catch (IOException ex) {
 			throw new ImportException(ex);
 		}
@@ -549,7 +549,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		LOGGER.debug("Fetching Samples from {}", samplesUrl);
 		String samplesFeatureXml;
 		try {
-			samplesFeatureXml = UrlUtils.fetchFromUrl(samplesUrl);
+			samplesFeatureXml = UrlUtils.fetchFromUrl(samplesUrl).data;
 		} catch (IOException ex) {
 			throw new ImportException(ex);
 		}
@@ -621,7 +621,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		LOGGER.debug("Fetching SamplingPoints from {}", samplingPointsUrl);
 		String samplingPointsFeatureXml;
 		try {
-			samplingPointsFeatureXml = UrlUtils.fetchFromUrl(samplingPointsUrl);
+			samplingPointsFeatureXml = UrlUtils.fetchFromUrl(samplingPointsUrl).data;
 		} catch (IOException ex) {
 			throw new ImportException(ex);
 		}
@@ -752,7 +752,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 			finalUrl = finalUrl.replace("{phenomenonTimeInterval}", interval.toString());
 			String observationsXml;
 			try {
-				observationsXml = UrlUtils.fetchFromUrl(finalUrl);
+				observationsXml = UrlUtils.fetchFromUrl(finalUrl).data;
 			} catch (IOException ex) {
 				throw new ImportException(ex);
 			}

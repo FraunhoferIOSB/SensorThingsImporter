@@ -134,7 +134,7 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
 				String fetchedFromUrl;
 				try {
 					currentParent = new URL(nextParentUrl.toString().trim());
-					fetchedFromUrl = UrlUtils.fetchFromUrl(currentParent.toString());
+					fetchedFromUrl = UrlUtils.fetchFromUrl(currentParent.toString()).data;
 					String[] split = StringUtils.split(fetchedFromUrl, splitter);
 					List<String> inList = new ArrayList<>(split.length);
 					for (String item : split) {

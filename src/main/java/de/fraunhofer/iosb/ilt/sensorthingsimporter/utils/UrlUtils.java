@@ -25,6 +25,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.codec.binary.Base64;
@@ -64,26 +65,26 @@ public class UrlUtils {
 		// Utility class.
 	}
 
-	public static String fetchFromUrl(String targetUrl) throws IOException {
+	public static HttpResponse fetchFromUrl(String targetUrl) throws IOException {
 		return fetchFromUrl(targetUrl, UTF8);
 	}
 
-	public static String fetchFromUrl(String targetUrl, String charset) throws IOException {
+	public static HttpResponse fetchFromUrl(String targetUrl, String charset) throws IOException {
 		return fetchFromUrl(targetUrl, Charset.forName(charset));
 	}
 
-	public static String fetchFromUrl(String targetUrl, Charset charset) throws IOException {
+	public static HttpResponse fetchFromUrl(String targetUrl, Charset charset) throws IOException {
 		if (targetUrl.startsWith("file:/")) {
 			return readFileUrl(targetUrl, charset);
 		}
 		return readNormalUrl(targetUrl, charset);
 	}
 
-	public static String readNormalUrl(String targetUrl, Charset charset) throws IOException, ParseException {
+	public static HttpResponse readNormalUrl(String targetUrl, Charset charset) throws IOException, ParseException {
 		return readNormalUrl(targetUrl, charset, Collections.emptyList(), null, null);
 	}
 
-	public static String readNormalUrl(String targetUrl, Charset charset, List<Header> headers, String username, String password) throws IOException, ParseException {
+	public static HttpResponse readNormalUrl(String targetUrl, Charset charset, List<Header> headers, String username, String password) throws IOException, ParseException {
 		LOGGER.info("Fetching: {}", targetUrl);
 		HttpClientBuilder clientBuilder = HttpClientBuilder.create()
 				.useSystemProperties()
@@ -103,43 +104,37 @@ public class UrlUtils {
 			}
 			headers.stream().forEach(h -> get.addHeader(h));
 			CloseableHttpResponse response = client.execute(get);
-			final int statusCode = response.getStatusLine().getStatusCode();
-			if (statusCode < 200) {
-				return "";
-			}
-			if (statusCode >= 400) {
-				return "";
-			}
 			HttpEntity entity = response.getEntity();
+			final int statusCode = response.getStatusLine().getStatusCode();
 			if (entity == null) {
-				return "";
+				return new HttpResponse(statusCode, "", response.getAllHeaders());
 			}
 			String data = EntityUtils.toString(entity, charset);
-			return data;
+			return new HttpResponse(statusCode, data, response.getAllHeaders());
 		}
 	}
 
-	private static String readFileUrl(String targetUrl, Charset charset) throws IOException {
+	private static HttpResponse readFileUrl(String targetUrl, Charset charset) throws IOException {
 		LOGGER.info("Loading: {}", targetUrl);
 		try (InputStream input = new URL(targetUrl).openStream()) {
-			String string = IOUtils.toString(input, charset);
-			return string;
+			final String string = IOUtils.toString(input, charset);
+			return new HttpResponse(200, string);
 		}
 	}
 
-	public static String postJsonToUrl(String targetUrl, Object body, String username, String password) throws IOException {
+	public static HttpResponse postJsonToUrl(String targetUrl, Object body, String username, String password) throws IOException {
 		return postJsonToUrl(targetUrl, body, Collections.emptyList(), username, password);
 	}
 
-	public static String postJsonToUrl(String targetUrl, Object body, List<Header> headers, String username, String password) throws IOException {
+	public static HttpResponse postJsonToUrl(String targetUrl, Object body, List<Header> headers, String username, String password) throws IOException {
 		LOGGER.info("Posting: {}", targetUrl);
-		String queryBody = ObjectMapperFactory.get().writeValueAsString(body);
+		final String queryBody = ObjectMapperFactory.get().writeValueAsString(body);
 		try (CloseableHttpClient client = HttpClients.createSystem()) {
-			HttpPost post = new HttpPost(targetUrl);
+			final HttpPost post = new HttpPost(targetUrl);
 			if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
-				String auth = username + ":" + password;
-				byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
-				String authHeader = "Basic " + new String(encodedAuth);
+				final String auth = username + ":" + password;
+				final byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
+				final String authHeader = "Basic " + new String(encodedAuth);
 				post.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
 			}
 			if (headers.isEmpty()) {
@@ -148,14 +143,49 @@ public class UrlUtils {
 				headers.stream().forEach(h -> post.addHeader(h));
 			}
 			post.setEntity(new StringEntity(queryBody));
-			CloseableHttpResponse response = client.execute(post);
-			HttpEntity entity = response.getEntity();
+			final CloseableHttpResponse response = client.execute(post);
+			final HttpEntity entity = response.getEntity();
+			final int statusCode = response.getStatusLine().getStatusCode();
 			if (entity == null) {
-				return "";
+				return new HttpResponse(statusCode, "", response.getAllHeaders());
 			}
 			String data = EntityUtils.toString(entity, UTF8);
-			return data;
+			return new HttpResponse(statusCode, data, response.getAllHeaders());
 		}
 
+	}
+
+	public static class HttpResponse {
+
+		public HttpResponse(int code, String data) {
+			this(code, data, null);
+		}
+
+		public HttpResponse(int code, String data, Header[] headers) {
+			this.code = code;
+			this.data = data;
+			this.headers = new LinkedHashMap<>();
+			if (headers != null) {
+				for (Header header : headers) {
+					this.headers.put(header.getName().toLowerCase(), header.getValue());
+				}
+			}
+		}
+
+		public final int code;
+		public final String data;
+		public final Map<String, String> headers;
+
+		public boolean isOkResponse() {
+			return code >= 200 && code < 300;
+		}
+
+		public boolean isRedirect() {
+			return code >= 300 && code < 400;
+		}
+
+		public boolean isError() {
+			return code >= 400;
+		}
 	}
 }

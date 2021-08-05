@@ -241,7 +241,7 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 								parser = CSVParser.parse(data, format);
 							}
 						} else {
-							String data = UrlUtils.fetchFromUrl(inUrl.toString(), charset);
+							String data = UrlUtils.fetchFromUrl(inUrl.toString(), charset).data;
 							parser = CSVParser.parse(data, format);
 						}
 					} else {

@@ -26,8 +26,6 @@ import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.slf4j.LoggerFactory;
 import org.threeten.extra.Interval;
 
