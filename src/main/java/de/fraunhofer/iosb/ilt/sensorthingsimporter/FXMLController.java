@@ -154,7 +154,9 @@ public class FXMLController implements Initializable {
 		String config = new GsonBuilder().setPrettyPrinting().create().toJson(json);
 		fileChooser.setTitle(title);
 		File file = fileChooser.showSaveDialog(paneConfig.getScene().getWindow());
-
+		if (file == null) {
+			return;
+		}
 		try {
 			FileUtils.writeStringToFile(file, config, "UTF-8");
 		} catch (IOException ex) {
