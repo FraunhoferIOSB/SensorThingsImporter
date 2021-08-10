@@ -376,7 +376,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				String locationPos = exprLocationPos.evaluate(stationNode);
 				String locationDescription = "Location of air quality station " + stationName;
 
-				Point targetPoint = FrostUtils.convertCoordinates(locationPos, locationSrsName);
+				Point targetPoint = FrostUtils.convertCoordinates(locationPos, locationSrsName, 6, false);
 
 				Map<String, Object> stationProps = new HashMap<>();
 				stationProps.put(TAG_OWNER, entityOwner);
@@ -592,7 +592,8 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 
 				String locationSrsName = exprSrsName.evaluate(sampleNode);
 				String locationPos = exprPos.evaluate(sampleNode);
-				Point geoJson = FrostUtils.convertCoordinates(locationPos, locationSrsName);
+				// http://luft.umweltbundesamt.at has wrong axis order
+				Point geoJson = FrostUtils.convertCoordinates(locationPos, locationSrsName, 6, true);
 
 				String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(sampleId);
 				FeatureOfInterest cachedFoi = foiCache.get(sampleId);

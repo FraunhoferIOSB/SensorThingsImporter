@@ -37,6 +37,7 @@ import de.fraunhofer.iosb.ilt.sta.query.Query;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -821,28 +822,38 @@ public final class FrostUtils {
 		return new TimeObject(interval);
 	}
 
-	public static Point convertCoordinates(final double latitude, final double longitude, final String locationSrsName) throws ImportException {
+	public static Point convertCoordinates(final double first, final double second, final String crsName, int numberScale) {
+		if (Utils.isNullOrEmpty(crsName)) {
+			return new Point(
+					new BigDecimal(second).setScale(numberScale, RoundingMode.HALF_EVEN).doubleValue(),
+					new BigDecimal(first).setScale(numberScale, RoundingMode.HALF_EVEN).doubleValue());
+		}
 		try {
-			final CoordinateReferenceSystem sourceCrs = CRS.decode(locationSrsName);
+			String fullCrs = crsName;
+			if (!fullCrs.contains(":")) {
+				fullCrs = "EPSG:" + fullCrs;
+			}
+			final CoordinateReferenceSystem sourceCrs = CRS.decode(fullCrs);
 			final CoordinateReferenceSystem targetCrs = CRS.decode("EPSG:4326");
 			final MathTransform transform = CRS.findMathTransform(sourceCrs, targetCrs);
-			final DirectPosition2D sourcePoint = new DirectPosition2D(sourceCrs, longitude, latitude);
+			final DirectPosition2D sourcePoint = new DirectPosition2D(sourceCrs, first, second);
 			final DirectPosition2D targetPoint = new DirectPosition2D(targetCrs);
 			transform.transform(sourcePoint, targetPoint);
-			return new Point(targetPoint.x, targetPoint.y);
-		} catch (FactoryException | MismatchedDimensionException | TransformException exc) {
-			throw new ImportException("Failed to convert coordinates", exc);
+			return new Point(
+					new BigDecimal(targetPoint.y).setScale(numberScale, RoundingMode.HALF_EVEN).doubleValue(),
+					new BigDecimal(targetPoint.x).setScale(numberScale, RoundingMode.HALF_EVEN).doubleValue());
+		} catch (FactoryException | MismatchedDimensionException | org.opengis.referencing.operation.TransformException exc) {
+			throw new RuntimeException("Failed to convert coordinates", exc);
 		}
 	}
 
-	public static Point convertCoordinates(final Point point, final String locationSrsName) throws ImportException {
-		final LngLatAlt sourceCoordinates = point.getCoordinates();
-		return convertCoordinates(sourceCoordinates.getLatitude(), sourceCoordinates.getLongitude(), locationSrsName);
-	}
-
-	public static Point convertCoordinates(final String locationPos, final String locationSrsName) throws ImportException {
+	public static Point convertCoordinates(final String locationPos, final String locationSrsName, int numberScale, boolean flip) {
 		final String[] coordinates = locationPos.split(" ");
-		return convertCoordinates(Double.parseDouble(coordinates[1]), Double.parseDouble(coordinates[0]), locationSrsName);
+		if (flip) {
+			return convertCoordinates(Double.parseDouble(coordinates[1]), Double.parseDouble(coordinates[0]), locationSrsName, numberScale);
+		} else {
+			return convertCoordinates(Double.parseDouble(coordinates[0]), Double.parseDouble(coordinates[1]), locationSrsName, numberScale);
+		}
 	}
 
 	public static Map<String, Object> putIntoSubMap(final Map<String, Object> map, final String subMapName, final String key, final Object value) {
