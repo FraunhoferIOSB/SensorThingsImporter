@@ -376,7 +376,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				String locationPos = exprLocationPos.evaluate(stationNode);
 				String locationDescription = "Location of air quality station " + stationName;
 
-				DirectPosition2D targetPoint = FrostUtils.convertCoordinates(locationPos, locationSrsName);
+				Point targetPoint = FrostUtils.convertCoordinates(locationPos, locationSrsName);
 
 				Map<String, Object> stationProps = new HashMap<>();
 				stationProps.put(TAG_OWNER, entityOwner);
@@ -401,7 +401,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 
 				String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(stationId);
 				Location cachedLocation = locationsCache.get(stationId);
-				Location location = frostUtils.findOrCreateLocation(filter, stationName, locationDescription, locationProps, new Point(targetPoint.x, targetPoint.y), cachedLocation);
+				Location location = frostUtils.findOrCreateLocation(filter, stationName, locationDescription, locationProps, targetPoint, cachedLocation);
 				Thing cachedThing = thingsCache.get(stationId);
 				Thing thing = frostUtils.findOrCreateThing(filter, stationName, stationDescription, stationProps, location, cachedThing);
 				locationsCache.add(location);
@@ -415,7 +415,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		} catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
 			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("XML problem.", ex);
-		} catch (FactoryException | MismatchedDimensionException | TransformException ex) {
+		} catch (MismatchedDimensionException ex) {
 			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Coordinate conversion problem.", ex);
 		} catch (ServiceFailureException ex) {
@@ -592,11 +592,10 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 
 				String locationSrsName = exprSrsName.evaluate(sampleNode);
 				String locationPos = exprPos.evaluate(sampleNode);
-				DirectPosition2D targetPoint = FrostUtils.convertCoordinates(locationPos, locationSrsName);
+				Point geoJson = FrostUtils.convertCoordinates(locationPos, locationSrsName);
 
 				String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(sampleId);
 				FeatureOfInterest cachedFoi = foiCache.get(sampleId);
-				Point geoJson = new Point(targetPoint.x, targetPoint.y);
 				FeatureOfInterest foi = frostUtils.findOrCreateFeature(filter, sampleName, sampleDescription, geoJson, properties, cachedFoi);
 				foiCache.add(foi);
 				LOGGER.debug("Sample: {}.", sampleId);
@@ -605,7 +604,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		} catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
 			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("XML problem.", ex);
-		} catch (FactoryException | MismatchedDimensionException | TransformException ex) {
+		} catch (MismatchedDimensionException ex) {
 			LOGGER.debug("Exception: {}", ex.getMessage());
 			throw new ImportException("Coordinate conversion problem.", ex);
 		} catch (ServiceFailureException | NumberFormatException ex) {

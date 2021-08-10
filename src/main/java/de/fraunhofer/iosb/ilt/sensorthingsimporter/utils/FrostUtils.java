@@ -56,6 +56,7 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.geojson.GeoJsonObject;
+import org.geojson.LngLatAlt;
 import org.geojson.Point;
 import org.geotools.geometry.DirectPosition2D;
 import org.geotools.referencing.CRS;
@@ -820,12 +821,12 @@ public final class FrostUtils {
 		return new TimeObject(interval);
 	}
 
-	public static Point convertCoordinates(final Point point, final String locationSrsName) throws ImportException {
+	public static Point convertCoordinates(final double latitude, final double longitude, final String locationSrsName) throws ImportException {
 		try {
 			final CoordinateReferenceSystem sourceCrs = CRS.decode(locationSrsName);
 			final CoordinateReferenceSystem targetCrs = CRS.decode("EPSG:4326");
 			final MathTransform transform = CRS.findMathTransform(sourceCrs, targetCrs);
-			final DirectPosition2D sourcePoint = new DirectPosition2D(sourceCrs, point.getCoordinates().getLongitude(), point.getCoordinates().getLatitude());
+			final DirectPosition2D sourcePoint = new DirectPosition2D(sourceCrs, longitude, latitude);
 			final DirectPosition2D targetPoint = new DirectPosition2D(targetCrs);
 			transform.transform(sourcePoint, targetPoint);
 			return new Point(targetPoint.x, targetPoint.y);
@@ -834,15 +835,14 @@ public final class FrostUtils {
 		}
 	}
 
-	public static DirectPosition2D convertCoordinates(final String locationPos, final String locationSrsName) throws FactoryException, TransformException, NumberFormatException, MismatchedDimensionException {
+	public static Point convertCoordinates(final Point point, final String locationSrsName) throws ImportException {
+		final LngLatAlt sourceCoordinates = point.getCoordinates();
+		return convertCoordinates(sourceCoordinates.getLatitude(), sourceCoordinates.getLongitude(), locationSrsName);
+	}
+
+	public static Point convertCoordinates(final String locationPos, final String locationSrsName) throws ImportException {
 		final String[] coordinates = locationPos.split(" ");
-		final CoordinateReferenceSystem sourceCrs = CRS.decode(locationSrsName);
-		final CoordinateReferenceSystem targetCrs = CRS.decode("EPSG:4326");
-		final MathTransform transform = CRS.findMathTransform(sourceCrs, targetCrs);
-		final DirectPosition2D sourcePoint = new DirectPosition2D(sourceCrs, Double.parseDouble(coordinates[1]), Double.parseDouble(coordinates[0]));
-		final DirectPosition2D targetPoint = new DirectPosition2D(targetCrs);
-		transform.transform(sourcePoint, targetPoint);
-		return targetPoint;
+		return convertCoordinates(Double.parseDouble(coordinates[1]), Double.parseDouble(coordinates[0]), locationSrsName);
 	}
 
 	public static Map<String, Object> putIntoSubMap(final Map<String, Object> map, final String subMapName, final String key, final Object value) {
