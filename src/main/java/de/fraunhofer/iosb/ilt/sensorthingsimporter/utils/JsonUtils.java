@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,5 +109,9 @@ public class JsonUtils {
 			LOGGER.debug("Exception: ", ex);
 			return new HashMap<>();
 		}
+	}
+
+	public static String DecodeJsonPointer(String pointer) {
+		return StringUtils.replaceEach(pointer, new String[]{"~0", "~1"}, new String[]{"~", "/"});
 	}
 }

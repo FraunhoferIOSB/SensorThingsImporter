@@ -57,7 +57,7 @@ public class Translator extends AbstractConfigurable<Void, Void> {
 	@ConfigurableField(
 			label = "Translations", description = "A map that translates input values to url values.",
 			editor = EditorString.class)
-	@EditorString.EdOptsString(lines = 10, dflt = "{\"from\":\"to\"}")
+	@EditorString.EdOptsString(lines = 10, dflt = "{\"from string\":\"to string\"}")
 	private String mappings;
 
 	@Override
@@ -125,7 +125,14 @@ public class Translator extends AbstractConfigurable<Void, Void> {
 		return fillTemplate(template, record, escapeForUrl, escapeForJson);
 	}
 
+	public static String fillTemplate(String template, CSVRecord record) {
+		return fillTemplate(template, record, false, false);
+	}
+
 	public static String fillTemplate(String template, CSVRecord record, boolean escapeForUrl, boolean escapeForJson) {
+		if (record.isMapped(template)) {
+			return record.get(template);
+		}
 		Matcher matcher = PLACE_HOLDER_PATTERN.matcher(template);
 		matcher.reset();
 		StringBuilder filter = new StringBuilder();

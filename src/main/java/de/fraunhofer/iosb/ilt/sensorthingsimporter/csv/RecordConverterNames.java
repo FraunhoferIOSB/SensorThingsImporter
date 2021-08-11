@@ -28,6 +28,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import static de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.CsvUtils.fillTemplate;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UnitConverter;
@@ -143,7 +144,7 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 		Object result;
 		Observation obs;
 		StringBuilder log;
-		String resultString = record.get(colResult);
+		String resultString = fillTemplate(colResult, record);
 		if (patternMissingResult.matcher(resultString).matches()) {
 			return Collections.emptyList();
 		}
@@ -159,7 +160,7 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 			return Collections.emptyList();
 		}
 		if (!colUnit.isEmpty()) {
-			String unitFrom = record.get(colUnit);
+			String unitFrom = fillTemplate(colUnit, record);
 			String unitTo = datastream.getUnitOfMeasurement().getSymbol();
 			result = convertResult(unitFrom, unitTo, result);
 			if (result == null) {
@@ -174,7 +175,7 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 		log.append(", phenomenonTime: ").append(obs.getPhenomenonTime());
 
 		if (!colResultTime.isEmpty()) {
-			obs.setResultTime(parseZonedDateTime(record.get(colResultTime)));
+			obs.setResultTime(parseTime(fillTemplate(colResultTime, record)));
 			log.append(", resultTime: ").append(obs.getResultTime());
 		}
 		if (!colValidTime.isEmpty()) {
@@ -216,7 +217,7 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 			Duration startDuration = null;
 			String start = null;
 			try {
-				start = record.get(firstCol);
+				start = fillTemplate(firstCol, record);
 			} catch (IllegalArgumentException ex) {
 				try {
 					startDuration = Duration.parse(firstCol);
@@ -227,7 +228,7 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 			Duration endDuration = null;
 			String end = null;
 			try {
-				end = record.get(secondCol);
+				end = fillTemplate(secondCol, record);
 			} catch (IllegalArgumentException ex) {
 				try {
 					endDuration = Duration.parse(secondCol);
@@ -239,15 +240,18 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 				throw new IllegalArgumentException("Can not have start and end be a duration.");
 			}
 			ZonedDateTime startTime = null;
-			if (start != null) {
+			if (!Utils.isNullOrEmpty(start)) {
 				startTime = parseTime(start).withZoneSameInstant(ZONE_Z);
 			}
 			ZonedDateTime endTime = null;
-			if (end != null) {
+			if (!Utils.isNullOrEmpty(end)) {
 				endTime = parseTime(end).withZoneSameInstant(ZONE_Z);
 			}
 			Interval interval;
-			if (startTime != null && endTime != null) {
+			if (startTime != null && endTime == null) {
+				// Not an interval after all.
+				return new TimeObject(startTime);
+			} else if (startTime != null && endTime != null) {
 				interval = Interval.of(startTime.toInstant(), endTime.toInstant());
 			} else if (startTime != null && endDuration != null) {
 				interval = Interval.of(startTime.toInstant(), endDuration);
@@ -258,7 +262,7 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 			}
 			return new TimeObject(interval);
 		} else {
-			return new TimeObject(parseTime(record.get(firstCol)).withZoneSameInstant(ZONE_Z));
+			return new TimeObject(parseTime(fillTemplate(firstCol, record)).withZoneSameInstant(ZONE_Z));
 		}
 	}
 
@@ -284,15 +288,6 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 			LOGGER.debug("Failed to parse {} to a time: {}", value, e.getMessage());
 			throw new ImportException("Time value " + value + " could not be parsed as a time.");
 		}
-	}
-
-	private ZonedDateTime parseZonedDateTime(String value) throws ImportException {
-		try {
-			return ZonedDateTime.parse(value);
-		} catch (Exception e) {
-			// Not a ZonedDateTime
-		}
-		return parseTimestamp(value);
 	}
 
 	private ZonedDateTime parseTimestamp(String value) throws ImportException {

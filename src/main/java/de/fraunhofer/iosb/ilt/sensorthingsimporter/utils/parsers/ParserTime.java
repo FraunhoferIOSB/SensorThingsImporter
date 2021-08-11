@@ -35,7 +35,7 @@ import java.time.format.DateTimeFormatter;
 public class ParserTime implements ParserZonedDateTime, AnnotatedConfigurable<Object, Object> {
 
 	@ConfigurableField(editor = EditorString.class,
-			label = "Format", description = "The format to use when parsing the time.")
+			label = "Format", description = "The format to use when parsing the time. Default: yyyy-MM-dd HH:mm:ssXXX")
 	@EditorString.EdOptsString(dflt = "yyyy-MM-dd HH:mm:ssXXX")
 	private String format;
 
