@@ -26,6 +26,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthMethod;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.Entity;
@@ -86,8 +87,9 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 
 	private DataArrayValue lastDav;
 
-	private int inserted = 0;
-	private int updated = 0;
+	private long inserted = 0;
+	private long updated = 0;
+	private long deleted = 0;
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
@@ -108,12 +110,16 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 		this.noAct = noAct;
 	}
 
-	public int getInserted() {
+	public long getInserted() {
 		return inserted;
 	}
 
-	public int getUpdated() {
+	public long getUpdated() {
 		return updated;
+	}
+
+	public long getDeleted() {
+		return deleted;
 	}
 
 	public void addObservation(Observation obs) throws ServiceFailureException {
@@ -156,7 +162,7 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 		lastDatastream = ds;
 	}
 
-	public int sendDataArray() throws ServiceFailureException {
+	public long sendDataArray() throws ServiceFailureException {
 		if (!noAct && !davMap.isEmpty()) {
 			DataArrayDocument dad = new DataArrayDocument();
 			dad.getValue().addAll(davMap.values());
@@ -175,6 +181,11 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 		lastDav = null;
 		lastDatastream = null;
 		return inserted;
+	}
+
+	public void delete(List<? extends Entity> entities, int threads) throws ServiceFailureException {
+		deleted += entities.size();
+		new FrostUtils(entities.get(0).getService()).delete(entities, 100);
 	}
 
 	private Set<DataArrayValue.Property> getDefinedProperties(Observation o) {

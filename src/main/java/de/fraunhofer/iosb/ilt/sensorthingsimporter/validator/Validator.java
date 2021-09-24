@@ -18,6 +18,7 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 
 /**
@@ -25,6 +26,9 @@ import de.fraunhofer.iosb.ilt.sta.model.Observation;
  * @author scf
  */
 public interface Validator {
+
+	public default void setObservationUploader(ObservationUploader uploader) {
+	}
 
 	public boolean isValid(Observation obs) throws ImportException;
 

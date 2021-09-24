@@ -21,6 +21,7 @@ import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.dao.BaseDao;
@@ -69,10 +70,16 @@ public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<Sen
 	@EditorBoolean.EdOptsBool(dflt = true)
 	private boolean deleteDuplicates;
 
+	private ObservationUploader uploader;
 	private Id latestDsId;
 	private Id latestMdsId;
 	private Instant cacheStart;
 	private Map<TimeObject, Observation> cache = new LinkedHashMap<>();
+
+	@Override
+	public void setObservationUploader(ObservationUploader uploader) {
+		this.uploader = uploader;
+	}
 
 	private boolean resultCompare(Object one, Object two) {
 		if (one == null) {
@@ -185,8 +192,7 @@ public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<Sen
 			}
 		}
 		if (!Utils.isNullOrEmpty(toDelete)) {
-			LOGGER.warn("Deleting {} duplicates.", toDelete.size());
-			new FrostUtils(toDelete.get(0).getService()).delete(toDelete, 100);
+			uploader.delete(toDelete, 100);
 		}
 
 		return cache.get(checkTime);
@@ -246,7 +252,7 @@ public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<Sen
 				return true;
 			} else {
 				if (!resultCompare(obs.getResult(), first.getResult())) {
-					LOGGER.debug("Observation {} with given phenomenonTime {} exists, but result not the same. {} {} != {} {}.", first.getId(), phenomenonTime, obs.getResult().getClass().getName(), obs.getResult(), first.getResult(), first.getResult().getClass().getName());
+					LOGGER.debug("Observation {} with given phenomenonTime {} exists, but result not the same. {} != {} .", first.getId(), phenomenonTime, obs.getResult(), first.getResult());
 					if (update) {
 						obs.setId(first.getId());
 						addToCache(obs);

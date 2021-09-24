@@ -18,6 +18,7 @@ target/
 nbactions.xml
 
 *.json
+*.csv
 *.txt
 *.lvm
 /nbproject/

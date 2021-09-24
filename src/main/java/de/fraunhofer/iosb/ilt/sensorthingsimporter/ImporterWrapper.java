@@ -100,6 +100,8 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 			importer = editorImporter.getValue();
 			uploader = editorUploader.getValue();
 			validator = editorValidator.getValue();
+
+			validator.setObservationUploader(uploader);
 			if (!editorName.isDefault()) {
 				name = editorName.getValue();
 				logStatus.setName(name);
@@ -209,6 +211,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 					validated++;
 					uploader.addObservation(observation);
 					logStatus.setValidatedCount(validated);
+					logStatus.setDeletedCount(uploader.getDeleted());
 				}
 				nextMessage--;
 				if (nextMessage <= 0) {
@@ -282,15 +285,15 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 
 	private static class LoggingStatus extends ChangingStatusLogger.ChangingStatusDefault {
 
-		public static final String MESSAGE = "{}: Genereated {}, Validated {}, Inserted {}, Updated {}, {}/s";
+		public static final String MESSAGE = "{}: Genereated {}, Validated {}, Inserted {}, Updated {}, Deleted {}, {}/s";
 		public final Object[] status;
 
 		public LoggingStatus() {
-			super(MESSAGE, new Object[6]);
+			super(MESSAGE, new Object[7]);
 			status = getCurrentParams();
 			Arrays.setAll(status, (int i) -> Long.valueOf(0));
 			status[0] = "unnamed";
-			status[5] = "0.0";
+			status[6] = "0.0";
 		}
 
 		public LoggingStatus setName(String name) {
@@ -318,8 +321,13 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 			return this;
 		}
 
+		public LoggingStatus setDeletedCount(Long count) {
+			status[5] = count;
+			return this;
+		}
+
 		public LoggingStatus setSpeed(Double speed) {
-			status[5] = String.format("%.1f", speed);
+			status[6] = String.format("%.1f", speed);
 			return this;
 		}
 
