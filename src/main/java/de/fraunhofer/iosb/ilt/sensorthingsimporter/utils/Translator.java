@@ -47,7 +47,7 @@ public class Translator extends AbstractConfigurable<Void, Void> {
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(Translator.class);
-	private static final Pattern PLACE_HOLDER_PATTERN = Pattern.compile("\\{([0-9a-zA-Z_]+)\\}");
+	private static final Pattern PLACE_HOLDER_PATTERN = Pattern.compile("\\{([0-9a-zA-Z_]+)(\\|([^}]*))?\\}");
 
 	private static final TypeReference<Map<String, String>> TYPE_REF_MAP_STRING_STRING = new TypeReference<Map<String, String>>() {
 		// Empty by design.
@@ -147,6 +147,9 @@ public class Translator extends AbstractConfigurable<Void, Void> {
 			} catch (NumberFormatException ex) {
 				String colName = matcher.group(1);
 				value = record.get(colName);
+			}
+			if (Utils.isNullOrEmpty(value) && matcher.group(3) != null) {
+				value = matcher.group(3);
 			}
 			if (escapeForUrl) {
 				value = Utils.escapeForStringConstant(value);
