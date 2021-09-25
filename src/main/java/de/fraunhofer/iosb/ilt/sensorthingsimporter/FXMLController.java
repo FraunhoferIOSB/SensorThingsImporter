@@ -21,8 +21,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
+import de.fraunhofer.iosb.ilt.configurable.ConfigEditors;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler.ImporterScheduler;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
 import java.io.File;
@@ -32,9 +33,6 @@ import java.util.List;
 import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -70,15 +68,13 @@ public class FXMLController implements Initializable {
 	@FXML
 	private ProgressBar progressBar;
 
-	private ImporterWrapper wrapper;
-	private ImporterScheduler scheduler;
 	private ImporterScheduler schedulerActive;
 
-	private EditorMap<?> configEditorImport;
-	private EditorMap<?> configEditorSchedule;
-	private FileChooser fileChooser = new FileChooser();
+	private ConfigEditor<?> configEditorImport;
+	private ConfigEditor<?> configEditorSchedule;
+	private final FileChooser fileChooser = new FileChooser();
 
-	private ExecutorService executor = Executors.newFixedThreadPool(1);
+	private final ExecutorService executor = Executors.newFixedThreadPool(1);
 
 	@FXML
 	private void actionLoad(ActionEvent event) throws ConfigurationException {
@@ -94,10 +90,11 @@ public class FXMLController implements Initializable {
 		if (json == null) {
 			return;
 		}
-		wrapper = new ImporterWrapper();
-		configEditorImport = wrapper.getConfigEditor(null, null);
+		configEditorImport = ConfigEditors
+				.buildEditorFromClass(ImporterWrapper.class, null, null)
+				.get();
+		configEditorImport.setConfig(json);
 		replaceEditor();
-		wrapper.configure(json, null, null, null);
 	}
 
 	private void loadScheduler() throws ConfigurationException {
@@ -105,10 +102,11 @@ public class FXMLController implements Initializable {
 		if (json == null) {
 			return;
 		}
-		scheduler = new ImporterScheduler();
-		configEditorSchedule = scheduler.getConfigEditor(null, null);
+		configEditorSchedule = ConfigEditors
+				.buildEditorFromClass(ImporterScheduler.class, null, null)
+				.get();
+		configEditorSchedule.setConfig(json);
 		replaceEditor();
-		scheduler.configure(json, null, null, null);
 	}
 
 	private JsonElement loadFromFile(String title) {
@@ -229,11 +227,13 @@ public class FXMLController implements Initializable {
 
 	@Override
 	public void initialize(URL url, ResourceBundle rb) {
-		wrapper = new ImporterWrapper();
-		configEditorImport = wrapper.getConfigEditor(null, null);
+		configEditorImport = ConfigEditors
+				.buildEditorFromClass(ImporterWrapper.class, null, null)
+				.get();
 
-		scheduler = new ImporterScheduler();
-		configEditorSchedule = scheduler.getConfigEditor(null, null);
+		configEditorSchedule = ConfigEditors
+				.buildEditorFromClass(ImporterScheduler.class, null, null)
+				.get();
 
 		replaceEditor();
 	}

@@ -71,14 +71,21 @@ public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<Sen
 	private boolean deleteDuplicates;
 
 	private ObservationUploader uploader;
-	private Id latestDsId;
-	private Id latestMdsId;
-	private Instant cacheStart;
-	private Map<TimeObject, Observation> cache = new LinkedHashMap<>();
+
+	private final ThreadLocal<ObsCache> cacheHolder = new ThreadLocal<>();
 
 	@Override
 	public void setObservationUploader(ObservationUploader uploader) {
 		this.uploader = uploader;
+	}
+
+	private ObsCache getCache() {
+		ObsCache cache = cacheHolder.get();
+		if (cache == null) {
+			cache = new ObsCache(uploader, deleteDuplicates);
+			cacheHolder.set(cache);
+		}
+		return cache;
 	}
 
 	private boolean resultCompare(Object one, Object two) {
@@ -132,28 +139,13 @@ public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<Sen
 		return false;
 	}
 
-	private void clearCache() {
-		latestDsId = null;
-		latestMdsId = null;
-		cacheStart = null;
-		cache.clear();
-	}
-
 	private BaseDao<Observation> validateCache(Datastream d, MultiDatastream m) {
 		if (cacheObservations) {
 			if (d != null) {
-				Id id = d.getId();
-				if (!id.equals(latestDsId)) {
-					clearCache();
-					latestDsId = id;
-				}
+				getCache().clearIfDifferent(d.getId());
 			}
 			if (m != null) {
-				Id id = m.getId();
-				if (!id.equals(latestMdsId)) {
-					clearCache();
-					latestMdsId = id;
-				}
+				getCache().clearIfDifferent(m.getId());
 			}
 		}
 		if (d != null) {
@@ -165,76 +157,16 @@ public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<Sen
 		throw new IllegalArgumentException("Must pass either a Datastream or multiDatastream.");
 	}
 
-	private static Instant instantFrom(TimeObject time) {
-		return time.isInterval() ? time.getAsInterval().getStart() : time.getAsDateTime().toInstant();
-	}
-
-	private Observation getFromCache(TimeObject checkTime, BaseDao<Observation> observations) throws ServiceFailureException {
-		Instant checkInstant = instantFrom(checkTime);
-		List<Observation> toDelete = null;
-		if (cache.isEmpty()) {
-			EntityList<Observation> list = observations.query()
-					.select("@iot.id", "result", "phenomenonTime")
-					.filter("phenomenonTime ge " + checkInstant.toString())
-					.orderBy("phenomenonTime asc")
-					.top(1000)
-					.list();
-			toDelete = addToCache(list);
-		} else {
-			if (checkInstant.isBefore(cacheStart)) {
-				EntityList<Observation> list = observations.query()
-						.select("@iot.id", "result", "phenomenonTime")
-						.filter("phenomenonTime ge " + checkInstant.toString() + " and phenomenonTime le " + cacheStart)
-						.orderBy("phenomenonTime asc")
-						.top(1000)
-						.list();
-				toDelete = addToCache(list);
-			}
-		}
-		if (!Utils.isNullOrEmpty(toDelete)) {
-			uploader.delete(toDelete, 100);
-		}
-
-		return cache.get(checkTime);
-	}
-
-	private List<Observation> addToCache(EntityList<Observation> list) {
-		List<Observation> toDelete = null;
-		Iterator<Observation> fullIterator = list.fullIterator();
-		while (fullIterator.hasNext()) {
-			Observation obs = fullIterator.next();
-			TimeObject phenomenonTime = obs.getPhenomenonTime();
-			Observation old = cache.put(phenomenonTime, obs);
-			Instant instant = instantFrom(phenomenonTime);
-			if (cacheStart == null || instant.isBefore(cacheStart)) {
-				cacheStart = instant;
-			}
-			if (deleteDuplicates && old != null && !old.getId().equals(obs.getId())) {
-				if (toDelete == null) {
-					toDelete = new ArrayList<>();
-				}
-				toDelete.add(old);
-			}
-		}
-		if (toDelete == null) {
-			return Collections.emptyList();
-		}
-		return toDelete;
-	}
-
 	private Observation getObservation(TimeObject phenTime, BaseDao<Observation> observations) throws ServiceFailureException {
 		if (cacheObservations) {
-			return getFromCache(phenTime, observations);
+			return getCache().getFromCache(phenTime, observations);
 		}
 		return observations.query().select("@iot.id", "result").filter("phenomenonTime eq " + phenTime.toString()).first();
 	}
 
 	private void addToCache(Observation obs) {
 		if (cacheObservations) {
-			cache.put(obs.getPhenomenonTime(), obs);
-			if (cacheStart == null) {
-				cacheStart = instantFrom(obs.getPhenomenonTime());
-			}
+			getCache().put(obs.getPhenomenonTime(), obs);
 		}
 	}
 

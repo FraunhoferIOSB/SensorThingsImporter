@@ -20,12 +20,12 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
+import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.Configurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler.ImporterScheduler;
@@ -47,6 +47,10 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,97 +59,65 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
-public class ImporterWrapper implements Configurable<Object, Object> {
+public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsService, Object> {
 
 	/**
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(ImporterWrapper.class);
-
-	private EditorMap<Map<String, Object>> editor;
-	private EditorSubclass<Object, Object, Importer> editorImporter;
-	private EditorSubclass<SensorThingsService, Object, Validator> editorValidator;
-	private EditorClass<SensorThingsService, Object, ObservationUploader> editorUploader;
-	private EditorInt editorSleepTime;
-	private EditorInt editorMsgInterval;
-	private EditorString editorName;
-
-	private SensorThingsService service;
-	private boolean noAct = false;
-	private Importer importer;
-	private Validator validator;
-	private ObservationUploader uploader;
-
-	private int messageIntervalStart;
-	private boolean doSleep;
-	private long sleepTime;
 	private final LoggingStatus logStatus = new LoggingStatus();
 
+	@ConfigurableField(editor = EditorSubclass.class, optional = false,
+			label = "Importer", description = "The specific importer to use.")
+	@EditorSubclass.EdOptsSubclass(iface = Importer.class)
+	private Importer importer;
+
+	@ConfigurableField(editor = EditorSubclass.class, optional = false,
+			label = "Validator", description = "The validator to use.")
+	@EditorSubclass.EdOptsSubclass(iface = Validator.class)
+	private Validator validator;
+
+	@ConfigurableField(editor = EditorClass.class, optional = false,
+			label = "Uploader", description = "The class to use for uploading the observations to a server.")
+	@EditorClass.EdOptsClass(clazz = ObservationUploader.class)
+	private ObservationUploader uploader;
+
+	@ConfigurableField(editor = EditorInt.class, optional = true,
+			label = "Sleep Time", description = "Sleep for this number of ms after each insert.")
+	@EditorInt.EdOptsInt(dflt = 0)
+	private long sleep;
+
+	@ConfigurableField(editor = EditorInt.class, optional = true,
+			label = "ValidatorThreads", description = "The number of Threads to use for validation.")
+	@EditorInt.EdOptsInt(dflt = 1)
+	private int validatorThreads;
+
+	@ConfigurableField(editor = EditorString.class, optional = false,
+			label = "Name", description = "The name to use in log messages")
+	@EditorString.EdOptsString(dflt = "Work")
+	private String name;
+
+	private boolean noAct = false;
+	private boolean doSleep;
+
 	private long generated = 0;
-	private long validated = 0;
-	private long inserted;
-	private long nextMessage;
+	private AtomicLong validated = new AtomicLong();
 
 	// Don't cache too many observations.
 	private final long maxSend = 100000;
 	private long nextSend = maxSend;
 
-	private String name;
-
 	@Override
-	public void configure(JsonElement config, Object context, Object edtCtx, ConfigEditor<?> configEditor) {
-		try {
-			service = new SensorThingsService();
-			getConfigEditor(service, edtCtx).setConfig(config);
-			importer = editorImporter.getValue();
-			uploader = editorUploader.getValue();
-			validator = editorValidator.getValue();
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+		AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
+		validator.setObservationUploader(uploader);
+		logStatus.setName(name);
 
-			validator.setObservationUploader(uploader);
-			if (!editorName.isDefault()) {
-				name = editorName.getValue();
-				logStatus.setName(name);
-			}
-
-			if (validator == null) {
-				validator = new Validator.ValidatorNull();
-			}
-
-			sleepTime = editorSleepTime.getValue();
-			doSleep = sleepTime > 0;
-			messageIntervalStart = editorMsgInterval.getValue();
-		} catch (ConfigurationException ex) {
-			throw new IllegalStateException(ex);
+		if (validator == null) {
+			validator = new Validator.ValidatorNull();
 		}
-	}
 
-	@Override
-	public EditorMap<Map<String, Object>> getConfigEditor(Object context, Object edtCtx) {
-		if (editor == null) {
-			if (service == null) {
-				service = new SensorThingsService();
-			}
-			editor = new EditorMap<>();
-
-			editorImporter = new EditorSubclass(service, edtCtx, Importer.class, "Importer", "The specific importer to use.", false, "className");
-			editor.addOption("importer", editorImporter, false);
-
-			editorValidator = new EditorSubclass(service, edtCtx, Validator.class, "Validator", "The validator to use.", false, "className");
-			editor.addOption("validator", editorValidator, true);
-
-			editorUploader = new EditorClass(service, edtCtx, ObservationUploader.class, "Uploader", "The class to use for uploading the observations to a server.");
-			editor.addOption("uploader", editorUploader, false);
-
-			editorSleepTime = new EditorInt(0, Integer.MAX_VALUE, 1, 0, "Sleep Time", "Sleep for this number of ms after each insert.");
-			editor.addOption("sleep", editorSleepTime, true);
-
-			editorMsgInterval = new EditorInt(0, Integer.MAX_VALUE, 1, 10000, "Message Interval", "Output a progress message every [interval] records. Defaults to 10000");
-			editor.addOption("msgInterval", editorMsgInterval, true);
-
-			editorName = new EditorString("", 1, "Name", "The name to use in log messages");
-			editor.addOption("name", editorName, true);
-		}
-		return editor;
+		doSleep = sleep > 0;
 	}
 
 	public void setName(String name) {
@@ -157,9 +129,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 
 	private void doImport() {
 		logStatus.setName("⏵" + name);
-		nextMessage = messageIntervalStart;
 		Calendar start = Calendar.getInstance();
-
 		try {
 			// Map of Obs per Ds/MDs
 			Map<Object, List<Observation>> obsPerDs = new HashMap<>();
@@ -182,7 +152,7 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 			}
 
 			validateAndSendObservations(obsPerDs, start);
-			inserted = uploader.sendDataArray();
+			uploader.sendDataArray();
 		} catch (StatusCodeException exc) {
 			LOGGER.error("URL: {}", exc.getUrl());
 			LOGGER.error("Code: {} {}", exc.getStatusCode(), exc.getStatusMessage());
@@ -192,9 +162,10 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 			LOGGER.error("Failed to import: {}", exc.getMessage());
 			LOGGER.debug("Details:", exc);
 		}
-		logStatus.setInsertedCount(inserted);
-		logStatus.setUpdatedCount(Long.valueOf(uploader.getUpdated()));
-		logStatus.setSpeed(getSpeed(start, inserted));
+		logStatus.setInsertedCount(uploader.getInserted());
+		logStatus.setUpdatedCount(uploader.getUpdated());
+		logStatus.setDeletedCount(uploader.getDeleted());
+		logStatus.setSpeed(getSpeed(start, validated.get()));
 		logStatus.setName("⏹" + name);
 	}
 
@@ -205,32 +176,43 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 	}
 
 	private void validateAndSendObservations(Map<Object, List<Observation>> obsPerDs, Calendar start) throws ServiceFailureException, ImportException {
-		for (List<Observation> observations : obsPerDs.values()) {
-			for (Observation observation : observations) {
-				if (validator.isValid(observation)) {
-					validated++;
-					uploader.addObservation(observation);
-					logStatus.setValidatedCount(validated);
-					logStatus.setDeletedCount(uploader.getDeleted());
-				}
-				nextMessage--;
-				if (nextMessage <= 0) {
-					inserted = uploader.sendDataArray();
-					nextMessage = messageIntervalStart;
-					logStatus.setInsertedCount(inserted);
-					logStatus.setUpdatedCount(Long.valueOf(uploader.getUpdated()));
-					logStatus.setSpeed(getSpeed(start, inserted));
-				}
-				maybeSleep();
-			}
+		ExecutorService executor = Executors.newFixedThreadPool(validatorThreads);
+		AtomicLong queued = new AtomicLong();
+		for (final List<Observation> observations : obsPerDs.values()) {
+			logStatus.setQueuedCount(queued.incrementAndGet());
+			executor.submit(() -> {
+				validateAndSend(observations, start);
+				logStatus.setQueuedCount(queued.decrementAndGet());
+				return null;
+			});
+		}
+		executor.shutdown();
+		try {
+			executor.awaitTermination(1, TimeUnit.DAYS);
+		} catch (InterruptedException ex) {
+			LOGGER.error("Interrupted waiting for tasks to finish.");
 		}
 		obsPerDs.clear();
+	}
+
+	private void validateAndSend(List<Observation> observations, Calendar start) throws ServiceFailureException, ImportException {
+		for (Observation observation : observations) {
+			if (validator.isValid(observation)) {
+				uploader.addObservation(observation);
+				logStatus.setValidatedCount(validated.incrementAndGet());
+			}
+			maybeSleep();
+		}
+		logStatus.setDeletedCount(uploader.getDeleted());
+		logStatus.setInsertedCount(uploader.getInserted());
+		logStatus.setUpdatedCount(uploader.getUpdated());
+		logStatus.setSpeed(getSpeed(start, validated.get()));
 	}
 
 	private void maybeSleep() {
 		if (doSleep) {
 			try {
-				Thread.sleep(sleepTime);
+				Thread.sleep(sleep);
 			} catch (InterruptedException ex) {
 				LOGGER.info("Rude wakeup.", ex);
 			}
@@ -258,13 +240,13 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 		ImporterScheduler.STATUS_LOGGER.addLogStatus(logStatus);
 		try {
 			JsonElement json = JsonParser.parseString(config);
-			configure(json, null, null, null);
+			configure(json, new SensorThingsService(), null, null);
 			importer.setVerbose(noAct);
 			importer.setNoAct(noAct);
 			importer.setProgressTracker(tracker);
 			uploader.setNoAct(noAct);
 			doImport();
-		} catch (JsonSyntaxException exc) {
+		} catch (JsonSyntaxException | ConfigurationException exc) {
 			LOGGER.error("Failed to parse {}", config);
 			LOGGER.debug("Failed to parse.", exc);
 		}
@@ -285,15 +267,15 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 
 	private static class LoggingStatus extends ChangingStatusLogger.ChangingStatusDefault {
 
-		public static final String MESSAGE = "{}: Genereated {}, Validated {}, Inserted {}, Updated {}, Deleted {}, {}/s";
+		public static final String MESSAGE = "{}: Read {}, Valid {}, New {}, Updated {}, Deleted {}, Queued {} - {}/s";
 		public final Object[] status;
 
 		public LoggingStatus() {
-			super(MESSAGE, new Object[7]);
+			super(MESSAGE, new Object[8]);
 			status = getCurrentParams();
 			Arrays.setAll(status, (int i) -> Long.valueOf(0));
 			status[0] = "unnamed";
-			status[6] = "0.0";
+			status[7] = "0.0";
 		}
 
 		public LoggingStatus setName(String name) {
@@ -326,8 +308,13 @@ public class ImporterWrapper implements Configurable<Object, Object> {
 			return this;
 		}
 
+		public LoggingStatus setQueuedCount(Long count) {
+			status[6] = count;
+			return this;
+		}
+
 		public LoggingStatus setSpeed(Double speed) {
-			status[6] = String.format("%.1f", speed);
+			status[7] = String.format("%.1f", speed);
 			return this;
 		}
 

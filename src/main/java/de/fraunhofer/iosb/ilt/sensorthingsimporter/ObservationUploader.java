@@ -23,6 +23,7 @@ import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableClass;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthMethod;
@@ -43,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,18 +80,20 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 	@EditorBoolean.EdOptsBool()
 	private boolean useDataArrays;
 
+	@ConfigurableField(editor = EditorInt.class, optional = true,
+			label = "Max Batch", description = "The maximum number of items to send in a batch")
+	@EditorInt.EdOptsInt(dflt = 1_000, min = 0, max = Integer.MAX_VALUE, step = 1)
+	private int maxBatch;
+
 	private SensorThingsService service;
 	private boolean noAct = false;
 
 	private final Map<Entity, DataArrayValue> davMap = new HashMap<>();
 
-	private Entity lastDatastream;
-
-	private DataArrayValue lastDav;
-
-	private long inserted = 0;
-	private long updated = 0;
-	private long deleted = 0;
+	private final AtomicLong inserted = new AtomicLong();
+	private final AtomicLong updated = new AtomicLong();
+	private final AtomicLong deleted = new AtomicLong();
+	private final AtomicLong queued = new AtomicLong();
 
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
@@ -111,24 +115,24 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 	}
 
 	public long getInserted() {
-		return inserted;
+		return inserted.get();
 	}
 
 	public long getUpdated() {
-		return updated;
+		return updated.get();
 	}
 
 	public long getDeleted() {
-		return deleted;
+		return deleted.get();
 	}
 
 	public void addObservation(Observation obs) throws ServiceFailureException {
 		if (obs.getId() != null && !noAct) {
 			service.update(obs);
-			updated++;
+			updated.incrementAndGet();
 		} else if (!useDataArrays && !noAct) {
 			service.create(obs);
-			inserted++;
+			inserted.incrementAndGet();
 		} else if (useDataArrays) {
 			addToDataArray(obs);
 		}
@@ -142,13 +146,18 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 		if (ds == null) {
 			throw new IllegalArgumentException("Observation must have a (Multi)Datastream.");
 		}
-		if (ds != lastDatastream) {
-			findDataArrayValue(ds, o);
+		synchronized (davMap) {
+			findDataArrayValue(ds, o)
+					.addObservation(o);
+			long newqueue = queued.incrementAndGet();
+			if (newqueue >= maxBatch) {
+				sendDataArray();
+			}
+
 		}
-		lastDav.addObservation(o);
 	}
 
-	private void findDataArrayValue(Entity ds, Observation o) {
+	private DataArrayValue findDataArrayValue(Entity ds, Observation o) {
 		DataArrayValue dav = davMap.get(ds);
 		if (dav == null) {
 			if (ds instanceof Datastream) {
@@ -158,33 +167,33 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 			}
 			davMap.put(ds, dav);
 		}
-		lastDav = dav;
-		lastDatastream = ds;
+		return dav;
 	}
 
 	public long sendDataArray() throws ServiceFailureException {
-		if (!noAct && !davMap.isEmpty()) {
-			DataArrayDocument dad = new DataArrayDocument();
-			dad.getValue().addAll(davMap.values());
-			List<String> locations = service.create(dad);
-			long error = locations.stream().filter(
-					location -> location.startsWith("error")
-			).count();
-			if (error > 0) {
-				Optional<String> first = locations.stream().filter(location -> location.startsWith("error")).findFirst();
-				LOGGER.warn("Failed to insert {} Observations. First error: {}", error, first);
+		synchronized (davMap) {
+			if (!noAct && !davMap.isEmpty()) {
+				DataArrayDocument dad = new DataArrayDocument();
+				dad.getValue().addAll(davMap.values());
+				List<String> locations = service.create(dad);
+				long error = locations.stream().filter(
+						location -> location.startsWith("error")
+				).count();
+				if (error > 0) {
+					Optional<String> first = locations.stream().filter(location -> location.startsWith("error")).findFirst();
+					LOGGER.warn("Failed to insert {} Observations. First error: {}", error, first);
+				}
+				long nonError = locations.size() - error;
+				inserted.addAndGet(nonError);
 			}
-			long nonError = locations.size() - error;
-			inserted += nonError;
+			queued.set(0);
+			davMap.clear();
 		}
-		davMap.clear();
-		lastDav = null;
-		lastDatastream = null;
-		return inserted;
+		return inserted.get();
 	}
 
 	public void delete(List<? extends Entity> entities, int threads) throws ServiceFailureException {
-		deleted += entities.size();
+		deleted.addAndGet(entities.size());
 		new FrostUtils(entities.get(0).getService()).delete(entities, 100);
 	}
 

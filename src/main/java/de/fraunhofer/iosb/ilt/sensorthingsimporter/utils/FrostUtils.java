@@ -740,6 +740,10 @@ public final class FrostUtils {
 		return false;
 	}
 
+	public static Instant instantFrom(TimeObject time) {
+		return time.isInterval() ? time.getAsInterval().getStart() : time.getAsDateTime().toInstant();
+	}
+
 	/**
 	 * Creates an Instant from a timestamp. If the timestamp has no timezone
 	 * information, then the given timeZone is used.

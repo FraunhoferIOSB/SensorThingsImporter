@@ -18,7 +18,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-import de.fraunhofer.iosb.ilt.configurable.AbstractConfigurable;
+import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
-public class ImporterScheduler extends AbstractConfigurable<Void, Void> {
+public class ImporterScheduler implements AnnotatedConfigurable<Void, Void> {
 
 	/**
 	 * The logger for this class.
