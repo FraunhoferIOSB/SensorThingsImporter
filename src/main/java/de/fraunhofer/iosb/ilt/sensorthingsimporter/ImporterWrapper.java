@@ -66,6 +66,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(ImporterWrapper.class);
 	private final LoggingStatus logStatus = new LoggingStatus();
+	private static final String NAME_DEFAULT = "Work";
 
 	@ConfigurableField(editor = EditorSubclass.class, optional = false,
 			label = "Importer", description = "The specific importer to use.")
@@ -94,7 +95,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 
 	@ConfigurableField(editor = EditorString.class, optional = false,
 			label = "Name", description = "The name to use in log messages")
-	@EditorString.EdOptsString(dflt = "Work")
+	@EditorString.EdOptsString(dflt = NAME_DEFAULT)
 	private String name;
 
 	private boolean noAct = false;
@@ -121,7 +122,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 	}
 
 	public void setName(String name) {
-		if (Utils.isNullOrEmpty(this.name)) {
+		if (Utils.isNullOrEmpty(this.name) || !NAME_DEFAULT.equals(name)) {
 			this.name = name;
 			logStatus.setName("⏸" + name);
 		}
