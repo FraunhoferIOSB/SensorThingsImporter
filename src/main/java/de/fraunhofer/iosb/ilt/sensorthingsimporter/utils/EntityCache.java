@@ -76,7 +76,7 @@ public class EntityCache<U, T extends Entity<T>> {
 		if (!Utils.isNullOrEmpty(filter)) {
 			query.filter(filter);
 		}
-		EntityList<T> entities = query.top(1000).list();
+		EntityList<T> entities = query.top(10000).orderBy("id asc").list();
 		Iterator<T> it = entities.fullIterator();
 		int count = 0;
 		while (it.hasNext()) {
