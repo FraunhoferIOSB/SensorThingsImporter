@@ -88,7 +88,12 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 	private SensorThingsService service;
 	private boolean noAct = false;
 
-	private final Map<Entity, DataArrayValue> davMap = new HashMap<>();
+	private final ThreadLocal<Map<Entity, DataArrayValue>> davMaps = new ThreadLocal<>() {
+		@Override
+		protected Map<Entity, DataArrayValue> initialValue() {
+			return new HashMap<>();
+		}
+	};
 
 	private final AtomicLong inserted = new AtomicLong();
 	private final AtomicLong updated = new AtomicLong();
@@ -146,18 +151,16 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 		if (ds == null) {
 			throw new IllegalArgumentException("Observation must have a (Multi)Datastream.");
 		}
-		synchronized (davMap) {
-			findDataArrayValue(ds, o)
-					.addObservation(o);
-			long newqueue = queued.incrementAndGet();
-			if (newqueue >= maxBatch) {
-				sendDataArray();
-			}
-
+		findDataArrayValue(ds, o)
+				.addObservation(o);
+		long newqueue = queued.incrementAndGet();
+		if (newqueue >= maxBatch) {
+			sendDataArray();
 		}
 	}
 
 	private DataArrayValue findDataArrayValue(Entity ds, Observation o) {
+		final Map<Entity, DataArrayValue> davMap = davMaps.get();
 		DataArrayValue dav = davMap.get(ds);
 		if (dav == null) {
 			if (ds instanceof Datastream) {
@@ -171,24 +174,23 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 	}
 
 	public long sendDataArray() throws ServiceFailureException {
-		synchronized (davMap) {
-			if (!noAct && !davMap.isEmpty()) {
-				DataArrayDocument dad = new DataArrayDocument();
-				dad.getValue().addAll(davMap.values());
-				List<String> locations = service.create(dad);
-				long error = locations.stream().filter(
-						location -> location.startsWith("error")
-				).count();
-				if (error > 0) {
-					Optional<String> first = locations.stream().filter(location -> location.startsWith("error")).findFirst();
-					LOGGER.warn("Failed to insert {} Observations. First error: {}", error, first);
-				}
-				long nonError = locations.size() - error;
-				inserted.addAndGet(nonError);
+		final Map<Entity, DataArrayValue> davMap = davMaps.get();
+		if (!noAct && !davMap.isEmpty()) {
+			DataArrayDocument dad = new DataArrayDocument();
+			dad.getValue().addAll(davMap.values());
+			List<String> locations = service.create(dad);
+			long error = locations.stream().filter(
+					location -> location.startsWith("error")
+			).count();
+			if (error > 0) {
+				Optional<String> first = locations.stream().filter(location -> location.startsWith("error")).findFirst();
+				LOGGER.warn("Failed to insert {} Observations. First error: {}", error, first);
 			}
-			queued.set(0);
-			davMap.clear();
+			long nonError = locations.size() - error;
+			inserted.addAndGet(nonError);
 		}
+		queued.set(0);
+		davMap.clear();
 		return inserted.get();
 	}
 

@@ -45,12 +45,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Level;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -153,13 +158,12 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 			}
 
 			validateAndSendObservations(obsPerDs, start);
-			uploader.sendDataArray();
 		} catch (StatusCodeException exc) {
 			LOGGER.error("URL: {}", exc.getUrl());
 			LOGGER.error("Code: {} {}", exc.getStatusCode(), exc.getStatusMessage());
 			LOGGER.error("Data: {}", exc.getReturnedContent());
 			LOGGER.debug("Failed to import.", exc);
-		} catch (ImportException | ServiceFailureException | RuntimeException exc) {
+		} catch (ServiceFailureException | RuntimeException exc) {
 			LOGGER.error("Failed to import: {}", exc.getMessage());
 			LOGGER.debug("Details:", exc);
 		}
@@ -176,31 +180,73 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 		return inserted / seconds;
 	}
 
-	private void validateAndSendObservations(Map<Object, List<Observation>> obsPerDs, Calendar start) throws ServiceFailureException, ImportException {
-		ExecutorService executor = Executors.newFixedThreadPool(validatorThreads);
-		AtomicLong queued = new AtomicLong();
+	private void validateAndSendObservations(Map<Object, List<Observation>> obsPerDs, Calendar start) {
+		final BlockingQueue<List<Observation>> queuePerDs = new LinkedBlockingQueue<>();
+		final AtomicLong active = new AtomicLong();
+		final AtomicLong queued = new AtomicLong();
 		for (final List<Observation> observations : obsPerDs.values()) {
 			logStatus.setQueuedCount(queued.incrementAndGet());
-			executor.submit(() -> {
-				validateAndSend(observations, start);
-				logStatus.setQueuedCount(queued.decrementAndGet());
-				return null;
-			});
+			queuePerDs.add(observations);
 		}
-		executor.shutdown();
-		try {
-			executor.awaitTermination(1, TimeUnit.DAYS);
-		} catch (InterruptedException ex) {
-			LOGGER.error("Interrupted waiting for tasks to finish.");
+		final List<Thread> validators = new ArrayList<>(validatorThreads);
+		for (int i = 0; i < validatorThreads; i++) {
+			final Thread thread = new Thread(() -> {
+				List<Observation> poll;
+				while ((poll = queuePerDs.poll()) != null) {
+					validateAndSend(poll, start);
+					logStatus.setQueuedCount(queued.decrementAndGet());
+				}
+				finaliseSending();
+				logStatus.setActive(active.decrementAndGet());
+			});
+			validators.add(thread);
+			thread.start();
+			logStatus.setActive(active.incrementAndGet());
+		}
+		for (Iterator<Thread> it = validators.iterator(); it.hasNext();) {
+			Thread thread = it.next();
+			try {
+				thread.join();
+			} catch (InterruptedException ex) {
+				LOGGER.error("Interrupted waiting for worker thread!");
+			}
+			it.remove();
 		}
 		obsPerDs.clear();
 	}
 
-	private void validateAndSend(List<Observation> observations, Calendar start) throws ServiceFailureException, ImportException {
+	private void finaliseSending() {
+		try {
+			uploader.sendDataArray();
+		} catch (StatusCodeException exc) {
+			LOGGER.error("URL: {}", exc.getUrl());
+			LOGGER.error("Code: {} {}", exc.getStatusCode(), exc.getStatusMessage());
+			LOGGER.error("Data: {}", exc.getReturnedContent());
+			LOGGER.debug("Failed to upload.", exc);
+		} catch (ServiceFailureException exc) {
+			LOGGER.error("Failed to upload: {}", exc.getMessage());
+			LOGGER.debug("Details:", exc);
+		}
+	}
+
+	private void validateAndSend(List<Observation> observations, Calendar start) {
 		for (Observation observation : observations) {
-			if (validator.isValid(observation)) {
-				uploader.addObservation(observation);
-				logStatus.setValidatedCount(validated.incrementAndGet());
+			try {
+				if (validator.isValid(observation)) {
+					uploader.addObservation(observation);
+					logStatus.setValidatedCount(validated.incrementAndGet());
+				}
+			} catch (ImportException exc) {
+				LOGGER.error("Failed to validate Observation: {}", exc.getMessage());
+				LOGGER.debug("Exception.", exc);
+			} catch (StatusCodeException exc) {
+				LOGGER.error("URL: {}", exc.getUrl());
+				LOGGER.error("Code: {} {}", exc.getStatusCode(), exc.getStatusMessage());
+				LOGGER.error("Data: {}", exc.getReturnedContent());
+				LOGGER.debug("Failed to upload.", exc);
+			} catch (ServiceFailureException exc) {
+				LOGGER.error("Failed to upload: {}", exc.getMessage());
+				LOGGER.debug("Details:", exc);
 			}
 			maybeSleep();
 		}
@@ -268,15 +314,15 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 
 	private static class LoggingStatus extends ChangingStatusLogger.ChangingStatusDefault {
 
-		public static final String MESSAGE = "{}: Read {}, Valid {}, New {}, Updated {}, Deleted {}, Queued {} - {}/s";
+		public static final String MESSAGE = "{}: Rd {}, Vld {}, New {}, Updt {}, Dlt {}, Queue {}, Thrds {}, - {}/s";
 		public final Object[] status;
 
 		public LoggingStatus() {
-			super(MESSAGE, new Object[8]);
+			super(MESSAGE, new Object[9]);
 			status = getCurrentParams();
 			Arrays.setAll(status, (int i) -> Long.valueOf(0));
 			status[0] = "unnamed";
-			status[7] = "0.0";
+			status[8] = "0.0";
 		}
 
 		public LoggingStatus setName(String name) {
@@ -314,8 +360,13 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 			return this;
 		}
 
+		public LoggingStatus setActive(Long count) {
+			status[7] = count;
+			return this;
+		}
+
 		public LoggingStatus setSpeed(Double speed) {
-			status[7] = String.format("%.1f", speed);
+			status[8] = String.format("%.1f", speed);
 			return this;
 		}
 

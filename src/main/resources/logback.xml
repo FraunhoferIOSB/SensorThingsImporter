@@ -2,6 +2,7 @@
 <configuration>
     <variable name="FROST_LL" value="${FROST_LL:-INFO}" />
     <variable name="FROST_LL_DSMAPPER" value="${FROST_LL_DSMAPPER:-INFO}" />
+    <variable name="FROST_LL_IMPORTER" value="${FROST_LL_IMPORTER:-INFO}" />
     <variable name="FROST_LL_REFLECTIONS" value="${FROST_LL_REFLECTIONS:-ERROR}" />
     <variable name="FROST_LL_STA" value="${FROST_LL_STA:-INFO}" />
     <variable name="FROST_LL_URLUTILS" value="${FROST_LL_URLUTILS:-WARN}" />
