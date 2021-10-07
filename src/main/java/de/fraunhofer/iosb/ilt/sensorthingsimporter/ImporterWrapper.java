@@ -193,8 +193,8 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 			final Thread thread = new Thread(() -> {
 				List<Observation> poll;
 				while ((poll = queuePerDs.poll()) != null) {
-					validateAndSend(poll, start);
 					logStatus.setQueuedCount(queued.decrementAndGet());
+					validateAndSend(poll, start);
 				}
 				finaliseSending();
 				logStatus.setActive(active.decrementAndGet());
