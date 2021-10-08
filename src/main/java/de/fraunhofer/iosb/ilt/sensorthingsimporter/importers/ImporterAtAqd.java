@@ -43,6 +43,7 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.sta.StatusCodeException;
 import de.fraunhofer.iosb.ilt.sta.Utils;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.FeatureOfInterest;
@@ -261,6 +262,8 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 				tracker.updateProgress(++progress, total);
 			}
 			return new ObservationListIter(foiCache, datastreamCache, observationsUrl, startTime);
+		} catch (StatusCodeException ex) {
+			throw new IllegalStateException("Failed to load cache: " + ex.getStatusCode() + " from " + ex.getUrl(), ex);
 		} catch (ImportException | ServiceFailureException ex) {
 			throw new IllegalStateException("Failed to import.", ex);
 		}
@@ -301,7 +304,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		final int foiCount = foiCache.load(
 				service.featuresOfInterest(),
 				filter,
-				"id,name,description,encodingtype,feature,properties",
+				"id,name,description,encodingType,feature,properties",
 				"");
 		LOGGER.debug("Loaded {} FeaturesOfInterest", foiCount);
 
