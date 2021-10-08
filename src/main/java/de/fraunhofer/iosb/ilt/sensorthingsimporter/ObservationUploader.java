@@ -38,12 +38,15 @@ import de.fraunhofer.iosb.ilt.sta.model.ext.DataArrayValue;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,6 +97,7 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 			return new HashMap<>();
 		}
 	};
+	private final Set<Entity> activeDatastreams = new ConcurrentSkipListSet<>(new EntityComparator());
 
 	private final AtomicLong inserted = new AtomicLong();
 	private final AtomicLong updated = new AtomicLong();
@@ -165,8 +169,10 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 		if (dav == null) {
 			if (ds instanceof Datastream) {
 				dav = new DataArrayValue((Datastream) ds, getDefinedProperties(o));
+				activeDatastreams.add(ds);
 			} else {
 				dav = new DataArrayValue((MultiDatastream) ds, getDefinedProperties(o));
+				activeDatastreams.add(ds);
 			}
 			davMap.put(ds, dav);
 		}
@@ -175,6 +181,7 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 
 	public long sendDataArray() throws ServiceFailureException {
 		final Map<Entity, DataArrayValue> davMap = davMaps.get();
+		Set<Entity> sentDatastreams = davMap.keySet();
 		if (!noAct && !davMap.isEmpty()) {
 			DataArrayDocument dad = new DataArrayDocument();
 			dad.getValue().addAll(davMap.values());
@@ -190,6 +197,9 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 			inserted.addAndGet(nonError);
 		}
 		queued.set(0);
+		if (!sentDatastreams.isEmpty() && !activeDatastreams.removeAll(sentDatastreams)) {
+			LOGGER.error("Datastream not registered!");
+		}
 		davMap.clear();
 		return inserted.get();
 	}
@@ -197,6 +207,18 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 	public void delete(List<? extends Entity> entities, int threads) throws ServiceFailureException {
 		deleted.addAndGet(entities.size());
 		new FrostUtils(entities.get(0).getService()).delete(entities, 100);
+	}
+
+	/**
+	 * Check if there are Observations being cached, but not sent, for the given
+	 * (Multi)Datastream.
+	 *
+	 * @param entity The Datastream or MultiDatastream to check for.
+	 * @return true if any Thread currently holds Observations for the given
+	 * (Multi)Datastream.
+	 */
+	public boolean isActive(Entity entity) {
+		return activeDatastreams.contains(entity);
 	}
 
 	private Set<DataArrayValue.Property> getDefinedProperties(Observation o) {
@@ -218,5 +240,20 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 			value.add(DataArrayValue.Property.ValidTime);
 		}
 		return value;
+	}
+
+	public static final class EntityComparator implements Comparator<Entity> {
+
+		public EntityComparator() {
+		}
+
+		@Override
+		public int compare(Entity o1, Entity o2) {
+			int ids = o1.getId().compareTo(o2.getId());
+			if (ids != 0) {
+				return ids;
+			}
+			return o1.getType().compareTo(o2.getType());
+		}
 	}
 }

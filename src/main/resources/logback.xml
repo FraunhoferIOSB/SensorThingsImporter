@@ -35,6 +35,7 @@
 	<logger name="de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter" level="${FROST_LL_DSMAPPER}"/>
 	<logger name="de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils" level="${FROST_LL_URLUTILS}"/>
 	<logger name="de.fraunhofer.iosb.ilt.sensorthingsimporter.validator" level="${FROST_LL_VALIDATOR}"/>
+	<logger name="de.fraunhofer.iosb.ilt.sensorthingsimporter" level="${FROST_LL_IMPORTER}"/>
 	<logger name="de.fraunhofer.iosb.ilt.sta" level="${FROST_LL_STA}"/>
 	<logger name="org.reflections8.Reflections" level="${FROST_LL_REFLECTIONS}"/>
 

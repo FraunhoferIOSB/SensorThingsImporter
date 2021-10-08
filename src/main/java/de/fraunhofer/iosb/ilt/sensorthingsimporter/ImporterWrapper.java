@@ -35,6 +35,7 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.Validator;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.StatusCodeException;
 import de.fraunhofer.iosb.ilt.sta.Utils;
+import de.fraunhofer.iosb.ilt.sta.model.Entity;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.File;
@@ -48,13 +49,19 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -70,6 +77,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(ImporterWrapper.class);
+	private static final long MAX_QUEUE_LOCK_SECONDS = 60;
 	private final LoggingStatus logStatus = new LoggingStatus();
 	private static final String NAME_DEFAULT = "Work";
 
@@ -98,6 +106,11 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 	@EditorInt.EdOptsInt(dflt = 1)
 	private int validatorThreads;
 
+	@ConfigurableField(editor = EditorInt.class, optional = true,
+			label = "ValidatorQueue", description = "The number of Datastreams that can be queued for validation.")
+	@EditorInt.EdOptsInt(dflt = 10)
+	private int validatorQueueSize;
+
 	@ConfigurableField(editor = EditorString.class, optional = false,
 			label = "Name", description = "The name to use in log messages")
 	@EditorString.EdOptsString(dflt = NAME_DEFAULT)
@@ -107,7 +120,15 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 	private boolean doSleep;
 
 	private long generated = 0;
-	private AtomicLong validated = new AtomicLong();
+	private final AtomicLong validated = new AtomicLong();
+	private final AtomicLong active = new AtomicLong();
+	private final AtomicLong queued = new AtomicLong();
+
+	private LinkedBlockingQueue<ObservationList> queuePerDs;
+	private final Lock queueLock = new ReentrantLock();
+	private final Condition workDone = queueLock.newCondition();
+	private final Set<Entity> activeDatastreams = new ConcurrentSkipListSet<>(new ObservationUploader.EntityComparator());
+	private final List<ValidatorRunner> validators = new ArrayList<>();
 
 	// Don't cache too many observations.
 	private final long maxSend = 100000;
@@ -124,6 +145,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 		}
 
 		doSleep = sleep > 0;
+		queuePerDs = new LinkedBlockingQueue<>(validatorQueueSize);
 	}
 
 	public void setName(String name) {
@@ -136,28 +158,31 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 	private void doImport() {
 		logStatus.setName("⏵" + name);
 		Calendar start = Calendar.getInstance();
+		startValidatorThreads(start);
 		try {
 			// Map of Obs per Ds/MDs
-			Map<Object, List<Observation>> obsPerDs = new HashMap<>();
+			Map<Entity, ObservationList> obsPerDs = new HashMap<>();
 
 			for (List<Observation> observations : importer) {
 				for (Observation observation : observations) {
-					Object key = observation.getDatastream();
+					Entity key = observation.getDatastream();
 					if (key == null) {
 						key = observation.getMultiDatastream();
 					}
-					List<Observation> obsList = obsPerDs.computeIfAbsent(key, t -> new ArrayList<>());
+					ObservationList obsList = obsPerDs.computeIfAbsent(key, t -> new ObservationList(t));
 					obsList.add(observation);
 					logStatus.setGeneratedCount(++generated);
 					nextSend--;
 				}
 				if (nextSend <= 0) {
-					validateAndSendObservations(obsPerDs, start);
+					queueObservationsForSending(obsPerDs, start);
 					nextSend = maxSend;
 				}
 			}
 
-			validateAndSendObservations(obsPerDs, start);
+			queueObservationsForSending(obsPerDs, start);
+
+			waitForValidatorThreads();
 		} catch (StatusCodeException exc) {
 			LOGGER.error("URL: {}", exc.getUrl());
 			LOGGER.error("Code: {} {}", exc.getStatusCode(), exc.getStatusMessage());
@@ -180,39 +205,72 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 		return inserted / seconds;
 	}
 
-	private void validateAndSendObservations(Map<Object, List<Observation>> obsPerDs, Calendar start) {
-		final BlockingQueue<List<Observation>> queuePerDs = new LinkedBlockingQueue<>();
-		final AtomicLong active = new AtomicLong();
-		final AtomicLong queued = new AtomicLong();
-		for (final List<Observation> observations : obsPerDs.values()) {
-			logStatus.setQueuedCount(queued.incrementAndGet());
-			queuePerDs.add(observations);
+	private void sleepWhileQueueing() {
+		LOGGER.debug("Sleeping while Queueing Observations...");
+		queueLock.lock();
+		try {
+			workDone.await(MAX_QUEUE_LOCK_SECONDS, TimeUnit.SECONDS);
+		} catch (InterruptedException ex) {
+			// It's Fine
+		} finally {
+			queueLock.unlock();
 		}
-		final List<Thread> validators = new ArrayList<>(validatorThreads);
-		for (int i = 0; i < validatorThreads; i++) {
-			final Thread thread = new Thread(() -> {
-				List<Observation> poll;
-				while ((poll = queuePerDs.poll()) != null) {
-					logStatus.setQueuedCount(queued.decrementAndGet());
-					validateAndSend(poll, start);
+		LOGGER.debug("Sleeping while Queueing Observations Done.");
+	}
+
+	private void queueObservationsForSending(Map<Entity, ObservationList> obsPerDs, Calendar start) {
+		LOGGER.debug("Queueing Observations for {} Datastreams.", obsPerDs.size());
+		while (!obsPerDs.isEmpty()) {
+			boolean shouldSleep = false;
+			for (Iterator<Map.Entry<Entity, ObservationList>> it = obsPerDs.entrySet().iterator(); it.hasNext();) {
+				Map.Entry<Entity, ObservationList> entry = it.next();
+				Entity key = entry.getKey();
+				if (activeDatastreams.contains(key) || uploader.isActive(key)) {
+					shouldSleep = true;
+				} else {
+					ObservationList observations = entry.getValue();
+					activeDatastreams.add(key);
+					logStatus.setQueuedCount(queued.incrementAndGet());
+					try {
+						queuePerDs.put(observations);
+					} catch (InterruptedException ex) {
+						LOGGER.error("Interupted while queuing Observations!", ex);
+					}
+					it.remove();
 				}
-				finaliseSending();
-				logStatus.setActive(active.decrementAndGet());
-			});
-			validators.add(thread);
-			thread.start();
-			logStatus.setActive(active.incrementAndGet());
+			}
+			if (shouldSleep) {
+				sleepWhileQueueing();
+			}
 		}
-		for (Iterator<Thread> it = validators.iterator(); it.hasNext();) {
-			Thread thread = it.next();
+	}
+
+	private void startValidatorThreads(Calendar start) {
+		LOGGER.debug("Starting Validators...");
+		for (int i = 0; i < validatorThreads; i++) {
+			final ValidatorRunner validatorRunner = new ValidatorRunner(queuePerDs, start);
+			final Thread thread = new Thread(validatorRunner);
+			validators.add(validatorRunner);
+			thread.start();
+		}
+		LOGGER.debug("Starting Validators Done.");
+	}
+
+	private void waitForValidatorThreads() {
+		LOGGER.debug("Notifying Validators...");
+		for (ValidatorRunner runner : validators) {
+			runner.finishWork();
+		}
+		LOGGER.debug("Waiting for Validators...");
+		for (ValidatorRunner runner : validators) {
 			try {
-				thread.join();
+				runner.waitForWork();
 			} catch (InterruptedException ex) {
 				LOGGER.error("Interrupted waiting for worker thread!");
 			}
-			it.remove();
 		}
-		obsPerDs.clear();
+		validators.clear();
+		LOGGER.debug("Waiting for Validators Done.");
 	}
 
 	private void finaliseSending() {
@@ -298,6 +356,88 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 			LOGGER.debug("Failed to parse.", exc);
 		}
 		ImporterScheduler.STATUS_LOGGER.removeLogStatus(logStatus);
+	}
+
+	private class ValidatorRunner implements Runnable {
+
+		private final Calendar start;
+		private final BlockingQueue<ObservationList> queuePerDs;
+		private final AtomicBoolean idle = new AtomicBoolean(true);
+		private boolean workDone = false;
+		private Thread currentThread;
+
+		public ValidatorRunner(BlockingQueue<ObservationList> queuePerDs, Calendar start) {
+			this.queuePerDs = queuePerDs;
+			this.start = start;
+		}
+
+		public void finishWork() {
+			this.workDone = true;
+			if (idle.get()) {
+				currentThread.interrupt();
+			}
+		}
+
+		public void waitForWork() throws InterruptedException {
+			this.workDone = true;
+			if (idle.get()) {
+				currentThread.interrupt();
+			}
+			currentThread.join();
+		}
+
+		public boolean isIdle() {
+			return idle.get();
+		}
+
+		@Override
+		public void run() {
+			currentThread = Thread.currentThread();
+			ObservationList list = null;
+			while (!workDone) {
+				try {
+					list = queuePerDs.poll(1, TimeUnit.MINUTES);
+				} catch (InterruptedException ex) {
+					// Rude wakeup.
+				}
+				idle.set(false);
+				logStatus.setActive(active.incrementAndGet());
+				workOnList(list);
+				// Keep working untill queue empty, avoid setting idle
+				while ((list = queuePerDs.poll()) != null) {
+					workOnList(list);
+				}
+				finaliseSending();
+				logStatus.setActive(active.decrementAndGet());
+				idle.set(true);
+			}
+		}
+
+		private void workOnList(ObservationList observations) {
+			if (observations == null) {
+				return;
+			}
+			logStatus.setQueuedCount(queued.decrementAndGet());
+			validateAndSend(observations.observations, start);
+			activeDatastreams.remove(observations.ds);
+		}
+
+	}
+
+	private class ObservationList {
+
+		public final Entity ds;
+		public final List<Observation> observations;
+
+		public ObservationList(Entity ds) {
+			this.ds = ds;
+			this.observations = new ArrayList<>();
+		}
+
+		public void add(Observation o) {
+			observations.add(o);
+		}
+
 	}
 
 	public static void importConfig(String config, boolean noAct, ProgressTracker tracker) {
