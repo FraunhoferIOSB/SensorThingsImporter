@@ -297,7 +297,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
 		final int sensorCount = sensorCache.load(
 				service.sensors(),
 				filter,
-				"id,name,description,encodingtype,metadata,properties",
+				"id,name,description,encodingType,metadata,properties",
 				"");
 		LOGGER.debug("Loaded {} Sensors", sensorCount);
 
