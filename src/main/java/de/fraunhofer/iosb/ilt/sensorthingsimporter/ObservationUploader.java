@@ -206,7 +206,7 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
 
 	public void delete(List<? extends Entity> entities, int threads) throws ServiceFailureException {
 		deleted.addAndGet(entities.size());
-		new FrostUtils(entities.get(0).getService()).delete(entities, 100);
+		new FrostUtils(entities.get(0).getService()).delete(entities, threads);
 	}
 
 	/**

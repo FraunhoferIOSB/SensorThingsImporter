@@ -35,6 +35,7 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.slf4j.LoggerFactory;
 
@@ -77,18 +78,14 @@ public class AuthBasic implements AnnotatedConfigurable<Void, Void>, AuthMethod 
 					new AuthScope(url.getHost(), url.getPort()),
 					new UsernamePasswordCredentials(username, password));
 
-			HttpClientBuilder clientBuilder = HttpClients.custom()
-					.useSystemProperties()
+			HttpClientBuilder clientBuilder = service.getClientBuilder()
 					.setDefaultCredentialsProvider(credsProvider);
 
 			if (ignoreSslErrors) {
 				SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(new SSLContextBuilder().loadTrustMaterial((X509Certificate[] chain, String authType) -> true).build());
 				clientBuilder.setSSLSocketFactory(sslsf);
 			}
-
-			CloseableHttpClient httpclient = clientBuilder.build();
-
-			service.setHttpClient(httpclient);
+			service.rebuildHttpClient();
 		} catch (NoSuchAlgorithmException | KeyManagementException | KeyStoreException ex) {
 			LOGGER.error("Failed to initialise basic auth.", ex);
 		}

@@ -101,7 +101,7 @@ class ObsCache {
 			}
 		}
 		if (!Utils.isNullOrEmpty(toDelete)) {
-			uploader.delete(toDelete, 100);
+			uploader.delete(toDelete, 10);
 		}
 		return cache.get(checkTime);
 	}

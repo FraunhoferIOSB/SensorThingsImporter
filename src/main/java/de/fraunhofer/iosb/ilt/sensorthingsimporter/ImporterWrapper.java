@@ -50,11 +50,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -62,8 +59,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
 import org.apache.commons.io.FileUtils;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,7 +134,15 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
 		AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
+
+		PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
+		cm.setDefaultMaxPerRoute(100);
+		cm.setMaxTotal(200);
+		context.getClientBuilder().setConnectionManager(cm);
+		context.rebuildHttpClient();
+
 		validator.setObservationUploader(uploader);
+
 		logStatus.setName(name);
 
 		if (validator == null) {
@@ -356,6 +361,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 			LOGGER.debug("Failed to parse.", exc);
 		}
 		ImporterScheduler.STATUS_LOGGER.removeLogStatus(logStatus);
+
 	}
 
 	private class ValidatorRunner implements Runnable {
@@ -450,6 +456,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 
 		ImporterWrapper wrapper = new ImporterWrapper();
 		wrapper.doImport(options);
+
 	}
 
 	private static class LoggingStatus extends ChangingStatusLogger.ChangingStatusDefault {

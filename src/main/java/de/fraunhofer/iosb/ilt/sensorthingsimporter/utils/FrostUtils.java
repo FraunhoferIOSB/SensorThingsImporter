@@ -158,7 +158,7 @@ public final class FrostUtils {
 	}
 
 	public void delete(List<? extends Entity> entities, int threads) throws ServiceFailureException {
-		if (threads == 0) {
+		if (threads <= 1) {
 			for (Entity entity : entities) {
 				service.delete(entity);
 			}
