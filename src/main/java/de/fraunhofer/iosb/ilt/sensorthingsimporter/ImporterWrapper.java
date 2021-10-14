@@ -164,44 +164,55 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 		logStatus.setName("⏵" + name);
 		Calendar start = Calendar.getInstance();
 		startValidatorThreads(start);
+		// Map of Obs per Ds/MDs
+		Map<Entity, ObservationList> obsPerDs = new HashMap<>();
+
 		try {
-			// Map of Obs per Ds/MDs
-			Map<Entity, ObservationList> obsPerDs = new HashMap<>();
-
 			for (List<Observation> observations : importer) {
-				for (Observation observation : observations) {
-					Entity key = observation.getDatastream();
-					if (key == null) {
-						key = observation.getMultiDatastream();
-					}
-					ObservationList obsList = obsPerDs.computeIfAbsent(key, t -> new ObservationList(t));
-					obsList.add(observation);
-					logStatus.setGeneratedCount(++generated);
-					nextSend--;
-				}
-				if (nextSend <= 0) {
-					queueObservationsForSending(obsPerDs, start);
-					nextSend = maxSend;
-				}
+				queueObservationsForValidation(observations, obsPerDs, start);
 			}
-
-			queueObservationsForSending(obsPerDs, start);
-
-			waitForValidatorThreads();
-		} catch (StatusCodeException exc) {
-			LOGGER.error("URL: {}", exc.getUrl());
-			LOGGER.error("Code: {} {}", exc.getStatusCode(), exc.getStatusMessage());
-			LOGGER.error("Data: {}", exc.getReturnedContent());
-			LOGGER.debug("Failed to import.", exc);
-		} catch (ServiceFailureException | RuntimeException exc) {
+		} catch (RuntimeException exc) {
 			LOGGER.error("Failed to import: {}", exc.getMessage());
 			LOGGER.debug("Details:", exc);
 		}
+
+		queueObservationsForSending(obsPerDs, start);
+
+		waitForValidatorThreads();
+
 		logStatus.setInsertedCount(uploader.getInserted());
 		logStatus.setUpdatedCount(uploader.getUpdated());
 		logStatus.setDeletedCount(uploader.getDeleted());
 		logStatus.setSpeed(getSpeed(start, validated.get()));
 		logStatus.setName("⏹" + name);
+	}
+
+	private void queueObservationsForValidation(List<Observation> observations, Map<Entity, ObservationList> obsPerDs, Calendar start) {
+		for (Observation observation : observations) {
+			try {
+				Entity key = observation.getDatastream();
+				if (key == null) {
+					key = observation.getMultiDatastream();
+				}
+
+				ObservationList obsList = obsPerDs.computeIfAbsent(key, t -> new ObservationList(t));
+				obsList.add(observation);
+				logStatus.setGeneratedCount(++generated);
+				nextSend--;
+			} catch (StatusCodeException exc) {
+				LOGGER.error("URL: {}", exc.getUrl());
+				LOGGER.error("Code: {} {}", exc.getStatusCode(), exc.getStatusMessage());
+				LOGGER.error("Data: {}", exc.getReturnedContent());
+				LOGGER.debug("Failed to import.", exc);
+			} catch (ServiceFailureException | RuntimeException exc) {
+				LOGGER.error("Failed to import: {}", exc.getMessage());
+				LOGGER.debug("Details:", exc);
+			}
+		}
+		if (nextSend <= 0) {
+			queueObservationsForSending(obsPerDs, start);
+			nextSend = maxSend;
+		}
 	}
 
 	private double getSpeed(Calendar since, long inserted) {

@@ -71,7 +71,6 @@ public class AuthBasic implements AnnotatedConfigurable<Void, Void>, AuthMethod 
 	@Override
 	public void setAuth(SensorThingsService service) {
 		try {
-
 			CredentialsProvider credsProvider = new BasicCredentialsProvider();
 			URL url = service.getEndpoint();
 			credsProvider.setCredentials(
@@ -85,6 +84,7 @@ public class AuthBasic implements AnnotatedConfigurable<Void, Void>, AuthMethod 
 				SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(new SSLContextBuilder().loadTrustMaterial((X509Certificate[] chain, String authType) -> true).build());
 				clientBuilder.setSSLSocketFactory(sslsf);
 			}
+
 			service.rebuildHttpClient();
 		} catch (NoSuchAlgorithmException | KeyManagementException | KeyStoreException ex) {
 			LOGGER.error("Failed to initialise basic auth.", ex);
