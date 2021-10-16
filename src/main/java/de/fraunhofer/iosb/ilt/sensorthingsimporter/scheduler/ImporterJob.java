@@ -19,8 +19,13 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImporterWrapper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options;
 import de.fraunhofer.iosb.ilt.sta.Utils;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import org.apache.commons.io.FileUtils;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
@@ -67,8 +72,16 @@ public class ImporterJob implements Job {
 
 	private void executeShellScript(String importerFileName) throws IOException {
 		LOGGER.info("Starting {}", importerFileName);
-		ProcessBuilder pb = new ProcessBuilder(importerFileName);
-		pb.start();
+		Process process = new ProcessBuilder(importerFileName)
+				.redirectErrorStream(true)
+				.start();
+		CompletableFuture<String> outputFuture = readInputStream(process.getInputStream());
+		try {
+			process.onExit().get();
+			LOGGER.info("Script output:\n{}", outputFuture.get());
+		} catch (InterruptedException | ExecutionException ex) {
+			LOGGER.error("Exception waiting for script.", ex);
+		}
 	}
 
 	private void executeImport(String importerFileName, boolean noAct) throws IOException {
@@ -91,6 +104,21 @@ public class ImporterJob implements Job {
 		}
 		LOGGER.error("Could not load configuration from {}. Not a file, nor an environment variable.", fileName);
 		return null;
+	}
+
+	public static CompletableFuture<String> readInputStream(InputStream is) {
+		return CompletableFuture.supplyAsync(() -> {
+			try (InputStreamReader isr = new InputStreamReader(is); BufferedReader br = new BufferedReader(isr)) {
+				StringBuilder result = new StringBuilder();
+				String inputLine;
+				while ((inputLine = br.readLine()) != null) {
+					result.append(inputLine).append(System.lineSeparator());
+				}
+				return result.toString();
+			} catch (Throwable e) {
+				throw new RuntimeException("Exception reading string.", e);
+			}
+		});
 	}
 
 }
