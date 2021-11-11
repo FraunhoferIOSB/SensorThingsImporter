@@ -123,7 +123,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 
 	private LinkedBlockingQueue<ObservationList> queuePerDs;
 	private final Lock queueLock = new ReentrantLock();
-	private final Condition workDone = queueLock.newCondition();
+	private final Condition cWorkDone = queueLock.newCondition();
 	private final Set<Entity> activeDatastreams = new ConcurrentSkipListSet<>(new ObservationUploader.EntityComparator());
 	private final List<ValidatorRunner> validators = new ArrayList<>();
 
@@ -225,7 +225,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 		LOGGER.debug("Sleeping while Queueing Observations...");
 		queueLock.lock();
 		try {
-			workDone.await(MAX_QUEUE_LOCK_SECONDS, TimeUnit.SECONDS);
+			cWorkDone.await(MAX_QUEUE_LOCK_SECONDS, TimeUnit.SECONDS);
 		} catch (InterruptedException ex) {
 			// It's Fine
 		} finally {
@@ -437,6 +437,12 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 			logStatus.setQueuedCount(queued.decrementAndGet());
 			validateAndSend(observations.observations, start);
 			activeDatastreams.remove(observations.ds);
+			queueLock.lock();
+			try {
+				cWorkDone.signalAll();
+			} finally {
+				queueLock.unlock();
+			}
 		}
 
 	}
