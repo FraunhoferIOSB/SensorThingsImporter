@@ -110,6 +110,18 @@ public class EntityCache<U, T extends Entity<T>> {
 		return hasLocalId;
 	}
 
+	/**
+	 * Register a NULL value for the given localId. This can be used to cache
+	 * the fact that the given localId does not have an Entity.
+	 *
+	 * @param localId The localId to cache.
+	 * @return the old value for the given localId, or null if there was no old
+	 * value registered.
+	 */
+	public T registerNull(U localId) {
+		return entitiesByLocalId.put(localId, null);
+	}
+
 	public Collection<T> valuesWithLocalId() {
 		return entitiesByLocalId.values();
 	}
