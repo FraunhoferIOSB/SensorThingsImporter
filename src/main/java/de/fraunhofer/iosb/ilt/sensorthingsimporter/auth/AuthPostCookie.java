@@ -16,7 +16,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.auth;
 
-import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorPassword;
@@ -31,7 +30,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
-public class AuthPostCookie implements AnnotatedConfigurable<Void, Void>, AuthMethod {
+public class AuthPostCookie implements AuthMethod {
 
 	public static final String HTTPREQUEST_HEADER_ACCEPT = "Accept";
 	public static final String HTTPREQUEST_HEADER_CONTENT_TYPE = "Content-Type";

@@ -16,7 +16,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.auth;
 
-import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
@@ -28,7 +27,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
  *
  * @author scf
  */
-public class AuthHeader implements AnnotatedConfigurable<Void, Void>, AuthMethod {
+public class AuthHeader implements AuthMethod {
 
 	@ConfigurableField(editor = EditorString.class,
 			label = "Header Name",

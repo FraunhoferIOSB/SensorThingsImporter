@@ -16,9 +16,8 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.auth;
 
-import com.google.gson.JsonElement;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorNull;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 
 /**
@@ -27,15 +26,12 @@ import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
  */
 public class AuthNone implements AuthMethod {
 
-	@Override
-	public void configure(JsonElement config, Void context, Void edtCtx, ConfigEditor<?> ce) {
-		// Nothing to configure
-	}
-
-	@Override
-	public ConfigEditor<?> getConfigEditor(Void context, Void edtCtx) {
-		return new EditorNull();
-	}
+	private static final String WORKAROUND = "Workaround because we need at least one item.";
+	@ConfigurableField(editor = EditorString.class, optional = true,
+			label = "Unused",
+			description = WORKAROUND)
+	@EditorString.EdOptsString(dflt = WORKAROUND)
+	private String unused;
 
 	@Override
 	public void setAuth(SensorThingsService service) {
