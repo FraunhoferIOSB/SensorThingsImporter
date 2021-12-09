@@ -231,17 +231,31 @@ public final class FrostUtils {
 			updated = true;
 		}
 		if (!newThing.getLocations().isEmpty()) {
-			final Location location = newThing.getLocations().toList().get(0);
-			final List<Location> locationList = thingToUpdate.getLocations().toList();
-			if (locationList.isEmpty()) {
-				thingToUpdate.getLocations().add(location.withOnlyId());
-				updated = true;
-			} else {
-				final boolean found = locationList.stream().anyMatch(loc -> loc.getId().equals(location.getId()));
-				if (!found) {
-					thingToUpdate.getLocations().clear();
-					thingToUpdate.getLocations().add(location.withOnlyId());
+			final Location newLocation = newThing.getLocations().toList().get(0);
+			final List<Location> locationListToUpdate = thingToUpdate.getLocations().toList();
+			if (newLocation.getId() == null) {
+				// "new" Location in newThing.
+				if (locationListToUpdate.isEmpty()) {
+					final Location created = findOrCreateLocation(null, newLocation, null);
+					thingToUpdate.getLocations().add(created.withOnlyId());
 					updated = true;
+				} else if (locationListToUpdate.size() == 1) {
+					final Location oldLocation = service.locations().find(locationListToUpdate.get(0).getId());
+					maybeUpdateLocation(newLocation, oldLocation);
+				} else {
+					LOGGER.error("Can't check locations for Things with multiple locations if updated Location has no ID.");
+				}
+			} else {
+				if (locationListToUpdate.isEmpty()) {
+					thingToUpdate.getLocations().add(newLocation.withOnlyId());
+					updated = true;
+				} else {
+					final boolean found = locationListToUpdate.stream().anyMatch(loc -> loc.getId().equals(newLocation.getId()));
+					if (!found) {
+						thingToUpdate.getLocations().clear();
+						thingToUpdate.getLocations().add(newLocation.withOnlyId());
+						updated = true;
+					}
 				}
 			}
 		}
@@ -716,6 +730,12 @@ public final class FrostUtils {
 			}
 			if (two instanceof BigInteger) {
 				return ((BigInteger) two).equals(new BigInteger(one.toString()));
+			}
+			if (one instanceof Instant) {
+				return ((Instant) one).equals(Instant.parse(two.toString()));
+			}
+			if (two instanceof Instant) {
+				return ((Instant) two).equals(Instant.parse(one.toString()));
 			}
 			if (one instanceof Collection && two instanceof Collection) {
 				final Collection cOne = (Collection) one;
