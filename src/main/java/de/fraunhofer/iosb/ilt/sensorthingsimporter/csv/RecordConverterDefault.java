@@ -26,6 +26,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import static de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames.ZONE_Z;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UnitConverter;
@@ -36,10 +37,8 @@ import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
@@ -209,7 +208,7 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
 			Interval interval = Interval.of(startTime.toInstant(), endTime.toInstant());
 			return new TimeObject(interval);
 		} else {
-			return new TimeObject(parseTime(record.get(colList.get(0))));
+			return new TimeObject(parseTime(record.get(colList.get(0))).withZoneSameInstant(ZONE_Z));
 		}
 	}
 

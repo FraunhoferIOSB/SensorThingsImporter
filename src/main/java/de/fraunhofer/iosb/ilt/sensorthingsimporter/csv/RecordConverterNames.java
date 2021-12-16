@@ -63,7 +63,7 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 	 * The logger for this class.
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(RecordConverterNames.class);
-	private static final ZoneId ZONE_Z = ZoneId.of("Z");
+	public static final ZoneId ZONE_Z = ZoneId.of("Z");
 	private boolean verbose = false;
 
 	@ConfigurableField(editor = EditorString.class,
