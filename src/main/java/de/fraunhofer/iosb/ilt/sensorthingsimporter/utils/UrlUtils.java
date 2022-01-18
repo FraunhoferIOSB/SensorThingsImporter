@@ -129,6 +129,14 @@ public class UrlUtils {
 	public static HttpResponse postJsonToUrl(String targetUrl, Object body, List<Header> headers, String username, String password) throws IOException {
 		LOGGER.info("Posting: {}", targetUrl);
 		final String queryBody = ObjectMapperFactory.get().writeValueAsString(body);
+		return postToUrl(targetUrl, headers, queryBody, username, password);
+	}
+
+	public static HttpResponse postToUrl(String targetUrl, String queryBody, String username, String password) throws IOException, ParseException {
+		return postToUrl(targetUrl, Collections.EMPTY_LIST, queryBody, username, password);
+	}
+
+	public static HttpResponse postToUrl(String targetUrl, List<Header> headers, String queryBody, String username, String password) throws IOException, ParseException {
 		try (CloseableHttpClient client = HttpClients.createSystem()) {
 			final HttpPost post = new HttpPost(targetUrl);
 			if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
@@ -152,7 +160,6 @@ public class UrlUtils {
 			String data = EntityUtils.toString(entity, UTF8);
 			return new HttpResponse(statusCode, data, response.getAllHeaders());
 		}
-
 	}
 
 	public static class HttpResponse {
