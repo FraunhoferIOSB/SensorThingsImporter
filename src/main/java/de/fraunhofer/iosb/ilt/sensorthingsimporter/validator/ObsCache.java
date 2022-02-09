@@ -92,11 +92,21 @@ class ObsCache {
 		Instant checkInstant = FrostUtils.instantFrom(checkTime);
 		List<Observation> toDelete = null;
 		if (cache.isEmpty()) {
-			EntityList<Observation> list = observations.query().select("@iot.id", "result", "phenomenonTime").filter("phenomenonTime ge " + checkInstant.toString()).orderBy("phenomenonTime asc").top(1000).list();
+			EntityList<Observation> list = observations.query()
+					.select("@iot.id", "result", "phenomenonTime")
+					.filter("phenomenonTime ge " + checkInstant.toString())
+					.orderBy("phenomenonTime asc")
+					.top(100000)
+					.list();
 			toDelete = addToCache(list);
 		} else {
 			if (checkInstant.isBefore(cacheStart)) {
-				EntityList<Observation> list = observations.query().select("@iot.id", "result", "phenomenonTime").filter("phenomenonTime ge " + checkInstant.toString() + " and phenomenonTime le " + cacheStart).orderBy("phenomenonTime asc").top(1000).list();
+				EntityList<Observation> list = observations.query()
+						.select("@iot.id", "result", "phenomenonTime")
+						.filter("phenomenonTime ge " + checkInstant.toString() + " and phenomenonTime le " + cacheStart)
+						.orderBy("phenomenonTime asc")
+						.top(100000)
+						.list();
 				toDelete = addToCache(list);
 			}
 		}
