@@ -114,6 +114,7 @@
 							<goal>shade</goal>
 						</goals>
 						<configuration>
+							<createDependencyReducedPom>false</createDependencyReducedPom>
 							<shadedArtifactAttached>true</shadedArtifactAttached>
 							<transformers>
 								<!-- This bit sets the main class for the executable jar as you otherwise -->
