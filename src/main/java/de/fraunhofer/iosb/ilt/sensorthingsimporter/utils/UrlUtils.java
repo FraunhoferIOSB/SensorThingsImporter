@@ -94,7 +94,7 @@ public class UrlUtils {
 								.setConnectTimeout(10_000)
 								.setConnectionRequestTimeout(10_000)
 								.build());
-		try (CloseableHttpClient client = clientBuilder.build()) {
+		try ( CloseableHttpClient client = clientBuilder.build()) {
 			HttpGet get = new HttpGet(targetUrl);
 			if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
 				String auth = username + ":" + password;
@@ -116,7 +116,7 @@ public class UrlUtils {
 
 	private static HttpResponse readFileUrl(String targetUrl, Charset charset) throws IOException {
 		LOGGER.info("Loading: {}", targetUrl);
-		try (InputStream input = new URL(targetUrl).openStream()) {
+		try ( InputStream input = new URL(targetUrl).openStream()) {
 			final String string = IOUtils.toString(input, charset);
 			return new HttpResponse(200, string);
 		}
@@ -137,7 +137,7 @@ public class UrlUtils {
 	}
 
 	public static HttpResponse postToUrl(String targetUrl, List<Header> headers, String queryBody, String username, String password) throws IOException, ParseException {
-		try (CloseableHttpClient client = HttpClients.createSystem()) {
+		try ( CloseableHttpClient client = HttpClients.createSystem()) {
 			final HttpPost post = new HttpPost(targetUrl);
 			if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
 				final String auth = username + ":" + password;
@@ -151,13 +151,18 @@ public class UrlUtils {
 				headers.stream().forEach(h -> post.addHeader(h));
 			}
 			post.setEntity(new StringEntity(queryBody));
+			LOGGER.debug("Posting to {}", targetUrl);
+			LOGGER.trace("Posting:\n{}", queryBody);
 			final CloseableHttpResponse response = client.execute(post);
 			final HttpEntity entity = response.getEntity();
 			final int statusCode = response.getStatusLine().getStatusCode();
 			if (entity == null) {
+				LOGGER.debug("Response: {}, no data", statusCode);
 				return new HttpResponse(statusCode, "", response.getAllHeaders());
 			}
 			String data = EntityUtils.toString(entity, UTF8);
+			LOGGER.debug("Response: {}, size: {}", statusCode, data.length());
+			LOGGER.trace("Response:\n{}", data);
 			return new HttpResponse(statusCode, data, response.getAllHeaders());
 		}
 	}
