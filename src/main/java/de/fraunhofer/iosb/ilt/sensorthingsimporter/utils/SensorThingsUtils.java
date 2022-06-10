@@ -42,9 +42,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
+ * @deprecated use FrostUtils instead.
  * @author scf
  */
+@Deprecated(forRemoval = true)
 public class SensorThingsUtils {
 
 	/**
