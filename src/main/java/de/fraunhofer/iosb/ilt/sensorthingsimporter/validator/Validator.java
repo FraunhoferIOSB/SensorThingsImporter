@@ -17,9 +17,12 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
+import de.fraunhofer.iosb.ilt.configurable.AbstractConfigurable;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableClass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
+import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 
 /**
  *
@@ -35,7 +38,8 @@ public interface Validator {
 	/**
 	 * Always returns true.
 	 */
-	public static class ValidatorNull implements Validator {
+	@ConfigurableClass
+	public static class ValidatorNull extends AbstractConfigurable<SensorThingsService, Object> implements Validator {
 
 		@Override
 		public boolean isValid(Observation obs) throws ImportException {
