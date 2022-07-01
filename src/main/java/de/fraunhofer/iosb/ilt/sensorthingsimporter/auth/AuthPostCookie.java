@@ -22,8 +22,11 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorPassword;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.IOException;
+import org.apache.http.StatusLine;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.util.EntityUtils;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -78,7 +81,12 @@ public class AuthPostCookie implements AuthMethod {
 		final HttpPost loginPost = new HttpPost(finalUrl);
 		loginPost.setHeader(HTTPREQUEST_HEADER_ACCEPT, HTTPREQUEST_TYPE_JSON);
 		try {
-			client.execute(loginPost);
+			CloseableHttpResponse response = client.execute(loginPost);
+			final StatusLine statusLine = response.getStatusLine();
+			LOGGER.debug("Response: {}, {}", statusLine.getStatusCode(), statusLine.getReasonPhrase());
+			if (statusLine.getStatusCode() >= 300) {
+				LOGGER.error("Login failed: {},{}\n{}", statusLine.getStatusCode(), statusLine.getReasonPhrase(), EntityUtils.toString(response.getEntity()));
+			}
 		} catch (IOException ex) {
 			LOGGER.error("Failed to login.", ex);
 		}
