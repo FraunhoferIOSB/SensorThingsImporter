@@ -33,9 +33,13 @@ public interface Importer extends Iterable<List<Observation>> {
 	 * @param verbose flag indicating that the importer should give lots of
 	 * output.
 	 */
-	public void setVerbose(boolean verbose);
+	public default void setVerbose(boolean verbose) {
+		// does nothing by default
+	}
 
-	public void setNoAct(boolean noAct);
+	public default void setNoAct(boolean noAct) {
+		// does nothing by default
+	}
 
 	public default void setProgressTracker(ProgressTracker tracker) {
 	}
