@@ -29,6 +29,7 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils.addOrCreateFilter;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.StatusCodeException;
+import de.fraunhofer.iosb.ilt.sta.Utils;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.Thing;
@@ -55,6 +56,11 @@ public class ImporterSta implements Importer, AnnotatedConfigurable<SensorThings
 			label = "Source Service URL", description = "The url of the server to import from.")
 	@EditorString.EdOptsString(dflt = "http://localhost:8080/FROST-Server/v1.0")
 	private String sourceServiceUrl;
+
+	@ConfigurableField(editor = EditorString.class, optional = true,
+			label = "Replace URL", description = "The part of server generated URLs that needs to be replaced with the Service URL.")
+	@EditorString.EdOptsString(dflt = "")
+	private String serviceUrlReplace;
 
 	@ConfigurableField(editor = EditorSubclass.class,
 			label = "Source Auth Method", description = "The authentication method the service uses.",
@@ -126,6 +132,9 @@ public class ImporterSta implements Importer, AnnotatedConfigurable<SensorThings
 			Iterator<Thing> things = null;
 			try {
 				service.setEndpoint(new URL(parent.sourceServiceUrl));
+				if (!Utils.isNullOrEmpty(parent.serviceUrlReplace)) {
+					service.setUrlReplace(parent.serviceUrlReplace);
+				}
 				if (parent.sourceAuthMethod != null) {
 					parent.sourceAuthMethod.setAuth(service);
 				}
@@ -144,6 +153,7 @@ public class ImporterSta implements Importer, AnnotatedConfigurable<SensorThings
 			if (sourceThings.hasNext()) {
 				currentSourceThing = sourceThings.next();
 				currentTargetThing = parent.findTargetFor(currentSourceThing);
+				LOGGER.debug("  {} -> {}", currentSourceThing, currentTargetThing);
 			} else {
 				currentSourceThing = null;
 				currentTargetThing = null;
@@ -167,6 +177,7 @@ public class ImporterSta implements Importer, AnnotatedConfigurable<SensorThings
 			if (sourceDatastreams.hasNext()) {
 				currentSourceDatastream = sourceDatastreams.next();
 				currentTargetDatastream = parent.findTargetFor(currentSourceDatastream);
+				LOGGER.debug("    {} -> {}", currentSourceDatastream, currentTargetDatastream);
 			} else {
 				currentSourceDatastream = null;
 				currentTargetDatastream = null;
@@ -181,7 +192,7 @@ public class ImporterSta implements Importer, AnnotatedConfigurable<SensorThings
 				}
 				sourceObservations = currentSourceDatastream.observations()
 						.query()
-						.orderBy("phenomenonTime asc, id asc")
+						.orderBy("phenomenonTime asc")
 						.top(10000)
 						.list()
 						.fullIterator();
@@ -216,7 +227,7 @@ public class ImporterSta implements Importer, AnnotatedConfigurable<SensorThings
 			} catch (StatusCodeException ex) {
 				LOGGER.error("Failed to fetch data: {} - {}\n{}", ex.getStatusCode(), ex.getStatusMessage(), ex.getReturnedContent());
 			} catch (ServiceFailureException ex) {
-				LOGGER.error("Failed to fetch data: {}", ex.getMessage());
+				LOGGER.error("Failed to fetch data", ex);
 			}
 			return Collections.emptyList();
 		}
