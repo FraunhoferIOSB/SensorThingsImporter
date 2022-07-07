@@ -31,6 +31,7 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.CsvUtils.fillTemplate;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator.StringType;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UnitConverter;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.Parser;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.ParserTime;
@@ -183,7 +184,7 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 			log.append(", validTime: ").append(obs.getValidTime());
 		}
 		if (!Utils.isNullOrEmpty(parametersTemplate)) {
-			String filledTemplate = Translator.fillTemplate(parametersTemplate, record, false, true, false);
+			String filledTemplate = Translator.fillTemplate(parametersTemplate, record, StringType.JSON, false);
 			obs.setParameters(JsonUtils.jsonToMap(filledTemplate));
 		}
 		if (verbose) {

@@ -43,6 +43,12 @@ import org.slf4j.LoggerFactory;
  */
 public class Translator extends AbstractConfigurable<Void, Void> {
 
+	public static enum StringType {
+		PLAIN,
+		URL,
+		JSON
+	}
+
 	/**
 	 * The logger for this class.
 	 */
@@ -118,18 +124,18 @@ public class Translator extends AbstractConfigurable<Void, Void> {
 		return result.toString();
 	}
 
-	public static String fillTemplate(String template, CSVRecord record, boolean escapeForUrl, boolean escapeForJson, boolean removeNewlines) {
+	public static String fillTemplate(String template, CSVRecord record, StringType targetType, boolean removeNewlines) {
 		if (removeNewlines) {
-			return fillTemplate(StringUtils.remove(template, "\n"), record, escapeForUrl, escapeForJson);
+			return fillTemplate(StringUtils.remove(template, "\n"), record, targetType);
 		}
-		return fillTemplate(template, record, escapeForUrl, escapeForJson);
+		return fillTemplate(template, record, targetType);
 	}
 
 	public static String fillTemplate(String template, CSVRecord record) {
-		return fillTemplate(template, record, false, false);
+		return fillTemplate(template, record, StringType.PLAIN);
 	}
 
-	public static String fillTemplate(String template, CSVRecord record, boolean escapeForUrl, boolean escapeForJson) {
+	public static String fillTemplate(String template, CSVRecord record, StringType targetType) {
 		if (record.isMapped(template)) {
 			return record.get(template);
 		}
@@ -151,12 +157,19 @@ public class Translator extends AbstractConfigurable<Void, Void> {
 			if (Utils.isNullOrEmpty(value) && matcher.group(3) != null) {
 				value = matcher.group(3);
 			}
-			if (escapeForUrl) {
-				value = Utils.escapeForStringConstant(value);
-			}
-			if (escapeForJson) {
-				value = StringUtils.replace(value, "\\", "\\\\");
-				value = StringUtils.replace(value, "\n", "\\n");
+			switch (targetType) {
+				case JSON:
+					value = StringUtils.replace(value, "\\", "\\\\");
+					value = StringUtils.replace(value, "\n", "\\n");
+					break;
+
+				case URL:
+					value = Utils.escapeForStringConstant(value);
+					break;
+
+				case PLAIN:
+				default:
+				// Do nothing.
 			}
 			filter.append(value);
 			pos = matcher.end();

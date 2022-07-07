@@ -26,6 +26,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator.StringType;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
@@ -75,7 +76,7 @@ public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<S
 	@Override
 	public Datastream getDatastreamFor(CSVRecord record) throws ImportException {
 		try {
-			String filter = Translator.fillTemplate(filterTemplate, record, true, false, true);
+			String filter = Translator.fillTemplate(filterTemplate, record, StringType.URL, true);
 			Datastream ds = getDatastreamFor(filter, record);
 			return ds;
 		} catch (ServiceFailureException ex) {
@@ -87,7 +88,7 @@ public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<S
 	@Override
 	public MultiDatastream getMultiDatastreamFor(CSVRecord record) {
 		try {
-			String filter = Translator.fillTemplate(filterTemplate, record, true, false, true);
+			String filter = Translator.fillTemplate(filterTemplate, record, StringType.URL, true);
 			MultiDatastream ds = getMultiDatastreamFor(filter, record);
 			return ds;
 		} catch (ServiceFailureException ex) {

@@ -26,6 +26,7 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator.StringType;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.ObservedProperty;
@@ -122,15 +123,15 @@ public class DataStreamGeneratorNames implements DatastreamGenerator, AnnotatedC
 			return null;
 		}
 		Datastream ds = new Datastream();
-		ds.setName(Translator.fillTemplate(templateName, record, false, false, true));
-		ds.setDescription(Translator.fillTemplate(templateDescription, record, false, false, true));
-		ds.setObservationType(Translator.fillTemplate(templateObsType, record, false, false, true));
-		String propertiesString = Translator.fillTemplate(templateProperties, record, false, true, false);
+		ds.setName(Translator.fillTemplate(templateName, record, StringType.PLAIN, true));
+		ds.setDescription(Translator.fillTemplate(templateDescription, record, StringType.PLAIN, true));
+		ds.setObservationType(Translator.fillTemplate(templateObsType, record, StringType.PLAIN, true));
+		String propertiesString = Translator.fillTemplate(templateProperties, record, StringType.JSON, false);
 		ds.setProperties(JsonUtils.jsonToMap(propertiesString));
 		UnitOfMeasurement uom = new UnitOfMeasurement(
-				Translator.fillTemplate(templateUomName, record, false, false, true),
-				Translator.fillTemplate(templateUomSymbol, record, false, false, true),
-				Translator.fillTemplate(templateUomDef, record, false, false, true)
+				Translator.fillTemplate(templateUomName, record, StringType.PLAIN, true),
+				Translator.fillTemplate(templateUomSymbol, record, StringType.PLAIN, true),
+				Translator.fillTemplate(templateUomDef, record, StringType.PLAIN, true)
 		);
 		ds.setUnitOfMeasurement(uom);
 		ds.setThing(thing);
@@ -146,7 +147,7 @@ public class DataStreamGeneratorNames implements DatastreamGenerator, AnnotatedC
 
 	public Thing getThingFor(CSVRecord record) throws ImportException {
 		try {
-			String filter = Translator.fillTemplate(filterThing, record, true, false, true);
+			String filter = Translator.fillTemplate(filterThing, record, StringType.URL, true);
 			Thing t = getThingFor(filter);
 			return t;
 		} catch (ServiceFailureException ex) {
@@ -157,7 +158,7 @@ public class DataStreamGeneratorNames implements DatastreamGenerator, AnnotatedC
 
 	public Sensor getSensorFor(CSVRecord record) throws ImportException {
 		try {
-			String filter = Translator.fillTemplate(filterSensor, record, true, false, true);
+			String filter = Translator.fillTemplate(filterSensor, record, StringType.URL, true);
 			Sensor s = getSensorFor(filter);
 			return s;
 		} catch (ServiceFailureException ex) {
@@ -168,7 +169,7 @@ public class DataStreamGeneratorNames implements DatastreamGenerator, AnnotatedC
 
 	public ObservedProperty getObsPropFor(CSVRecord record) throws ImportException {
 		try {
-			String filter = Translator.fillTemplate(filterObsProp, record, true, false, true);
+			String filter = Translator.fillTemplate(filterObsProp, record, StringType.URL, true);
 			ObservedProperty o = getObsPropFor(filter);
 			return o;
 		} catch (ServiceFailureException ex) {
