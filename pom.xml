@@ -35,7 +35,7 @@
 		<commons-io.version>2.11.0</commons-io.version>
 		<configurable.version>0.33</configurable.version>
 		<geotools.version>27.0</geotools.version>
-		<groovy.version>3.0.11</groovy.version>
+		<groovy.version>3.0.12</groovy.version>
 		<javax-activation.version>1.1.1</javax-activation.version>
 		<junit.version>4.13.2</junit.version>
 		<logback.version>1.2.11</logback.version>
