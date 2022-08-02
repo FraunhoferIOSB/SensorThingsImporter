@@ -597,7 +597,8 @@ public final class FrostUtils {
 		if (cached != null) {
 			location = cached;
 		} else {
-			final EntityList<Location> lList = service.locations().query().filter(filter).list();
+			final Query<Location> query = service.locations().query();
+			final EntityList<Location> lList = addOrCreateFilter(query, filter, newLocation.getName()).list();
 			if (lList.size() > 1) {
 				throw new IllegalStateException("More than one Location matches filter: " + filter);
 			}
