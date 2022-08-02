@@ -219,6 +219,7 @@ public final class FrostUtils {
 
 	public boolean maybeUpdateThing(final Thing newThing, final Thing thingToUpdate) throws ServiceFailureException {
 		boolean updated = false;
+		boolean updatedLocation = false;
 		if (!newThing.getName().equals(thingToUpdate.getName())) {
 			updated = true;
 			thingToUpdate.setName(newThing.getName());
@@ -239,6 +240,7 @@ public final class FrostUtils {
 					final Location created = findOrCreateLocation(null, newLocation, null);
 					thingToUpdate.getLocations().add(created.withOnlyId());
 					updated = true;
+					updatedLocation = true;
 				} else if (locationListToUpdate.size() == 1) {
 					final Location oldLocation = service.locations().find(locationListToUpdate.get(0).getId());
 					maybeUpdateLocation(newLocation, oldLocation);
@@ -249,18 +251,28 @@ public final class FrostUtils {
 				if (locationListToUpdate.isEmpty()) {
 					thingToUpdate.getLocations().add(newLocation.withOnlyId());
 					updated = true;
+					updatedLocation = true;
 				} else {
 					final boolean found = locationListToUpdate.stream().anyMatch(loc -> loc.getId().equals(newLocation.getId()));
 					if (!found) {
 						thingToUpdate.getLocations().clear();
 						thingToUpdate.getLocations().add(newLocation.withOnlyId());
 						updated = true;
+						updatedLocation = true;
 					}
 				}
 			}
 		}
 		if (updated) {
-			update(thingToUpdate);
+			if (!updatedLocation) {
+				final List<Location> thingLocations = thingToUpdate.getLocations().toList();
+				final List<Location> oldLocations = new ArrayList<>(thingLocations);
+				thingLocations.clear();
+				update(thingToUpdate);
+				thingLocations.addAll(oldLocations);
+			} else {
+				update(thingToUpdate);
+			}
 		}
 		return updated;
 	}

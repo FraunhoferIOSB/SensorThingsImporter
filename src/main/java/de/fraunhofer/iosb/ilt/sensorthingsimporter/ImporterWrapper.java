@@ -203,9 +203,9 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 				LOGGER.error("URL: {}", exc.getUrl());
 				LOGGER.error("Code: {} {}", exc.getStatusCode(), exc.getStatusMessage());
 				LOGGER.error("Data: {}", exc.getReturnedContent());
-				LOGGER.debug("Failed to import.", exc);
+				LOGGER.debug("Failed to upload.", exc);
 			} catch (ServiceFailureException | RuntimeException exc) {
-				LOGGER.error("Failed to import: {}", exc.getMessage());
+				LOGGER.error("Failed to upload: {}", exc.getMessage());
 				LOGGER.debug("Details:", exc);
 			}
 		}
