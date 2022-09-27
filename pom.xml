@@ -41,7 +41,7 @@
 		<logback.version>1.4.1</logback.version>
 		<openjfx.version>19</openjfx.version>
 		<quartz.version>2.3.2</quartz.version>
-		<slf4j-version>2.0.1</slf4j-version>
+		<slf4j-version>2.0.2</slf4j-version>
 	</properties>
 
 	<licenses>
