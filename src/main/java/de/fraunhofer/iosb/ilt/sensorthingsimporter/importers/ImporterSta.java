@@ -21,10 +21,12 @@ import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthMethod;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen.TimeGen;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils.addOrCreateFilter;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
@@ -37,12 +39,15 @@ import de.fraunhofer.iosb.ilt.sta.model.ext.EntityList;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.threeten.extra.Interval;
 
 /**
  *
@@ -65,9 +70,18 @@ public class ImporterSta implements Importer, AnnotatedConfigurable<SensorThings
 	@ConfigurableField(editor = EditorSubclass.class,
 			label = "Source Auth Method", description = "The authentication method the service uses.",
 			optional = true)
-	@EditorSubclass.EdOptsSubclass(
-			iface = AuthMethod.class)
+	@EditorSubclass.EdOptsSubclass(iface = AuthMethod.class)
 	private AuthMethod sourceAuthMethod;
+
+	@ConfigurableField(editor = EditorInt.class,
+			label = "Days Per Request", description = "Request Observations for this many days at a time.")
+	@EditorInt.EdOptsInt(dflt = 30, min = 1, max = 999, step = 1)
+	private int daysPerBatch;
+
+	@ConfigurableField(editor = EditorSubclass.class,
+			label = "Earliest Date Time", description = "Earliest date/time to fetch Observations for.")
+	@EditorSubclass.EdOptsSubclass(iface = TimeGen.class)
+	private TimeGen minTime;
 
 	private SensorThingsService targetService;
 	private FrostUtils frostUtils;
@@ -124,6 +138,8 @@ public class ImporterSta implements Importer, AnnotatedConfigurable<SensorThings
 		private Iterator<Datastream> sourceDatastreams;
 		private Datastream currentSourceDatastream;
 		private Datastream currentTargetDatastream;
+		private Instant startTime;
+		private Instant finalTime;
 		private Iterator<Observation> sourceObservations;
 
 		public ObservationListIter(ImporterSta parent) {
@@ -138,7 +154,7 @@ public class ImporterSta implements Importer, AnnotatedConfigurable<SensorThings
 				if (parent.sourceAuthMethod != null) {
 					parent.sourceAuthMethod.setAuth(service);
 				}
-				things = service.things().query().top(1000).list().fullIterator();
+				things = service.things().query().orderBy("id").top(1000).list().fullIterator();
 			} catch (MalformedURLException ex) {
 				LOGGER.error("Failed to create service", ex);
 			} catch (StatusCodeException ex) {
@@ -177,6 +193,14 @@ public class ImporterSta implements Importer, AnnotatedConfigurable<SensorThings
 			if (sourceDatastreams.hasNext()) {
 				currentSourceDatastream = sourceDatastreams.next();
 				currentTargetDatastream = parent.findTargetFor(currentSourceDatastream);
+				startTime = parent.minTime.getInstant(currentSourceDatastream);
+				final Interval phenomenonTime = currentSourceDatastream.getPhenomenonTime();
+				if (phenomenonTime == null) {
+					finalTime = Instant.now();
+				} else {
+					final Instant phenTimeEnd = phenomenonTime.getEnd();
+					finalTime = phenTimeEnd;
+				}
 				LOGGER.debug("    {} -> {}", currentSourceDatastream, currentTargetDatastream);
 			} else {
 				currentSourceDatastream = null;
@@ -186,16 +210,21 @@ public class ImporterSta implements Importer, AnnotatedConfigurable<SensorThings
 
 		private List<Observation> nextObservations() throws ServiceFailureException {
 			if (currentTargetDatastream == null || sourceObservations == null || !sourceObservations.hasNext()) {
-				nextDatastream();
+				if (startTime == null || startTime.isAfter(finalTime)) {
+					nextDatastream();
+				}
 				if (currentSourceDatastream == null || currentTargetDatastream == null) {
 					return Collections.emptyList();
 				}
+				Instant endTime = startTime.plus(parent.daysPerBatch, ChronoUnit.DAYS);
 				sourceObservations = currentSourceDatastream.observations()
 						.query()
 						.orderBy("phenomenonTime asc")
+						.filter("phenomenonTime ge " + startTime.toString() + " and phenomenonTime lt " + endTime)
 						.top(10000)
 						.list()
 						.fullIterator();
+				startTime = endTime;
 			}
 			List<Observation> result = new ArrayList<>(10000);
 			while (sourceObservations.hasNext() && result.size() < 10000) {
