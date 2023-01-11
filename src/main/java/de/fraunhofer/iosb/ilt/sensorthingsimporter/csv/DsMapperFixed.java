@@ -18,8 +18,10 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
 import com.google.gson.JsonElement;
+import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.Configurable;
+import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
@@ -34,7 +36,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author scf
  */
-public class DsMapperFixed implements DatastreamMapper, Configurable<Object, Object> {
+public class DsMapperFixed implements DatastreamMapper, AnnotatedConfigurable<SensorThingsService, Object> {
 
 	/**
 	 * The logger for this class.
@@ -46,23 +48,21 @@ public class DsMapperFixed implements DatastreamMapper, Configurable<Object, Obj
 	private Datastream ds;
 	private MultiDatastream mds;
 
-	private EditorInt editor;
+	@ConfigurableField(editor = EditorInt.class, label = "Datastream ID", description = "The datastream id to add the observations to.")
+	@EditorInt.EdOptsInt()
+	private int dsId;
 
 	public DsMapperFixed() {
 		this.ds = null;
 	}
 
 	@Override
-	public void configure(JsonElement config, Object context, Object edtCtx, ConfigEditor<?> configEditor) {
-		if (!(context instanceof SensorThingsService)) {
-			throw new IllegalArgumentException("Context must be a SensorThingsService. We got a " + context.getClass());
-		}
-		service = (SensorThingsService) context;
-		getConfigEditor(service, edtCtx).setConfig(config);
+	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+		service = context;
+		AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
 	}
 
 	private void init(boolean multi) {
-		long dsId = editor.getValue();
 		try {
 			if (multi) {
 				mds = service.multiDatastreams().find(dsId);
@@ -74,14 +74,6 @@ public class DsMapperFixed implements DatastreamMapper, Configurable<Object, Obj
 		} catch (ServiceFailureException exc) {
 			throw new IllegalArgumentException("Could not fetch (multi)datastream for id " + dsId, exc);
 		}
-	}
-
-	@Override
-	public EditorInt getConfigEditor(Object context, Object edtCtx) {
-		if (editor == null) {
-			editor = new EditorInt(Integer.MIN_VALUE, Integer.MAX_VALUE, 1, 0, "Datastream ID", "The datastream id to add the observations to.");
-		}
-		return editor;
 	}
 
 	@Override
