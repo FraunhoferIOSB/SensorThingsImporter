@@ -45,6 +45,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,6 +109,11 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 			label = "Has Header", description = "Check if the CSV file has a header line.")
 	@EditorBoolean.EdOptsBool()
 	private boolean hasHeader;
+
+	@ConfigurableField(editor = EditorBoolean.class, optional = true,
+			label = "Strip UTF-8 null", description = "Strip UTF-8 null characters.")
+	@EditorBoolean.EdOptsBool(dflt = true)
+	private boolean stripNull;
 
 	private CSVFormat format;
 
@@ -243,16 +249,19 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 					if (inUrl != null) {
 						currentUrl = inUrl.toString();
 						final String protocol = inUrl.getProtocol();
+						String data;
 						if (protocol.startsWith("ftp")) {
 							URLConnection connection = inUrl.openConnection();
 							try (InputStream stream = connection.getInputStream()) {
-								String data = IOUtils.toString(stream, "UTF-8");
-								parser = CSVParser.parse(data, format);
+								data = IOUtils.toString(stream, "UTF-8");
 							}
 						} else {
-							String data = UrlUtils.fetchFromUrl(inUrl.toString(), charset).data;
-							parser = CSVParser.parse(data, format);
+							data = UrlUtils.fetchFromUrl(inUrl.toString(), charset).data;
 						}
+						if (stripNull) {
+							data = StringUtils.replaceChars(data, "\u0000", "");
+						}
+						parser = CSVParser.parse(data, format);
 					} else {
 						LOGGER.error("No valid input url or file.");
 						throw new ImportException("No valid input url or file.");
