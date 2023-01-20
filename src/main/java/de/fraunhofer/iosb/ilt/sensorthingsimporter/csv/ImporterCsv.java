@@ -174,6 +174,8 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 		private long rowSkip;
 		private int rowCount = 0;
 		private int totalCount = 0;
+		private int currentLine;
+		private String currentUrl;
 
 		public ObsListIter(Iterator<URL> urlIterator, long rowSkip, long rowLimit) throws ImportException {
 			this.rowSkipBase = rowSkip;
@@ -194,13 +196,16 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 			if (!records.hasNext()) {
 				try {
 					records = nextUrl().iterator();
-				} catch (ImportException ex) {
+					currentLine = 0;
+				} catch (RuntimeException | ImportException ex) {
+					LOGGER.error("Failed to import line {}, URL {}.", currentLine, currentUrl);
 					throw new IllegalStateException(ex);
 				}
 			}
 			while (records != null && records.hasNext()) {
 				CSVRecord record = records.next();
 				totalCount++;
+				currentLine++;
 				if (rowSkip > 0) {
 					rowSkip--;
 					continue;
@@ -215,7 +220,10 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 						obs = rcCsv.convert(record);
 						result.addAll(obs);
 					} catch (ImportException ex) {
-						LOGGER.debug("Failed to import.", ex);
+						LOGGER.debug("Failed to import line {}, URL {}.", currentLine, currentUrl, ex);
+					} catch (RuntimeException ex) {
+						LOGGER.error("Failed to import line {}, URL {}.", currentLine, currentUrl, ex);
+						throw new IllegalStateException(ex);
 					}
 				}
 				rowCount++;
@@ -233,6 +241,7 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 				try {
 					CSVParser parser;
 					if (inUrl != null) {
+						currentUrl = inUrl.toString();
 						final String protocol = inUrl.getProtocol();
 						if (protocol.startsWith("ftp")) {
 							URLConnection connection = inUrl.openConnection();

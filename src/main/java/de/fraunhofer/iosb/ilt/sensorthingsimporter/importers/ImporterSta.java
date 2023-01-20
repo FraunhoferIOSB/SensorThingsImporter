@@ -59,7 +59,7 @@ public class ImporterSta implements Importer, AnnotatedConfigurable<SensorThings
 
 	@ConfigurableField(editor = EditorString.class,
 			label = "Source Service URL", description = "The url of the server to import from.")
-	@EditorString.EdOptsString(dflt = "http://localhost:8080/FROST-Server/v1.0")
+	@EditorString.EdOptsString(dflt = "http://localhost:8080/FROST-Server/v1.1")
 	private String sourceServiceUrl;
 
 	@ConfigurableField(editor = EditorString.class, optional = true,
