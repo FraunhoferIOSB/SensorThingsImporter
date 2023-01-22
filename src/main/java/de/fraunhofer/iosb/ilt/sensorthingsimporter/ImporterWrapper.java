@@ -170,6 +170,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 		try {
 			for (List<Observation> observations : importer) {
 				queueObservationsForValidation(observations, obsPerDs, start);
+				logStatus.setErrors(importer.getErrorCount());
 			}
 		} catch (RuntimeException exc) {
 			LOGGER.error("Failed to import: {}", exc.getMessage());
@@ -184,6 +185,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 		logStatus.setUpdatedCount(uploader.getUpdated());
 		logStatus.setDeletedCount(uploader.getDeleted());
 		logStatus.setSpeed(getSpeed(start, validated.get()));
+		logStatus.setErrors(importer.getErrorCount());
 		logStatus.setName("⏹" + name);
 		String errors = importer.getErrorLog();
 		if (!errors.isBlank()) {
@@ -482,11 +484,11 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 
 	private static class LoggingStatus extends ChangingStatusLogger.ChangingStatusDefault {
 
-		public static final String MESSAGE = "{}: Rd {}, Vld {}, New {}, Updt {}, Dlt {}, Queue {}, Thrds {}, - {}/s";
+		public static final String MESSAGE = "{}: Rd {}, Vld {}, New {}, Updt {}, Dlt {}, Queue {}, Thrds {}, - {}/s, Err {}";
 		public final Object[] status;
 
 		public LoggingStatus() {
-			super(MESSAGE, new Object[9]);
+			super(MESSAGE, new Object[10]);
 			status = getCurrentParams();
 			Arrays.setAll(status, (int i) -> Long.valueOf(0));
 			status[0] = "unnamed";
@@ -535,6 +537,11 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 
 		public LoggingStatus setSpeed(Double speed) {
 			status[8] = String.format("%.1f", speed);
+			return this;
+		}
+
+		public LoggingStatus setErrors(Integer count) {
+			status[9] = count;
 			return this;
 		}
 

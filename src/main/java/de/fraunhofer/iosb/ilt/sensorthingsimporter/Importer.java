@@ -48,4 +48,8 @@ public interface Importer extends Iterable<List<Observation>> {
 	public default String getErrorLog() {
 		return "";
 	}
+
+	public default int getErrorCount() {
+		return 0;
+	}
 }

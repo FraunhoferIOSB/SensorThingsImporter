@@ -143,6 +143,11 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 	}
 
 	@Override
+	public int getErrorCount() {
+		return errorLog.getErrorCount();
+	}
+
+	@Override
 	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
 		service = context;
 		AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);

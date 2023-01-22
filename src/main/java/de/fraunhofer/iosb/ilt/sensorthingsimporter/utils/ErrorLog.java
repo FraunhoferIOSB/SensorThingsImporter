@@ -23,12 +23,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author hylke
  */
 public class ErrorLog implements AnnotatedConfigurable<Object, Object> {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(ErrorLog.class.getName());
 
 	public static final int DEFAULT_MAX_FILES_PER_TYPE = 20;
 	public static final int DEFAULT_MAX_LINES_PER_FILE = 5;
@@ -60,7 +64,7 @@ public class ErrorLog implements AnnotatedConfigurable<Object, Object> {
 		addError(type, currentFileName, currentLine);
 	}
 
-	public void addError(String type, String fileName, int line) {
+	public synchronized void addError(String type, String fileName, int line) {
 		ErrorType errorType = errorTypes.computeIfAbsent(type, (t) -> {
 			return new ErrorType(t, maxFiles, maxLines);
 		});
@@ -68,7 +72,7 @@ public class ErrorLog implements AnnotatedConfigurable<Object, Object> {
 		errorCount++;
 	}
 
-	public void clear() {
+	public synchronized void clear() {
 		errorTypes.clear();
 		errorCount = 0;
 	}
@@ -87,6 +91,12 @@ public class ErrorLog implements AnnotatedConfigurable<Object, Object> {
 
 	public void setCurrentLine(int currentLine) {
 		this.currentLine = currentLine;
+	}
+
+	public void logErrors() {
+		if (errorCount > 0) {
+			LOGGER.info(getErrors());
+		}
 	}
 
 	public String getErrors() {
