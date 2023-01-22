@@ -27,6 +27,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.Parser;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.ParserTime;
@@ -107,7 +108,7 @@ public class JsonConverter implements DocumentParser {
 	}
 
 	@Override
-	public List<Observation> process(Datastream ds, String input) throws ImportException {
+	public List<Observation> process(Datastream ds, ErrorLog errorLog, String input) throws ImportException {
 		try {
 			ObjectMapper mapper = new ObjectMapper();
 			mapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
@@ -135,7 +136,7 @@ public class JsonConverter implements DocumentParser {
 	}
 
 	@Override
-	public List<Observation> process(MultiDatastream mds, String... inputs) throws ImportException {
+	public List<Observation> process(MultiDatastream mds, ErrorLog errorLog, String... inputs) throws ImportException {
 		Map<ZonedDateTime, Observation> observationsMap = new HashMap<>();
 		ObjectMapper mapper = new ObjectMapper();
 		int resultIndex = 0;

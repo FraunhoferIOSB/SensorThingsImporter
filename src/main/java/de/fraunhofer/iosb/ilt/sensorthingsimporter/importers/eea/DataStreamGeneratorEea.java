@@ -36,6 +36,7 @@ import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConst
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.VALUE_MEDIUM_AIR;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.VALUE_OWNER_EEA;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.EntityCache;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
@@ -50,7 +51,6 @@ import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -90,7 +90,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 	}
 
 	@Override
-	public Datastream createDatastreamFor(CSVRecord record) throws ImportException {
+	public Datastream createDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
 		EeaStationRecord stationRecord = findStation(record);
 		if (stationRecord == null) {
 			return null;

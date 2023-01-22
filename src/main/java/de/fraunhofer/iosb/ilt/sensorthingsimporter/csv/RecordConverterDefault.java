@@ -27,6 +27,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames.ZONE_Z;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator.StringType;
@@ -127,7 +128,7 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
 	}
 
 	@Override
-	public List<Observation> convert(CSVRecord record) throws ImportException {
+	public List<Observation> convert(CSVRecord record, ErrorLog errorLog) throws ImportException {
 		Object result;
 		Observation obs;
 		StringBuilder log;
@@ -141,12 +142,14 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
 		result = parseResult(resultString);
 		if (result == null) {
 			LOGGER.debug("No result found in column {}.", colResult);
+			errorLog.addError("No result");
 			return Collections.emptyList();
 		}
 
-		Datastream datastream = dsm.getDatastreamFor(record);
+		Datastream datastream = dsm.getDatastreamFor(record, errorLog);
 		if (datastream == null) {
 			LOGGER.debug("No datastream found for column {}", record);
+			errorLog.addError("No Datastream");
 			return Collections.emptyList();
 		}
 		if (colUnit >= 0) {
@@ -155,6 +158,7 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
 			result = convertResult(unitFrom, unitTo, result);
 			if (result == null) {
 				LOGGER.error("Failed to convert from {} to {}.", unitFrom, unitTo);
+				errorLog.addError("Failed unit conversion from " + unitFrom + " to " + unitTo);
 				return Collections.emptyList();
 			}
 		}

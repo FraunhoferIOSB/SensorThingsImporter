@@ -17,6 +17,7 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import org.apache.commons.csv.CSVRecord;
 
@@ -26,5 +27,5 @@ import org.apache.commons.csv.CSVRecord;
  */
 public interface DatastreamGenerator {
 
-	public Datastream createDatastreamFor(CSVRecord record) throws ImportException;
+	public Datastream createDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException;
 }

@@ -42,5 +42,10 @@ public interface Importer extends Iterable<List<Observation>> {
 	}
 
 	public default void setProgressTracker(ProgressTracker tracker) {
+		// does nothing by default
+	}
+
+	public default String getErrorLog() {
+		return "";
 	}
 }

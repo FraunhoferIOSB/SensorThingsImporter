@@ -28,6 +28,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DatastreamMapper;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.Parser;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
@@ -103,7 +104,7 @@ public class CsvColumnExtractor implements DocumentParser {
 		return editor;
 	}
 
-	private List<Observation> process(String data) throws IOException, ImportException {
+	private List<Observation> process(String data, ErrorLog errorLog) throws IOException, ImportException {
 		CSVFormat format = CSVFormat.DEFAULT;
 		if (editorTabDelim.getValue()) {
 			format = format.withDelimiter('\t');
@@ -153,7 +154,7 @@ public class CsvColumnExtractor implements DocumentParser {
 		MultiDatastream mds;
 		List<List<Object>> mdsResult = null;
 		if (dsms.size() == 1 && dataCount > 1) {
-			mds = dsms.get(0).getMultiDatastreamFor(null);
+			mds = dsms.get(0).getMultiDatastreamFor(null, errorLog);
 			if (mds != null) {
 				mdsResult = new ArrayList<>();
 				Observation obs = new Observation(mdsResult, mds);
@@ -167,7 +168,7 @@ public class CsvColumnExtractor implements DocumentParser {
 				if (mdsResult == null) {
 					Observation obs = new Observation();
 					obs.setResult(results.get(column));
-					Datastream ds = dsms.get(dataColumn).getDatastreamFor(null);
+					Datastream ds = dsms.get(dataColumn).getDatastreamFor(null, errorLog);
 					if (ds != null) {
 						obs.setDatastream(ds);
 						dataColumn++;
@@ -182,9 +183,9 @@ public class CsvColumnExtractor implements DocumentParser {
 	}
 
 	@Override
-	public List<Observation> process(Datastream ds, String input) throws ImportException {
+	public List<Observation> process(Datastream ds, ErrorLog errorLog, String input) throws ImportException {
 		try {
-			return process(input);
+			return process(input, errorLog);
 		} catch (IOException exc) {
 			LOGGER.debug("Exception: {}", exc.getMessage());
 			throw new ImportException(exc);
@@ -192,7 +193,7 @@ public class CsvColumnExtractor implements DocumentParser {
 	}
 
 	@Override
-	public List<Observation> process(MultiDatastream mds, String... inputs) throws ImportException {
+	public List<Observation> process(MultiDatastream mds, ErrorLog errorLog, String... inputs) throws ImportException {
 		throw new UnsupportedOperationException("Not supported yet.");
 	}
 

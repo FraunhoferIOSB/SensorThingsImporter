@@ -18,6 +18,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.document;
 
 import de.fraunhofer.iosb.ilt.configurable.Configurable;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
@@ -30,7 +31,7 @@ import java.util.List;
  */
 public interface DocumentParser extends Configurable<SensorThingsService, Object> {
 
-	public List<Observation> process(Datastream ds, String input) throws ImportException;
+	public List<Observation> process(Datastream ds, ErrorLog errorLog, String input) throws ImportException;
 
-	public List<Observation> process(MultiDatastream mds, String... inputs) throws ImportException;
+	public List<Observation> process(MultiDatastream mds, ErrorLog errorLog, String... inputs) throws ImportException;
 }

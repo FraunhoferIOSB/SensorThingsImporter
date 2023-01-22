@@ -23,6 +23,7 @@ import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
@@ -77,7 +78,7 @@ public class DsMapperFixed implements DatastreamMapper, AnnotatedConfigurable<Se
 	}
 
 	@Override
-	public Datastream getDatastreamFor(CSVRecord record) {
+	public Datastream getDatastreamFor(CSVRecord record, ErrorLog errorLog) {
 		if (ds == null) {
 			init(false);
 		}
@@ -85,7 +86,7 @@ public class DsMapperFixed implements DatastreamMapper, AnnotatedConfigurable<Se
 	}
 
 	@Override
-	public MultiDatastream getMultiDatastreamFor(CSVRecord record) {
+	public MultiDatastream getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) {
 		if (mds == null) {
 			init(true);
 		}

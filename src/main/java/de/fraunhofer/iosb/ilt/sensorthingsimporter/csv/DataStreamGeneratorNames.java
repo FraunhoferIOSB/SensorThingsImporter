@@ -23,6 +23,7 @@ import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
@@ -115,10 +116,10 @@ public class DataStreamGeneratorNames implements DatastreamGenerator, AnnotatedC
 	}
 
 	@Override
-	public Datastream createDatastreamFor(CSVRecord record) throws ImportException {
-		Thing thing = getThingFor(record);
-		Sensor sensor = getSensorFor(record);
-		ObservedProperty obsProp = getObsPropFor(record);
+	public Datastream createDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
+		Thing thing = getThingFor(record, errorLog);
+		Sensor sensor = getSensorFor(record, errorLog);
+		ObservedProperty obsProp = getObsPropFor(record, errorLog);
 		if (thing == null || sensor == null || obsProp == null) {
 			return null;
 		}
@@ -145,10 +146,10 @@ public class DataStreamGeneratorNames implements DatastreamGenerator, AnnotatedC
 		return ds;
 	}
 
-	public Thing getThingFor(CSVRecord record) throws ImportException {
+	public Thing getThingFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
 		try {
 			String filter = Translator.fillTemplate(filterThing, record, StringType.URL, true);
-			Thing t = getThingFor(filter);
+			Thing t = getThingFor(filter, errorLog);
 			return t;
 		} catch (ServiceFailureException ex) {
 			LOGGER.error("Failed to fetch datastream.", ex);
@@ -156,10 +157,10 @@ public class DataStreamGeneratorNames implements DatastreamGenerator, AnnotatedC
 		}
 	}
 
-	public Sensor getSensorFor(CSVRecord record) throws ImportException {
+	public Sensor getSensorFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
 		try {
 			String filter = Translator.fillTemplate(filterSensor, record, StringType.URL, true);
-			Sensor s = getSensorFor(filter);
+			Sensor s = getSensorFor(filter, errorLog);
 			return s;
 		} catch (ServiceFailureException ex) {
 			LOGGER.error("Failed to fetch datastream.", ex);
@@ -167,10 +168,10 @@ public class DataStreamGeneratorNames implements DatastreamGenerator, AnnotatedC
 		}
 	}
 
-	public ObservedProperty getObsPropFor(CSVRecord record) throws ImportException {
+	public ObservedProperty getObsPropFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
 		try {
 			String filter = Translator.fillTemplate(filterObsProp, record, StringType.URL, true);
-			ObservedProperty o = getObsPropFor(filter);
+			ObservedProperty o = getObsPropFor(filter, errorLog);
 			return o;
 		} catch (ServiceFailureException ex) {
 			LOGGER.error("Failed to fetch datastream.", ex);
@@ -178,7 +179,7 @@ public class DataStreamGeneratorNames implements DatastreamGenerator, AnnotatedC
 		}
 	}
 
-	private Thing getThingFor(String filter) throws ServiceFailureException, ImportException {
+	private Thing getThingFor(String filter, ErrorLog errorLog) throws ServiceFailureException, ImportException {
 		Thing t = cacheThings.get(filter);
 		if (t != null) {
 			return t;
@@ -198,12 +199,13 @@ public class DataStreamGeneratorNames implements DatastreamGenerator, AnnotatedC
 		}
 		if (t == null) {
 			LOGGER.error("Found no Thing for filter: {}.", filter);
+			errorLog.addError("Thing not found");
 		}
 		cacheThings.put(filter, t);
 		return t;
 	}
 
-	private Sensor getSensorFor(String filter) throws ServiceFailureException, ImportException {
+	private Sensor getSensorFor(String filter, ErrorLog errorLog) throws ServiceFailureException, ImportException {
 		Sensor s = cacheSensors.get(filter);
 		if (s != null) {
 			return s;
@@ -223,12 +225,13 @@ public class DataStreamGeneratorNames implements DatastreamGenerator, AnnotatedC
 		}
 		if (s == null) {
 			LOGGER.error("Found no Sensor for filter: {}.", filter);
+			errorLog.addError("Sensor not found");
 		}
 		cacheSensors.put(filter, s);
 		return s;
 	}
 
-	private ObservedProperty getObsPropFor(String filter) throws ServiceFailureException, ImportException {
+	private ObservedProperty getObsPropFor(String filter, ErrorLog errorLog) throws ServiceFailureException, ImportException {
 		ObservedProperty o = cacheObsProps.get(filter);
 		if (o != null) {
 			return o;
@@ -248,6 +251,7 @@ public class DataStreamGeneratorNames implements DatastreamGenerator, AnnotatedC
 		}
 		if (o == null) {
 			LOGGER.error("Found no ObservedProperties for filter: {}.", filter);
+			errorLog.addError("ObsProp not found");
 		}
 		cacheObsProps.put(filter, o);
 		return o;

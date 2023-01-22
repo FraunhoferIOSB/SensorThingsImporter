@@ -185,6 +185,10 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
 		logStatus.setDeletedCount(uploader.getDeleted());
 		logStatus.setSpeed(getSpeed(start, validated.get()));
 		logStatus.setName("⏹" + name);
+		String errors = importer.getErrorLog();
+		if (!errors.isBlank()) {
+			LOGGER.info(errors);
+		}
 	}
 
 	private void queueObservationsForValidation(List<Observation> observations, Map<Entity, ObservationList> obsPerDs, Calendar start) {

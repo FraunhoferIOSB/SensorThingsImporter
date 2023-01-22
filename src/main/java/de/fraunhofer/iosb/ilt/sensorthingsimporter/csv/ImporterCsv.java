@@ -24,12 +24,14 @@ import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.Utils;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
@@ -115,6 +117,11 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 	@EditorBoolean.EdOptsBool(dflt = true)
 	private boolean stripNull;
 
+	@ConfigurableField(editor = EditorClass.class, optional = true,
+			label = "Error Logger", description = "Configuration of the error logger")
+	@EditorClass.EdOptsClass(clazz = ErrorLog.class)
+	private ErrorLog errorLog;
+
 	private CSVFormat format;
 
 	public ImporterCsv() {
@@ -128,6 +135,11 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 	@Override
 	public void setNoAct(boolean noAct) {
 		// Nothing to set.
+	}
+
+	@Override
+	public String getErrorLog() {
+		return errorLog.getErrors();
 	}
 
 	@Override
@@ -203,6 +215,7 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 				try {
 					records = nextUrl().iterator();
 					currentLine = 0;
+					errorLog.setCurrentLine(currentLine);
 				} catch (RuntimeException | ImportException ex) {
 					LOGGER.error("Failed to import line {}, URL {}.", currentLine, currentUrl);
 					throw new IllegalStateException(ex);
@@ -212,6 +225,7 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 				CSVRecord record = records.next();
 				totalCount++;
 				currentLine++;
+				errorLog.setCurrentLine(currentLine);
 				if (rowSkip > 0) {
 					rowSkip--;
 					continue;
@@ -223,7 +237,7 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 				for (RecordConverter rcCsv : recordConverters) {
 					List<Observation> obs;
 					try {
-						obs = rcCsv.convert(record);
+						obs = rcCsv.convert(record, errorLog);
 						result.addAll(obs);
 					} catch (ImportException ex) {
 						LOGGER.debug("Failed to import line {}, URL {}.", currentLine, currentUrl, ex);
@@ -248,6 +262,7 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 					CSVParser parser;
 					if (inUrl != null) {
 						currentUrl = inUrl.toString();
+						errorLog.setCurrentFileName(currentUrl);
 						final String protocol = inUrl.getProtocol();
 						String data;
 						if (protocol.startsWith("ftp")) {

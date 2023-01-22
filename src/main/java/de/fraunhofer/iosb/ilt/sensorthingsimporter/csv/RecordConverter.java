@@ -17,6 +17,7 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.util.List;
@@ -34,5 +35,5 @@ public interface RecordConverter {
 	public default void setVerbose(boolean verbose) {
 	}
 
-	public List<Observation> convert(CSVRecord record) throws ImportException;
+	public List<Observation> convert(CSVRecord record, ErrorLog errorLog) throws ImportException;
 }

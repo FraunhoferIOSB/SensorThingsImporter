@@ -25,6 +25,7 @@ import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator.StringType;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
@@ -74,10 +75,10 @@ public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<S
 	}
 
 	@Override
-	public Datastream getDatastreamFor(CSVRecord record) throws ImportException {
+	public Datastream getDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
 		try {
 			String filter = Translator.fillTemplate(filterTemplate, record, StringType.URL, true);
-			Datastream ds = getDatastreamFor(filter, record);
+			Datastream ds = getDatastreamFor(filter, record, errorLog);
 			return ds;
 		} catch (ServiceFailureException ex) {
 			LOGGER.error("Failed to fetch datastream.", ex);
@@ -86,10 +87,10 @@ public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<S
 	}
 
 	@Override
-	public MultiDatastream getMultiDatastreamFor(CSVRecord record) {
+	public MultiDatastream getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) {
 		try {
 			String filter = Translator.fillTemplate(filterTemplate, record, StringType.URL, true);
-			MultiDatastream ds = getMultiDatastreamFor(filter, record);
+			MultiDatastream ds = getMultiDatastreamFor(filter, record, errorLog);
 			return ds;
 		} catch (ServiceFailureException ex) {
 			LOGGER.error("Failed to fetch datastream.", ex);
@@ -97,7 +98,7 @@ public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<S
 		}
 	}
 
-	private Datastream getDatastreamFor(String filter, CSVRecord record) throws ServiceFailureException, ImportException {
+	private Datastream getDatastreamFor(String filter, CSVRecord record, ErrorLog errorLog) throws ServiceFailureException, ImportException {
 		Datastream ds = datastreamCache.get(filter);
 		if (ds != null) {
 			return ds;
@@ -113,7 +114,7 @@ public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<S
 			throw new ImportException("Found incorrect number of datastreams: " + streams.size() + " for filter: " + filter);
 		} else if (streams.isEmpty()) {
 			if (dsGenerator != null) {
-				ds = dsGenerator.createDatastreamFor(record);
+				ds = dsGenerator.createDatastreamFor(record, errorLog);
 				if (ds != null) {
 					LOGGER.info("Created datastream {} for filter {}.", ds, filter);
 				}
@@ -123,13 +124,14 @@ public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<S
 			LOGGER.debug("Found datastream {} for filter {}.", ds.getId(), filter);
 		}
 		if (ds == null) {
+			errorLog.addError("DS not found");
 			LOGGER.error("Found no datastreams for filter: {}.", filter);
 		}
 		datastreamCache.put(filter, ds);
 		return ds;
 	}
 
-	private MultiDatastream getMultiDatastreamFor(String filter, CSVRecord record) throws ServiceFailureException {
+	private MultiDatastream getMultiDatastreamFor(String filter, CSVRecord record, ErrorLog errorLog) throws ServiceFailureException {
 		MultiDatastream mds = multiDatastreamCache.get(filter);
 		if (mds != null) {
 			return mds;

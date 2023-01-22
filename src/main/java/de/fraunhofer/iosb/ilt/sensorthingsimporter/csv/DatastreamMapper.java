@@ -18,6 +18,7 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import org.apache.commons.csv.CSVRecord;
@@ -32,10 +33,11 @@ public interface DatastreamMapper {
 	 * Get the Datastream to be used for the given record.
 	 *
 	 * @param record The record to get the Datastream for.
+	 * @param errorLog The error logger to log non-fatal errors to.
 	 * @return The Datastream to use for the given record.
 	 * @throws ImportException if there is a permanent failure.
 	 */
-	public Datastream getDatastreamFor(CSVRecord record) throws ImportException;
+	public Datastream getDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException;
 
-	public MultiDatastream getMultiDatastreamFor(CSVRecord record) throws ImportException;
+	public MultiDatastream getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException;
 }

@@ -29,6 +29,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.CsvUtils.fillTemplate;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator.StringType;
@@ -141,7 +142,7 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 	}
 
 	@Override
-	public List<Observation> convert(CSVRecord record) throws ImportException {
+	public List<Observation> convert(CSVRecord record, ErrorLog errorLog) throws ImportException {
 		Object result;
 		Observation obs;
 		StringBuilder log;
@@ -155,7 +156,7 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 			return Collections.emptyList();
 		}
 
-		Datastream datastream = dsm.getDatastreamFor(record);
+		Datastream datastream = dsm.getDatastreamFor(record, errorLog);
 		if (datastream == null) {
 			LOGGER.debug("No datastream found for column {}", record);
 			return Collections.emptyList();
@@ -308,12 +309,12 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
 			return resultParser.parse(resultString);
 		}
 		try {
-			return Integer.parseInt(resultString);
+			return Integer.valueOf(resultString);
 		} catch (NumberFormatException e) {
 			LOGGER.trace("Not an Integer.");
 		}
 		try {
-			return Long.parseLong(resultString);
+			return Long.valueOf(resultString);
 		} catch (NumberFormatException e) {
 			LOGGER.trace("Not a long.");
 		}

@@ -20,6 +20,7 @@ import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import groovy.lang.GroovyClassLoader;
@@ -66,8 +67,8 @@ public class RecordConverterGroovy implements RecordConverter, AnnotatedConfigur
 	}
 
 	@Override
-	public List<Observation> convert(CSVRecord record) throws ImportException {
-		return scriptInstance.convert(record);
+	public List<Observation> convert(CSVRecord record, ErrorLog errorLog) throws ImportException {
+		return scriptInstance.convert(record, errorLog);
 	}
 
 }
