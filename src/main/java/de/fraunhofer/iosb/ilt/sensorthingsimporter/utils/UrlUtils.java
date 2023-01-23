@@ -19,6 +19,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import de.fraunhofer.iosb.ilt.sta.Utils;
 import de.fraunhofer.iosb.ilt.sta.jackson.ObjectMapperFactory;
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -221,9 +222,13 @@ public class UrlUtils {
 				return EntityUtils.toString(entity, charset);
 			}
 		}
-		byte[] firstBytes = new byte[3];
-		entity.getContent().read(firstBytes);
-		return EntityUtils.toString(entity, guessCharset(firstBytes, charset));
+		try (InputStream content = entity.getContent(); BufferedInputStream bufContent = new BufferedInputStream(content)) {
+			byte[] firstBytes = new byte[3];
+			bufContent.mark(3);
+			bufContent.read(firstBytes);
+			bufContent.reset();
+			return IOUtils.toString(bufContent, guessCharset(firstBytes, charset));
+		}
 	}
 
 	private static Charset guessCharset(byte[] firstThreeBytes, Charset deflt) {
