@@ -180,7 +180,7 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 	public Iterator<List<Observation>> iterator() {
 		try {
 			init();
-			ObsListIter obsListIter = new ObsListIter(inputUrl.iterator(), rowSkip, rowLimit);
+			ObsListIter obsListIter = new ObsListIter(inputUrl.urls(errorLog).iterator(), rowSkip, rowLimit);
 			return obsListIter;
 		} catch (ImportException | ConfigurationException exc) {
 			throw new IllegalStateException("Failed to handle csv file.", exc);

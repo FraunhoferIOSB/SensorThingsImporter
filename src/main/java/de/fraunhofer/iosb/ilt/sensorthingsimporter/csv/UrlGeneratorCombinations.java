@@ -21,6 +21,7 @@ import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -141,11 +142,28 @@ public class UrlGeneratorCombinations implements UrlGenerator, AnnotatedConfigur
 	private List<ReplaceSet> replaceSets = new ArrayList<>();
 
 	@Override
-	public Iterator<URL> iterator() {
-		return new ComboIterator(baseUrl, replaceSets);
+	public Iterable<URL> urls(ErrorLog errorLog) {
+		return new ComboIterable(baseUrl, replaceSets);
 	}
 
-	private class ComboIterator implements Iterator<URL> {
+	private static class ComboIterable implements Iterable<URL> {
+
+		private final String baseUrl;
+		private final List<ReplaceSet> replaceSets;
+
+		public ComboIterable(String baseUrl, List<ReplaceSet> replaceSets) {
+			this.baseUrl = baseUrl;
+			this.replaceSets = replaceSets;
+		}
+
+		@Override
+		public Iterator<URL> iterator() {
+			return new ComboIterator(baseUrl, replaceSets);
+		}
+
+	}
+
+	private static class ComboIterator implements Iterator<URL> {
 
 		private final String baseUrl;
 		private ReplaceSet start;

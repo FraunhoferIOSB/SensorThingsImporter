@@ -23,6 +23,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -30,6 +31,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -71,8 +73,27 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
 	private String splitter;
 
 	@Override
-	public Iterator<URL> iterator() {
-		return new proxyIterator(this, inputUrl.iterator());
+	public Iterable<URL> urls(ErrorLog errorLog) {
+		return new proxyIterable(this, inputUrl, errorLog);
+	}
+
+	private static class proxyIterable implements Iterable<URL> {
+
+		private final UrlGeneratorBouncer bouncer;
+		private final UrlGenerator parentGenerator;
+		private final ErrorLog errorLog;
+
+		public proxyIterable(UrlGeneratorBouncer bouncer, UrlGenerator parentGenerator, ErrorLog errorLog) {
+			this.bouncer = bouncer;
+			this.parentGenerator = parentGenerator;
+			this.errorLog = errorLog;
+		}
+
+		@Override
+		public Iterator<URL> iterator() {
+			return new proxyIterator(bouncer, parentGenerator.urls(errorLog).iterator(), errorLog);
+		}
+
 	}
 
 	private static class proxyIterator implements Iterator<URL> {
@@ -83,10 +104,12 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
 		private Pattern filter;
 		private String splitter;
 		private URL currentParent;
+		private ErrorLog errorLog;
 
-		public proxyIterator(UrlGeneratorBouncer bouncer, Iterator<URL> parentIterator) {
+		public proxyIterator(UrlGeneratorBouncer bouncer, Iterator<URL> parentIterator, ErrorLog errorLog) {
 			this.bouncer = bouncer;
 			this.parentIterator = parentIterator;
+			this.errorLog = errorLog;
 			this.splitter = StringUtils.replaceEach(
 					bouncer.splitter,
 					new String[]{"\\n", "\\r", "\\t"},
@@ -162,9 +185,9 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
 					currentIterator = outList.iterator();
 				} catch (IOException exc) {
 					LOGGER.error("Failed to handle URL: {}; {}", currentParent, exc.getMessage());
+					errorLog.addError("Failed to download", Objects.toString(currentParent), 0);
 				}
 			}
 		}
 	}
-
 }

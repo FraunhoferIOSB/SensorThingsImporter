@@ -16,12 +16,14 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import java.net.URL;
 
 /**
  *
  * @author hylke
  */
-public interface UrlGenerator extends Iterable<URL> {
+public interface UrlGenerator {
 
+	public Iterable<URL> urls(ErrorLog errorLog);
 }

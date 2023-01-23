@@ -19,10 +19,10 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
-import java.util.Iterator;
 
 /**
  *
@@ -36,13 +36,15 @@ public class UrlGeneratorFixed implements UrlGenerator, AnnotatedConfigurable<Ob
 	private String url;
 
 	@Override
-	public Iterator<URL> iterator() {
-		try {
-			URL u = new URL(url);
-			return Arrays.asList(u).iterator();
-		} catch (MalformedURLException ex) {
-			throw new IllegalArgumentException("Not a valid URL: " + url, ex);
-		}
+	public Iterable<URL> urls(ErrorLog errorLog) {
+		return () -> {
+			try {
+				URL u = new URL(url);
+				return Arrays.asList(u).iterator();
+			} catch (MalformedURLException ex) {
+				throw new IllegalArgumentException("Not a valid URL: " + url, ex);
+			}
+		};
 	}
 
 }
