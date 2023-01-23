@@ -38,6 +38,7 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -94,7 +95,7 @@ public class UrlUtils {
 								.setConnectTimeout(10_000)
 								.setConnectionRequestTimeout(10_000)
 								.build());
-		try ( CloseableHttpClient client = clientBuilder.build()) {
+		try (CloseableHttpClient client = clientBuilder.build()) {
 			HttpGet get = new HttpGet(targetUrl);
 			if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
 				String auth = username + ":" + password;
@@ -109,14 +110,22 @@ public class UrlUtils {
 			if (entity == null) {
 				return new HttpResponse(statusCode, "", response.getAllHeaders());
 			}
-			String data = EntityUtils.toString(entity, charset);
+
+			String data = entityToString(entity, charset);
 			return new HttpResponse(statusCode, data, response.getAllHeaders());
 		}
 	}
 
 	private static HttpResponse readFileUrl(String targetUrl, Charset charset) throws IOException {
 		LOGGER.info("Loading: {}", targetUrl);
-		try ( InputStream input = new URL(targetUrl).openStream()) {
+		try (InputStream input = new URL(targetUrl).openStream()) {
+			if (input.markSupported()) {
+				input.mark(4);
+				byte[] firstBytes = new byte[3];
+				input.read(firstBytes);
+				charset = guessCharset(firstBytes, charset);
+				input.reset();
+			}
 			final String string = IOUtils.toString(input, charset);
 			return new HttpResponse(200, string);
 		}
@@ -137,7 +146,7 @@ public class UrlUtils {
 	}
 
 	public static HttpResponse postToUrl(String targetUrl, List<Header> headers, String queryBody, String username, String password) throws IOException, ParseException {
-		try ( CloseableHttpClient client = HttpClients.createSystem()) {
+		try (CloseableHttpClient client = HttpClients.createSystem()) {
 			final HttpPost post = new HttpPost(targetUrl);
 			if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
 				final String auth = username + ":" + password;
@@ -199,5 +208,46 @@ public class UrlUtils {
 		public boolean isError() {
 			return code >= 400;
 		}
+	}
+
+	private static final byte[] BOM_UTF16_LE = new byte[]{(byte) 0xFF, (byte) 0xFE};
+	private static final byte[] BOM_UTF16_BE = new byte[]{(byte) 0xFE, (byte) 0xFF};
+	private static final byte[] BOM_UTF8 = new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
+
+	public static String entityToString(HttpEntity entity, Charset charset) throws IOException {
+		ContentType contentType = ContentType.get(entity);
+		if (contentType != null) {
+			if (contentType.getCharset() != null) {
+				return EntityUtils.toString(entity, charset);
+			}
+		}
+		byte[] firstBytes = new byte[3];
+		entity.getContent().read(firstBytes);
+		return EntityUtils.toString(entity, guessCharset(firstBytes, charset));
+	}
+
+	private static Charset guessCharset(byte[] firstThreeBytes, Charset deflt) {
+		if (startsWith(firstThreeBytes, BOM_UTF16_LE)) {
+			return StandardCharsets.UTF_16LE;
+		}
+		if (startsWith(firstThreeBytes, BOM_UTF16_BE)) {
+			return StandardCharsets.UTF_16BE;
+		}
+		if (startsWith(firstThreeBytes, BOM_UTF8)) {
+			return StandardCharsets.UTF_8;
+		}
+		return deflt;
+	}
+
+	private static boolean startsWith(byte[] content, byte[] probe) {
+		if (probe.length > content.length) {
+			return false;
+		}
+		for (int i = 0; i < probe.length; i++) {
+			if (content[i] != probe[i]) {
+				return false;
+			}
+		}
+		return true;
 	}
 }
