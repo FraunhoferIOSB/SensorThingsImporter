@@ -43,7 +43,6 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -147,7 +146,14 @@ public class UrlUtils {
 	}
 
 	public static HttpResponse postToUrl(String targetUrl, List<Header> headers, String queryBody, String username, String password) throws IOException, ParseException {
-		try (CloseableHttpClient client = HttpClients.createSystem()) {
+		HttpClientBuilder builder = HttpClientBuilder.create()
+				.useSystemProperties()
+				.setMaxConnTotal(1)
+				.setDefaultRequestConfig(
+						RequestConfig.custom()
+								.setSocketTimeout(1000 * 60 * 15)
+								.build());
+		try (CloseableHttpClient client = builder.build()) {
 			final HttpPost post = new HttpPost(targetUrl);
 			if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
 				final String auth = username + ":" + password;
