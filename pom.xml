@@ -23,23 +23,23 @@
 		<git-commit-id-plugin.version>6.0.0</git-commit-id-plugin.version>
 		<maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
 		<maven-gpg-plugin>3.1.0</maven-gpg-plugin>
-		<maven-javadoc-plugin.version>3.5.0</maven-javadoc-plugin.version>
+		<maven-javadoc-plugin.version>3.6.0</maven-javadoc-plugin.version>
 		<maven-nexus-staging-plugin>1.6.13</maven-nexus-staging-plugin>
-		<maven-shade-plugin.version>3.5.0</maven-shade-plugin.version>
+		<maven-shade-plugin.version>3.5.1</maven-shade-plugin.version>
 		<maven-source-plugin.version>3.3.0</maven-source-plugin.version>
 
 		<!-- Dependency versions -->
 		<FROST-Client.version>0.44</FROST-Client.version>
 		<commons-collections.version>4.4</commons-collections.version>
 		<commons-csv.version>1.10.0</commons-csv.version>
-		<commons-io.version>2.13.0</commons-io.version>
+		<commons-io.version>2.14.0</commons-io.version>
 		<configurable.version>0.34</configurable.version>
-		<geotools.version>29.2</geotools.version>
+		<geotools.version>30.0</geotools.version>
 		<groovy.version>3.0.19</groovy.version>
 		<javax-activation.version>1.1.1</javax-activation.version>
 		<junit.version>4.13.2</junit.version>
 		<logback.version>1.4.11</logback.version>
-		<openjfx.version>20.0.2</openjfx.version>
+		<openjfx.version>21</openjfx.version>
 		<quartz.version>2.3.2</quartz.version>
 		<slf4j-version>2.0.9</slf4j-version>
 	</properties>
