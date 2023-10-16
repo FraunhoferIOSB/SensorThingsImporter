@@ -34,7 +34,7 @@
 		<commons-csv.version>1.10.0</commons-csv.version>
 		<commons-io.version>2.13.0</commons-io.version>
 		<configurable.version>0.34</configurable.version>
-		<geotools.version>29.2</geotools.version>
+		<geotools.version>30.0</geotools.version>
 		<groovy.version>3.0.19</groovy.version>
 		<javax-activation.version>1.1.1</javax-activation.version>
 		<junit.version>4.13.2</junit.version>
