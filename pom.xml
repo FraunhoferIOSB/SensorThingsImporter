@@ -91,12 +91,7 @@
 
 	<repositories>
 		<repository>
-			<id>1_maven_central</id>
-			<name>Maven Central</name>
-			<url>https://repo1.maven.org/maven2/</url>
-		</repository>
-		<repository>
-			<id>2_osgeo</id>
+			<id>osgeo</id>
 			<name>Open Source Geospatial Foundation Repository</name>
 			<url>https://repo.osgeo.org/repository/release/</url>
 		</repository>
