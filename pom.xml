@@ -33,15 +33,15 @@
 		<commons-collections.version>4.4</commons-collections.version>
 		<commons-csv.version>1.10.0</commons-csv.version>
 		<commons-io.version>2.15.1</commons-io.version>
-		<configurable.version>0.34</configurable.version>
-		<geotools.version>30.1</geotools.version>
+		<configurable.version>0.35</configurable.version>
+		<geotools.version>30.2</geotools.version>
 		<groovy.version>3.0.20</groovy.version>
 		<javax-activation.version>1.1.1</javax-activation.version>
 		<junit.version>4.13.2</junit.version>
-		<logback.version>1.4.14</logback.version>
-		<openjfx.version>21.0.1</openjfx.version>
+		<logback.version>1.5.0</logback.version>
+		<openjfx.version>21.0.2</openjfx.version>
 		<quartz.version>2.3.2</quartz.version>
-		<slf4j-version>2.0.11</slf4j-version>
+		<slf4j-version>2.0.12</slf4j-version>
 	</properties>
 
 	<licenses>
