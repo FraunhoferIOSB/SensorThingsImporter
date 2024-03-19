@@ -113,9 +113,9 @@ public class UrlUtils {
 
 			String data = entityToString(entity, charset);
 			if (LOGGER.isTraceEnabled()) {
-				LOGGER.trace("Received: ", Utils.cleanForLogging(data));
+				LOGGER.trace("Received: {}", Utils.cleanForLogging(data));
 			} else if (LOGGER.isDebugEnabled()) {
-				LOGGER.trace("Received: ", Utils.cleanForLogging(data, 100));
+				LOGGER.debug("Received: {}", Utils.cleanForLogging(data, 100));
 			}
 
 			return new HttpResponse(statusCode, data, response.getAllHeaders());
