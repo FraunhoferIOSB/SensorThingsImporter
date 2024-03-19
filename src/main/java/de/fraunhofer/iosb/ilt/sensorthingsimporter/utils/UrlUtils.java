@@ -103,7 +103,16 @@ public class UrlUtils {
 				String authHeader = "Basic " + new String(encodedAuth);
 				get.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
 			}
-			headers.stream().forEach(h -> get.addHeader(h));
+			boolean hasAccept = false;
+			for (var h : headers) {
+				if ("accept".equalsIgnoreCase(h.getName())) {
+					hasAccept = true;
+				}
+				get.addHeader(h);
+			}
+			if (!hasAccept) {
+				get.addHeader("Accept", "*/*");
+			}
 			CloseableHttpResponse response = client.execute(get);
 			HttpEntity entity = response.getEntity();
 			final int statusCode = response.getStatusLine().getStatusCode();
