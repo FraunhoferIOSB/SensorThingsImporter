@@ -4,7 +4,7 @@
 
 	<groupId>de.fraunhofer.iosb.ilt</groupId>
 	<artifactId>SensorThingsImporter</artifactId>
-	<version>0.19</version>
+	<version>0.20-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>SensorThingsImporter</name>
@@ -70,7 +70,7 @@
 		<connection>scm:git:git://github.com/FraunhoferIOSB/SensorThingsImporter.git</connection>
 		<developerConnection>scm:git:ssh://github.com:FraunhoferIOSB/SensorThingsImporter.git</developerConnection>
 		<url>https://github.com/FraunhoferIOSB/SensorThingsImporter/tree/master</url>
-		<tag>v0.19</tag>
+		<tag>HEAD</tag>
 	</scm>
 
 	<issueManagement>
@@ -250,7 +250,7 @@
 									<goal>push</goal>
 								</goals>
 								<configuration>
-									<tag>v0.19</tag>
+									<tag>latest</tag>
 								</configuration>
 							</execution>
 							<execution>
