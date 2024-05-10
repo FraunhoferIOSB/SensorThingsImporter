@@ -1,0 +1,125 @@
+{
+  "importer": {
+    "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.ImporterCsv",
+    "classConfig": {
+      "recordConvertors": [
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames",
+          "classConfig": {
+            "colResult": "VALUE_NUMERIC",
+            "resultMissing": "-1",
+            "colUnit": "UNIT",
+            "converter": {
+              "conversions": [
+                {
+                  "from": "mg/m3",
+                  "to": "µg/m3",
+                  "factor": 1000
+                },
+                {
+                  "from": "mg/m3",
+                  "to": "ug/m3",
+                  "factor": 1000
+                },
+                {
+                  "from": "ugNO2/m3",
+                  "to": "ug/m3",
+                  "factor": 1
+                },
+                {
+                  "from": "ug.m-3",
+                  "to": "ug/m3",
+                  "factor": 1
+                },
+                {
+                  "from": "µg/m3",
+                  "to": "ug/m3",
+                  "factor": 1
+                }
+              ]
+            },
+            "colPhenTime": [
+              "DATETIME_BEGIN",
+              "DATETIME_END"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DsMapperFilter",
+              "classConfig": {
+                "filterTemplate": "name eq \u0027{SAMPLINGPOINT_LOCALID}\u0027",
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.DataStreamGeneratorEea",
+                  "classConfig": {
+                    "stationsUrl": "http://discomap.eea.europa.eu/map/fme/metadata/PanEuropean_metadata.csv"
+                  }
+                }
+              }
+            },
+            "timeParser": {
+              "format": "yyyyMMddHHmmss",
+              "zone": "+01:00"
+            },
+            "resultParser": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.ParserBigdecimal",
+              "classConfig": {
+                "dropTailingZeroes": true,
+                "decimalSeparator": "DETECT"
+              }
+            }
+          }
+        }
+      ],
+      "inputUrl": {
+        "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.UrlGeneratorCombinations",
+        "classConfig": {
+          "baseUrl": "https://discomap.eea.europa.eu/Map/UTDViewer/dataService/Hourly?polu\u003d{polu}\u0026dt\u003d{time}",
+          "replaceSets": [
+            {
+              "replaceKey": "{polu}",
+              "replacementGen": {
+                "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.StringListGenStatic",
+                "strings": [
+                  "PM10",
+                  "PM25",
+                  "NO2",
+                  "O3",
+                  "SO2",
+                  "CO"
+                ]
+              }
+            },
+            {
+              "replaceKey": "{time}",
+              "replacementGen": {
+                "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.StringListGeneratorTimeStrings",
+                "minus": 24,
+                "count": 26,
+                "delta": 1,
+                "zone": "+01:00",
+                "format": "yyyyMMddHHmmss"
+              }
+            }
+          ]
+        }
+      },
+      "hasHeader": true
+    }
+  },
+  "validator": {
+    "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.ValidatorByPhenTime",
+    "classConfig": {
+      "update": true,
+      "cacheObservations": true,
+      "deleteDuplicates": true
+    }
+  },
+  "uploader": {
+    "serviceUrl": "http://localhost:8080/FROST-Server/v1.1",
+    "authMethod": {
+      "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthNone",
+      "classConfig": {}
+    },
+    "useDataArrays": true,
+    "maxBatch": 1000
+  },
+  "name": "eeaIosbH"
+}

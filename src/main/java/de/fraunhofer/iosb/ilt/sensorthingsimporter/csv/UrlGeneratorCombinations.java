@@ -21,7 +21,9 @@ import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
+import de.fraunhofer.iosb.ilt.swe.common.Utils;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -42,11 +44,16 @@ public class UrlGeneratorCombinations implements UrlGenerator, AnnotatedConfigur
 		@EditorString.EdOptsString()
 		private String replaceKey;
 
-		@ConfigurableField(editor = EditorList.class,
-				label = "Replacements", description = "The values to replace {key} with.")
-		@EditorList.EdOptsList(editor = EditorString.class, minCount = 1, labelText = "Add Replace Value")
+		@ConfigurableField(editor = EditorList.class, optional = true,
+				label = "Depricated", description = "Use a generator instead!")
+		@EditorList.EdOptsList(editor = EditorString.class, minCount = 0, labelText = "Add Replace Value")
 		@EditorString.EdOptsString()
 		private List<String> replacements;
+
+		@ConfigurableField(editor = EditorSubclass.class,
+				label = "Generator", description = "Generator for the values to replace {key} with.")
+		@EditorSubclass.EdOptsSubclass(iface = StringListGenerator.class, merge = true, shortenClassNames = true)
+		private StringListGenerator replacementGen;
 
 		private Iterator<String> iterator;
 
@@ -71,21 +78,24 @@ public class UrlGeneratorCombinations implements UrlGenerator, AnnotatedConfigur
 		}
 
 		public List<String> getReplacements() {
+			if (Utils.isNullOrEmpty(replacements)) {
+				if (replacementGen != null) {
+					replacements = replacementGen.get();
+				} else {
+					replacements = new ArrayList<>();
+				}
+			}
 			return replacements;
 		}
 
 		public ReplaceSet addReplacement(String replacement) {
-			if (replacements == null) {
-				replacements = new ArrayList<>();
-
-			}
-			replacements.add(replacement);
+			getReplacements().add(replacement);
 			return this;
 		}
 
 		private void init() {
 			if (iterator == null) {
-				iterator = replacements.iterator();
+				iterator = getReplacements().iterator();
 				if (child != null) {
 					child.childInit();
 				}
@@ -93,7 +103,7 @@ public class UrlGeneratorCombinations implements UrlGenerator, AnnotatedConfigur
 		}
 
 		private void childInit() {
-			iterator = replacements.iterator();
+			iterator = getReplacements().iterator();
 			current = iterator.next();
 			if (child != null) {
 				child.childInit();
@@ -108,7 +118,7 @@ public class UrlGeneratorCombinations implements UrlGenerator, AnnotatedConfigur
 		public void next() {
 			init();
 			if (!iterator.hasNext()) {
-				iterator = replacements.iterator();
+				iterator = getReplacements().iterator();
 				child.next();
 			}
 			current = iterator.next();

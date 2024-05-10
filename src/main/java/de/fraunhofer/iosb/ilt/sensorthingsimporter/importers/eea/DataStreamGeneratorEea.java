@@ -81,6 +81,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 	 * StationLocalid/SamplingPointLocalId
 	 */
 	private static final Map<String, Map<String, Map<String, EeaStationRecord>>> STATIONS = new HashMap<>();
+	private static final Map<String, EeaStationRecord> SAMPLING_POINTS = new HashMap<>();
 	private final EntityCache<String, ObservedProperty> observedPropertyCache = EeaObservedProperty.createObservedPropertyCache();
 
 	@Override
@@ -171,7 +172,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 					null);
 			ObservedProperty observedProperty = observedPropertyCache.get(FrostUtils.afterLastSlash(sr.airPollutantCode).trim());
 
-			String valueUnit = getFromRecord(record, "value_unit", "UnitOfMeasurement");
+			String valueUnit = getFromRecord(record, "UNIT", "value_unit", "UnitOfMeasurement");
 			if (valueUnit == null) {
 				throw new ImportException("Could not find unit in record.");
 			}
@@ -205,8 +206,12 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 		loadStationData();
 		loadObservedProperties();
 		String stationLocalId = getFromRecord(record, "station_localid", "AirQualityStation");
-		String pointLocalId = getFromRecord(record, "samplingpoint_localid", "SamplingPoint");
+		String pointLocalId = getFromRecord(record, "SAMPLINGPOINT_LOCALID", "samplingpoint_localid", "SamplingPoint");
 		String processLocalId = getFromRecord(record, "samplingprocess_localid", "SamplingProcess");
+		final EeaStationRecord station = SAMPLING_POINTS.get(pointLocalId);
+		if (station != null) {
+			return station;
+		}
 		return STATIONS
 				.getOrDefault(stationLocalId, Collections.emptyMap())
 				.getOrDefault(pointLocalId, Collections.emptyMap())
@@ -256,6 +261,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
 				STATIONS.computeIfAbsent(station.airQualityStation, (t) -> new HashMap<>())
 						.computeIfAbsent(station.samplingPoint, (t) -> new HashMap<>())
 						.put(station.samplingProces, station);
+				SAMPLING_POINTS.put(station.samplingPoint, station);
 			}
 
 		} catch (IOException ex) {
