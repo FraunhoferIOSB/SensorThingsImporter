@@ -111,6 +111,13 @@ public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<S
 		EntityList<Datastream> streams = query.list();
 		if (streams.size() > 1) {
 			LOGGER.error("Found incorrect number of datastreams: {} for filter: {}", streams.size(), filter);
+			if (dsGenerator != null) {
+				ds = dsGenerator.createDatastreamFor(record, errorLog);
+				if (ds == null) {
+					LOGGER.info("DsGenerator did not fix it.");
+				}
+				return ds;
+			}
 			return null;
 		} else if (streams.isEmpty()) {
 			if (dsGenerator != null) {
