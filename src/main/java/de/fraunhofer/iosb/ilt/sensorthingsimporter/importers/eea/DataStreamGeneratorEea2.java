@@ -218,6 +218,13 @@ public class DataStreamGeneratorEea2 implements DatastreamGenerator, AnnotatedCo
 
 	private Datastream importEntities(EeaStationRecord sr, CSVRecord record) throws ImportException {
 		String pointLocalId = getFromRecord(record, "SAMPLINGPOINT_LOCALID");
+		String obsPropName = getFromRecord(record, "PROPERTY");
+		ObservedProperty observedProperty = observedPropertyCache.getByName(obsPropName);
+		if (observedProperty == null) {
+			LOGGER.error("Found no ObservedProperty for {}", obsPropName);
+			return null;
+		}
+
 		Point point = new Point(
 				sr.longitude.setScale(6, RoundingMode.HALF_EVEN).doubleValue(),
 				sr.latitude.setScale(6, RoundingMode.HALF_EVEN).doubleValue());
@@ -286,7 +293,6 @@ public class DataStreamGeneratorEea2 implements DatastreamGenerator, AnnotatedCo
 					sr.measurementEquipment,
 					sensorProps,
 					null);
-			ObservedProperty observedProperty = observedPropertyCache.get(FrostUtils.afterLastSlash(sr.airPollutant).trim());
 
 			String valueUnit = getFromRecord(record, "UNIT", "value_unit", "UnitOfMeasurement");
 			if (valueUnit == null) {
@@ -310,7 +316,7 @@ public class DataStreamGeneratorEea2 implements DatastreamGenerator, AnnotatedCo
 	private String getFromRecord(CSVRecord record, String... names) {
 		for (String name : names) {
 			try {
-				return record.get(name);
+				return record.get(name).trim();
 			} catch (IllegalArgumentException ex) {
 				// It's fine
 			}
@@ -384,7 +390,6 @@ public class DataStreamGeneratorEea2 implements DatastreamGenerator, AnnotatedCo
 		String assessmentMethodId;
 		String sample;
 		String samplingMethod;
-		String airPollutant;
 		String observationDateBegin;
 		String observationDateEnd;
 
@@ -417,7 +422,6 @@ public class DataStreamGeneratorEea2 implements DatastreamGenerator, AnnotatedCo
 
 			processId = deQuote(getString(samplingPoint, "ProcessId"));
 			assessmentMethodId = deQuote(getString(samplingPoint, "AssessmentMethodId"));
-			airPollutant = deQuote(getString(samplingPoint, "AirPollutant"));
 
 			observationDateBegin = deQuote(getString(samplingPoint, "OperationalActivityBegin"));
 			observationDateEnd = deQuote(getString(samplingPoint, "OperationalActivityEnd"));
