@@ -176,10 +176,19 @@ public class UrlUtils {
 				final String authHeader = "Basic " + new String(encodedAuth);
 				post.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
 			}
-			if (headers.isEmpty()) {
+			boolean hasAccept = false;
+			boolean hasContentType = false;
+			for (var h : headers) {
+				if ("accept".equalsIgnoreCase(h.getName())) {
+					hasAccept = true;
+				}
+				post.addHeader(h);
+			}
+			if (!hasAccept) {
+				post.addHeader("Accept", "*/*");
+			}
+			if (!hasContentType) {
 				post.addHeader("Content-Type", "application/json");
-			} else {
-				headers.stream().forEach(h -> post.addHeader(h));
 			}
 			post.setEntity(new StringEntity(queryBody));
 			LOGGER.debug("Posting to {}", targetUrl);
