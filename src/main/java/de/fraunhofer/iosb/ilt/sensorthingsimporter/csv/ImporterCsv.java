@@ -254,7 +254,7 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
 				rowCount++;
 				return result;
 			}
-			LOGGER.info("Parsed {} rows of {}.", rowCount, totalCount);
+			LOGGER.debug("Parsed {} rows of {}.", rowCount, totalCount);
 			return Collections.emptyList();
 		}
 
