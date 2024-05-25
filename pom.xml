@@ -42,6 +42,7 @@
 		<openjfx.version>22.0.1</openjfx.version>
 		<quartz.version>2.3.2</quartz.version>
 		<slf4j-version>2.0.13</slf4j-version>
+        <version.time4j>5.9.4</version.time4j>
 	</properties>
 
 	<licenses>
@@ -316,6 +317,11 @@
 			<artifactId>logback-classic</artifactId>
 			<version>${logback.version}</version>
 		</dependency>
+        <dependency>
+            <groupId>net.time4j</groupId>
+            <artifactId>time4j-base</artifactId>
+            <version>${version.time4j}</version>
+        </dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-collections4</artifactId>

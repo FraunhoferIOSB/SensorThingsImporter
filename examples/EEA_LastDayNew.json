@@ -106,11 +106,24 @@
 		}
 	},
 	"validator": {
-		"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.ValidatorByPhenTime",
+		"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.ValidatorMulti",
 		"classConfig": {
-			"update": true,
-			"cacheObservations": true,
-			"deleteDuplicates": true
+			"validators": [
+				{
+					"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.ValidatorCheckTimeInterval",
+					"classConfig": {
+						"duration": "PT1H"
+					}
+				},
+				{
+					"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.ValidatorByPhenTime",
+					"classConfig": {
+						"update": true,
+						"cacheObservations": true,
+						"deleteDuplicates": true
+					}
+				}
+			]
 		}
 	},
 	"uploader": {

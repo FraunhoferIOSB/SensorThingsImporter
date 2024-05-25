@@ -462,7 +462,7 @@ public class DataStreamGeneratorEea2 implements DatastreamGenerator, AnnotatedCo
 			if (value.isTextual()) {
 				return value.textValue();
 			}
-			LOGGER.error("No text value for {}: {}", property, value);
+			LOGGER.debug("No text value for {}: {}", property, value);
 			return "";
 		}
 
