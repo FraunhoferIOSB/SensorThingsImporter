@@ -1,4 +1,4 @@
-FROM openjdk:17-slim
+FROM eclipse-temurin:21-alpine
 
 # Copy to images tomcat path
 ARG JAR_FILE
