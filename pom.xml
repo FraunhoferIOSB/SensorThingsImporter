@@ -26,7 +26,7 @@
 		<maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
 		<maven-nexus-staging-plugin>1.7.0</maven-nexus-staging-plugin>
 		<maven-shade-plugin.version>3.6.1</maven-shade-plugin.version>
-		<maven-source-plugin.version>3.3.1</maven-source-plugin.version>
+		<maven-source-plugin.version>3.4.0</maven-source-plugin.version>
 
 		<!-- Dependency versions -->
 		<FROST-Client.version>0.45</FROST-Client.version>
@@ -38,9 +38,9 @@
 		<groovy.version>3.0.25</groovy.version>
 		<javax-activation.version>1.1.1</javax-activation.version>
 		<junit.version>4.13.2</junit.version>
-		<logback.version>1.5.21</logback.version>
+		<logback.version>1.5.22</logback.version>
 		<openjfx.version>23.0.2</openjfx.version>
-		<quartz.version>2.5.1</quartz.version>
+		<quartz.version>2.5.2</quartz.version>
 		<slf4j-version>2.0.17</slf4j-version>
         <version.time4j>5.9.4</version.time4j>
 	</properties>
