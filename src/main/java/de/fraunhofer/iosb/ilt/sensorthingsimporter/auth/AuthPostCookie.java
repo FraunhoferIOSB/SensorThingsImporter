@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2019 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,61 +36,59 @@ import org.slf4j.LoggerFactory;
  */
 public class AuthPostCookie implements AuthMethod {
 
-	public static final String HTTPREQUEST_HEADER_ACCEPT = "Accept";
-	public static final String HTTPREQUEST_HEADER_CONTENT_TYPE = "Content-Type";
-	public static final String HTTPREQUEST_TYPE_JSON = "application/json";
-	/**
-	 * The logger for this class.
-	 */
-	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(AuthPostCookie.class);
+    public static final String HTTPREQUEST_HEADER_ACCEPT = "Accept";
+    public static final String HTTPREQUEST_HEADER_CONTENT_TYPE = "Content-Type";
+    public static final String HTTPREQUEST_TYPE_JSON = "application/json";
+    /**
+     * The logger for this class.
+     */
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(AuthPostCookie.class);
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "PostUrl",
-			description = "The url to post to, use placeholders {username} and {password} for username and password.",
-			optional = false
-	)
-	@EditorString.EdOptsString(dflt = "https://example.org/servlet/is/rest/login?user={username}&key={password}")
-	private String postUrl;
+    @ConfigurableField(editor = EditorString.class,
+            label = "PostUrl",
+            description = "The url to post to, use placeholders {username} and {password} for username and password.",
+            optional = false)
+    @EditorString.EdOptsString(dflt = "https://example.org/servlet/is/rest/login?user={username}&key={password}")
+    private String postUrl;
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Username",
-			description = "The username to use for authentication",
-			optional = false
-	)
-	@EditorString.EdOptsString()
-	private String username;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Username",
+            description = "The username to use for authentication",
+            optional = false)
+    @EditorString.EdOptsString()
+    private String username;
 
-	@ConfigurableField(editor = EditorPassword.class,
-			label = "Password",
-			description = "The password to use for authentication",
-			optional = false)
-	@EditorPassword.EdOptsPassword()
-	private String password;
+    @ConfigurableField(editor = EditorPassword.class,
+            label = "Password",
+            description = "The password to use for authentication",
+            optional = false)
+    @EditorPassword.EdOptsPassword()
+    private String password;
 
-	@ConfigurableField(editor = EditorBoolean.class,
-			label = "IgnoreSslErrors",
-			description = "Ignore SSL certificate errors. This is a bad idea unless you know what you are doing.",
-			optional = true)
-	@EditorBoolean.EdOptsBool()
-	private boolean ignoreSslErrors;
+    @ConfigurableField(editor = EditorBoolean.class,
+            label = "IgnoreSslErrors",
+            description = "Ignore SSL certificate errors. This is a bad idea unless you know what you are doing.",
+            optional = true)
+    @EditorBoolean.EdOptsBool()
+    private boolean ignoreSslErrors;
 
-	@Override
-	public void setAuth(SensorThingsService service) {
-		String finalUrl = postUrl.replace("{username}", username);
-		finalUrl = finalUrl.replace("{password}", password);
-		CloseableHttpClient client = service.getHttpClient();
-		final HttpPost loginPost = new HttpPost(finalUrl);
-		loginPost.setHeader(HTTPREQUEST_HEADER_ACCEPT, HTTPREQUEST_TYPE_JSON);
-		try {
-			CloseableHttpResponse response = client.execute(loginPost);
-			final StatusLine statusLine = response.getStatusLine();
-			LOGGER.debug("Response: {}, {}", statusLine.getStatusCode(), statusLine.getReasonPhrase());
-			if (statusLine.getStatusCode() >= 300) {
-				LOGGER.error("Login failed: {},{}\n{}", statusLine.getStatusCode(), statusLine.getReasonPhrase(), EntityUtils.toString(response.getEntity()));
-			}
-		} catch (IOException ex) {
-			LOGGER.error("Failed to login.", ex);
-		}
-	}
+    @Override
+    public void setAuth(SensorThingsService service) {
+        String finalUrl = postUrl.replace("{username}", username);
+        finalUrl = finalUrl.replace("{password}", password);
+        CloseableHttpClient client = service.getHttpClient();
+        final HttpPost loginPost = new HttpPost(finalUrl);
+        loginPost.setHeader(HTTPREQUEST_HEADER_ACCEPT, HTTPREQUEST_TYPE_JSON);
+        try {
+            CloseableHttpResponse response = client.execute(loginPost);
+            final StatusLine statusLine = response.getStatusLine();
+            LOGGER.debug("Response: {}, {}", statusLine.getStatusCode(), statusLine.getReasonPhrase());
+            if (statusLine.getStatusCode() >= 300) {
+                LOGGER.error("Login failed: {},{}\n{}", statusLine.getStatusCode(), statusLine.getReasonPhrase(), EntityUtils.toString(response.getEntity()));
+            }
+        } catch (IOException ex) {
+            LOGGER.error("Failed to login.", ex);
+        }
+    }
 
 }

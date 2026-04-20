@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2020 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,68 +35,68 @@ import java.util.Map;
  */
 public class UnitConverter implements AnnotatedConfigurable<Object, Object> {
 
-	public static class Unit implements AnnotatedConfigurable<Object, Object> {
+    public static class Unit implements AnnotatedConfigurable<Object, Object> {
 
-		@ConfigurableField(editor = EditorString.class,
-				label = "From", description = "The unit to convert from.")
-		@EditorString.EdOptsString()
-		private String from;
+        @ConfigurableField(editor = EditorString.class,
+                label = "From", description = "The unit to convert from.")
+        @EditorString.EdOptsString()
+        private String from;
 
-		@ConfigurableField(editor = EditorString.class,
-				label = "To", description = "The unit to convert to.")
-		@EditorString.EdOptsString()
-		private String to;
+        @ConfigurableField(editor = EditorString.class,
+                label = "To", description = "The unit to convert to.")
+        @EditorString.EdOptsString()
+        private String to;
 
-		@ConfigurableField(editor = EditorBigDecimal.class,
-				label = "Factor", description = "The factor to multiply 'From' with to get 'To'.")
-		@EditorBigDecimal.EdOptsBigDecimal(dflt = 1)
-		private BigDecimal factor;
+        @ConfigurableField(editor = EditorBigDecimal.class,
+                label = "Factor", description = "The factor to multiply 'From' with to get 'To'.")
+        @EditorBigDecimal.EdOptsBigDecimal(dflt = 1)
+        private BigDecimal factor;
 
-		public Unit() {
-		}
+        public Unit() {
+        }
 
-		public BigDecimal convert(BigDecimal from) {
-			return from.multiply(factor);
-		}
+        public BigDecimal convert(BigDecimal from) {
+            return from.multiply(factor);
+        }
 
-		public BigDecimal convertInverse(BigDecimal from) {
-			return from.divide(factor);
-		}
-	}
+        public BigDecimal convertInverse(BigDecimal from) {
+            return from.divide(factor);
+        }
+    }
 
-	@ConfigurableField(editor = EditorList.class,
-			label = "Conversions",
-			description = "The list of unit conversions")
-	@EditorList.EdOptsList(editor = EditorClass.class)
-	@EditorClass.EdOptsClass(clazz = Unit.class)
-	public List<Unit> conversions;
+    @ConfigurableField(editor = EditorList.class,
+            label = "Conversions",
+            description = "The list of unit conversions")
+    @EditorList.EdOptsList(editor = EditorClass.class)
+    @EditorClass.EdOptsClass(clazz = Unit.class)
+    public List<Unit> conversions;
 
-	public boolean inited = false;
-	public Map<String, Map<String, Unit>> forward = new HashMap<>();
-	public Map<String, Map<String, Unit>> reverse = new HashMap<>();
+    public boolean inited = false;
+    public Map<String, Map<String, Unit>> forward = new HashMap<>();
+    public Map<String, Map<String, Unit>> reverse = new HashMap<>();
 
-	public BigDecimal convert(String from, String to, BigDecimal value) {
-		if (!inited) {
-			init();
-		}
-		Unit unit = forward.computeIfAbsent(from, (t) -> Collections.emptyMap()).get(to);
-		if (unit != null) {
-			return unit.convert(value);
-		}
-		unit = reverse.computeIfAbsent(from, (t) -> Collections.emptyMap()).get(to);
-		if (unit != null) {
-			return unit.convertInverse(value);
-		}
-		return null;
-	}
+    public BigDecimal convert(String from, String to, BigDecimal value) {
+        if (!inited) {
+            init();
+        }
+        Unit unit = forward.computeIfAbsent(from, (t) -> Collections.emptyMap()).get(to);
+        if (unit != null) {
+            return unit.convert(value);
+        }
+        unit = reverse.computeIfAbsent(from, (t) -> Collections.emptyMap()).get(to);
+        if (unit != null) {
+            return unit.convertInverse(value);
+        }
+        return null;
+    }
 
-	private void init() {
-		if (inited) {
-			return;
-		}
-		for (Unit unit : conversions) {
-			forward.computeIfAbsent(unit.from, (t) -> new HashMap<>()).put(unit.to, unit);
-			reverse.computeIfAbsent(unit.to, (t) -> new HashMap<>()).put(unit.from, unit);
-		}
-	}
+    private void init() {
+        if (inited) {
+            return;
+        }
+        for (Unit unit : conversions) {
+            forward.computeIfAbsent(unit.from, (t) -> new HashMap<>()).put(unit.to, unit);
+            reverse.computeIfAbsent(unit.to, (t) -> new HashMap<>()).put(unit.from, unit);
+        }
+    }
 }

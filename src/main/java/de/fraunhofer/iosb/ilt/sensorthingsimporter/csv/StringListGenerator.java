@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2024 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,5 +25,5 @@ import java.util.List;
  */
 public interface StringListGenerator extends AnnotatedConfigurable<Object, Object> {
 
-	public List<String> get();
+    public List<String> get();
 }

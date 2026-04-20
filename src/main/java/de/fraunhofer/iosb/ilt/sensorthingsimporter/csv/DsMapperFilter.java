@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -46,113 +46,113 @@ import org.slf4j.LoggerFactory;
  */
 public class DsMapperFilter implements DatastreamMapper, AnnotatedConfigurable<SensorThingsService, Object> {
 
-	/**
-	 * The logger for this class.
-	 */
-	private static final Logger LOGGER = LoggerFactory.getLogger(DsMapperFilter.class);
-	private final Map<String, Datastream> datastreamCache = new HashMap<>();
-	private final Map<String, MultiDatastream> multiDatastreamCache = new HashMap<>();
+    /**
+     * The logger for this class.
+     */
+    private static final Logger LOGGER = LoggerFactory.getLogger(DsMapperFilter.class);
+    private final Map<String, Datastream> datastreamCache = new HashMap<>();
+    private final Map<String, MultiDatastream> multiDatastreamCache = new HashMap<>();
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Filter", description = "A filter that will be added to the query for the datastream.\nUse placeholders {colNr} to add the content of columns to the query.")
-	@EditorString.EdOptsString(dflt = "Thing/properties/id eq {1}", lines = 3)
-	private String filterTemplate;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Filter", description = "A filter that will be added to the query for the datastream.\nUse placeholders {colNr} to add the content of columns to the query.")
+    @EditorString.EdOptsString(dflt = "Thing/properties/id eq {1}", lines = 3)
+    private String filterTemplate;
 
-	@ConfigurableField(editor = EditorSubclass.class, optional = true,
-			label = "DS Generator", description = "Generates Datastreams if the required one does not exist yet.")
-	@EditorSubclass.EdOptsSubclass(iface = DatastreamGenerator.class)
-	private DatastreamGenerator dsGenerator;
+    @ConfigurableField(editor = EditorSubclass.class, optional = true,
+            label = "DS Generator", description = "Generates Datastreams if the required one does not exist yet.")
+    @EditorSubclass.EdOptsSubclass(iface = DatastreamGenerator.class)
+    private DatastreamGenerator dsGenerator;
 
-	private SensorThingsService service;
+    private SensorThingsService service;
 
-	public DsMapperFilter() {
-	}
+    public DsMapperFilter() {
+    }
 
-	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
-		service = context;
-		AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
-	}
+    @Override
+    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+        service = context;
+        AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
+    }
 
-	@Override
-	public Datastream getDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
-		try {
-			String filter = Translator.fillTemplate(filterTemplate, record, StringType.URL, true);
-			Datastream ds = getDatastreamFor(filter, record, errorLog);
-			return ds;
-		} catch (ServiceFailureException ex) {
-			LOGGER.error("Failed to fetch datastream.", ex);
-			throw new IllegalArgumentException(ex);
-		}
-	}
+    @Override
+    public Datastream getDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
+        try {
+            String filter = Translator.fillTemplate(filterTemplate, record, StringType.URL, true);
+            Datastream ds = getDatastreamFor(filter, record, errorLog);
+            return ds;
+        } catch (ServiceFailureException ex) {
+            LOGGER.error("Failed to fetch datastream.", ex);
+            throw new IllegalArgumentException(ex);
+        }
+    }
 
-	@Override
-	public MultiDatastream getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) {
-		try {
-			String filter = Translator.fillTemplate(filterTemplate, record, StringType.URL, true);
-			MultiDatastream ds = getMultiDatastreamFor(filter, record, errorLog);
-			return ds;
-		} catch (ServiceFailureException ex) {
-			LOGGER.error("Failed to fetch datastream.", ex);
-			throw new IllegalArgumentException(ex);
-		}
-	}
+    @Override
+    public MultiDatastream getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) {
+        try {
+            String filter = Translator.fillTemplate(filterTemplate, record, StringType.URL, true);
+            MultiDatastream ds = getMultiDatastreamFor(filter, record, errorLog);
+            return ds;
+        } catch (ServiceFailureException ex) {
+            LOGGER.error("Failed to fetch datastream.", ex);
+            throw new IllegalArgumentException(ex);
+        }
+    }
 
-	private Datastream getDatastreamFor(String filter, CSVRecord record, ErrorLog errorLog) throws ServiceFailureException, ImportException {
-		Datastream ds = datastreamCache.get(filter);
-		if (ds != null) {
-			return ds;
-		}
-		if (datastreamCache.containsKey(filter)) {
-			// We previously had found nothing. Don't search again.
-			return null;
-		}
-		Query<Datastream> query = service.datastreams().query().filter(filter);
-		EntityList<Datastream> streams = query.list();
-		if (streams.size() > 1) {
-			LOGGER.error("Found incorrect number of datastreams: {} for filter: {}", streams.size(), filter);
-			if (dsGenerator != null) {
-				ds = dsGenerator.createDatastreamFor(record, errorLog);
-				if (ds == null) {
-					LOGGER.info("DsGenerator did not fix it.");
-				}
-				return ds;
-			}
-			return null;
-		} else if (streams.isEmpty()) {
-			if (dsGenerator != null) {
-				ds = dsGenerator.createDatastreamFor(record, errorLog);
-				if (ds != null) {
-					LOGGER.info("Created datastream {} for filter {}.", ds, filter);
-				}
-			}
-		} else {
-			ds = streams.iterator().next();
-			LOGGER.debug("Found datastream {} for filter {}.", ds.getId(), filter);
-		}
-		if (ds == null) {
-			errorLog.addError("DS not found");
-			LOGGER.error("Found no datastreams for filter: {}.", filter);
-		}
-		datastreamCache.put(filter, ds);
-		return ds;
-	}
+    private Datastream getDatastreamFor(String filter, CSVRecord record, ErrorLog errorLog) throws ServiceFailureException, ImportException {
+        Datastream ds = datastreamCache.get(filter);
+        if (ds != null) {
+            return ds;
+        }
+        if (datastreamCache.containsKey(filter)) {
+            // We previously had found nothing. Don't search again.
+            return null;
+        }
+        Query<Datastream> query = service.datastreams().query().filter(filter);
+        EntityList<Datastream> streams = query.list();
+        if (streams.size() > 1) {
+            LOGGER.error("Found incorrect number of datastreams: {} for filter: {}", streams.size(), filter);
+            if (dsGenerator != null) {
+                ds = dsGenerator.createDatastreamFor(record, errorLog);
+                if (ds == null) {
+                    LOGGER.info("DsGenerator did not fix it.");
+                }
+                return ds;
+            }
+            return null;
+        } else if (streams.isEmpty()) {
+            if (dsGenerator != null) {
+                ds = dsGenerator.createDatastreamFor(record, errorLog);
+                if (ds != null) {
+                    LOGGER.info("Created datastream {} for filter {}.", ds, filter);
+                }
+            }
+        } else {
+            ds = streams.iterator().next();
+            LOGGER.debug("Found datastream {} for filter {}.", ds.getId(), filter);
+        }
+        if (ds == null) {
+            errorLog.addError("DS not found");
+            LOGGER.error("Found no datastreams for filter: {}.", filter);
+        }
+        datastreamCache.put(filter, ds);
+        return ds;
+    }
 
-	private MultiDatastream getMultiDatastreamFor(String filter, CSVRecord record, ErrorLog errorLog) throws ServiceFailureException {
-		MultiDatastream mds = multiDatastreamCache.get(filter);
-		if (mds != null) {
-			return mds;
-		}
-		Query<MultiDatastream> query = service.multiDatastreams().query().filter(filter);
-		EntityList<MultiDatastream> streams = query.list();
-		if (streams.size() != 1) {
-			LOGGER.error("Found incorrect number of multiDatastreams: {}", streams.size());
-			throw new IllegalArgumentException("Found incorrect number of multiDatastreams: " + streams.size());
-		}
-		mds = streams.iterator().next();
-		LOGGER.info("Found multiDatastreams {} for query {}.", mds.getId(), filter);
-		multiDatastreamCache.put(filter, mds);
-		return mds;
-	}
+    private MultiDatastream getMultiDatastreamFor(String filter, CSVRecord record, ErrorLog errorLog) throws ServiceFailureException {
+        MultiDatastream mds = multiDatastreamCache.get(filter);
+        if (mds != null) {
+            return mds;
+        }
+        Query<MultiDatastream> query = service.multiDatastreams().query().filter(filter);
+        EntityList<MultiDatastream> streams = query.list();
+        if (streams.size() != 1) {
+            LOGGER.error("Found incorrect number of multiDatastreams: {}", streams.size());
+            throw new IllegalArgumentException("Found incorrect number of multiDatastreams: " + streams.size());
+        }
+        mds = streams.iterator().next();
+        LOGGER.info("Found multiDatastreams {} for query {}.", mds.getId(), filter);
+        multiDatastreamCache.put(filter, mds);
+        return mds;
+    }
 
 }

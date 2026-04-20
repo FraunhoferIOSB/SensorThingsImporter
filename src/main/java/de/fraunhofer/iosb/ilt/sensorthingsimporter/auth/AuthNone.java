@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2019 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,16 +27,16 @@ import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
  */
 public class AuthNone implements AuthMethod {
 
-	private static final String WORKAROUND = "Workaround because we need at least one item.";
-	@ConfigurableField(editor = EditorString.class, optional = true,
-			label = "Unused",
-			description = WORKAROUND)
-	@EditorString.EdOptsString(dflt = WORKAROUND)
-	private String unused;
+    private static final String WORKAROUND = "Workaround because we need at least one item.";
+    @ConfigurableField(editor = EditorString.class, optional = true,
+            label = "Unused",
+            description = WORKAROUND)
+    @EditorString.EdOptsString(dflt = WORKAROUND)
+    private String unused;
 
-	@Override
-	public void setAuth(SensorThingsService service) {
-		// Do Nothing.
-	}
+    @Override
+    public void setAuth(SensorThingsService service) {
+        // Do Nothing.
+    }
 
 }

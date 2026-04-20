@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2017 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,28 +31,28 @@ import java.time.temporal.ChronoUnit;
  */
 public class TimeGenAgo implements TimeGen {
 
-	@ConfigurableField(editor = EditorInt.class,
-			label = "Amount", description = "The amount of steps to go into the past.")
-	@EditorInt.EdOptsInt(dflt = 1, min = 0, max = 999999, step = 1)
-	private int amount;
-	@ConfigurableField(editor = EditorEnum.class,
-			label = "Unit", description = "The unit.")
-	@EditorEnum.EdOptsEnum(sourceType = ChronoUnit.class, dflt = "DAYS")
-	private ChronoUnit unit;
+    @ConfigurableField(editor = EditorInt.class,
+            label = "Amount", description = "The amount of steps to go into the past.")
+    @EditorInt.EdOptsInt(dflt = 1, min = 0, max = 999999, step = 1)
+    private int amount;
+    @ConfigurableField(editor = EditorEnum.class,
+            label = "Unit", description = "The unit.")
+    @EditorEnum.EdOptsEnum(sourceType = ChronoUnit.class, dflt = "DAYS")
+    private ChronoUnit unit;
 
-	@Override
-	public Instant getInstant() {
-		return Instant.now().minus(unit.getDuration().multipliedBy(amount));
-	}
+    @Override
+    public Instant getInstant() {
+        return Instant.now().minus(unit.getDuration().multipliedBy(amount));
+    }
 
-	@Override
-	public Instant getInstant(Datastream ds) {
-		return Instant.now().minus(unit.getDuration().multipliedBy(amount));
-	}
+    @Override
+    public Instant getInstant(Datastream ds) {
+        return Instant.now().minus(unit.getDuration().multipliedBy(amount));
+    }
 
-	@Override
-	public Instant getInstant(MultiDatastream mds) {
-		return Instant.now().minus(unit.getDuration().multipliedBy(amount));
-	}
+    @Override
+    public Instant getInstant(MultiDatastream mds) {
+        return Instant.now().minus(unit.getDuration().multipliedBy(amount));
+    }
 
 }

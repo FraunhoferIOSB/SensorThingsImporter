@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2017 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,60 +36,60 @@ import org.threeten.extra.Interval;
  */
 public class TimeGenNewer implements TimeGen {
 
-	/**
-	 * The logger for this class.
-	 */
-	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(TimeGenNewer.class);
+    /**
+     * The logger for this class.
+     */
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(TimeGenNewer.class);
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "StartTime", description = "The starting time, if the datastream has no observations yet.")
-	@EditorString.EdOptsString(dflt = "2017-01-01T00:00:00Z")
-	private String startTime;
+    @ConfigurableField(editor = EditorString.class,
+            label = "StartTime", description = "The starting time, if the datastream has no observations yet.")
+    @EditorString.EdOptsString(dflt = "2017-01-01T00:00:00Z")
+    private String startTime;
 
-	@Override
-	public Instant getInstant() {
-		return ZonedDateTime.parse(startTime).toInstant();
-	}
+    @Override
+    public Instant getInstant() {
+        return ZonedDateTime.parse(startTime).toInstant();
+    }
 
-	@Override
-	public Instant getInstant(Datastream ds) {
-		if (ds.getPhenomenonTime() != null) {
-			Interval phenomenonTime = ds.getPhenomenonTime();
-			return phenomenonTime.getEnd().plusSeconds(1);
-		}
-		if (!ds.getObservations().toList().isEmpty()) {
-			TimeObject phenomenonTime = ds.getObservations().toList().get(0).getPhenomenonTime();
-			if (phenomenonTime.isInterval()) {
-				return phenomenonTime.getAsInterval().getEnd();
-			}
-			return phenomenonTime.getAsDateTime().plusSeconds(1).toInstant();
-		}
-		try {
-			List<Observation> obsList = ds.observations().query().top(1).orderBy("phenomenonTime desc").list().toList();
-			if (!obsList.isEmpty()) {
-				TimeObject phenomenonTime = obsList.get(0).getPhenomenonTime();
-				if (phenomenonTime.isInterval()) {
-					return phenomenonTime.getAsInterval().getEnd();
-				}
-				return phenomenonTime.getAsDateTime().plusSeconds(1).toInstant();
-			}
-		} catch (ServiceFailureException ex) {
-			LOGGER.error("Failed to fetch last Observation.", ex);
-		}
-		return ZonedDateTime.parse(startTime).toInstant();
-	}
+    @Override
+    public Instant getInstant(Datastream ds) {
+        if (ds.getPhenomenonTime() != null) {
+            Interval phenomenonTime = ds.getPhenomenonTime();
+            return phenomenonTime.getEnd().plusSeconds(1);
+        }
+        if (!ds.getObservations().toList().isEmpty()) {
+            TimeObject phenomenonTime = ds.getObservations().toList().get(0).getPhenomenonTime();
+            if (phenomenonTime.isInterval()) {
+                return phenomenonTime.getAsInterval().getEnd();
+            }
+            return phenomenonTime.getAsDateTime().plusSeconds(1).toInstant();
+        }
+        try {
+            List<Observation> obsList = ds.observations().query().top(1).orderBy("phenomenonTime desc").list().toList();
+            if (!obsList.isEmpty()) {
+                TimeObject phenomenonTime = obsList.get(0).getPhenomenonTime();
+                if (phenomenonTime.isInterval()) {
+                    return phenomenonTime.getAsInterval().getEnd();
+                }
+                return phenomenonTime.getAsDateTime().plusSeconds(1).toInstant();
+            }
+        } catch (ServiceFailureException ex) {
+            LOGGER.error("Failed to fetch last Observation.", ex);
+        }
+        return ZonedDateTime.parse(startTime).toInstant();
+    }
 
-	@Override
-	public Instant getInstant(MultiDatastream mds) {
-		if (mds.getPhenomenonTime() != null) {
-			Interval phenomenonTime = mds.getPhenomenonTime();
-			return phenomenonTime.getEnd();
-		}
-		if (mds.getObservations().toList().isEmpty()) {
-			return ZonedDateTime.parse(startTime).toInstant();
-		} else {
-			return mds.getObservations().toList().get(0).getPhenomenonTime().getAsDateTime().plusSeconds(1).toInstant();
-		}
-	}
+    @Override
+    public Instant getInstant(MultiDatastream mds) {
+        if (mds.getPhenomenonTime() != null) {
+            Interval phenomenonTime = mds.getPhenomenonTime();
+            return phenomenonTime.getEnd();
+        }
+        if (mds.getObservations().toList().isEmpty()) {
+            return ZonedDateTime.parse(startTime).toInstant();
+        } else {
+            return mds.getObservations().toList().get(0).getPhenomenonTime().getAsDateTime().plusSeconds(1).toInstant();
+        }
+    }
 
 }

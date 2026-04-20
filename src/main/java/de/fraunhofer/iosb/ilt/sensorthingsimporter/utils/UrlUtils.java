@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2019 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,236 +54,235 @@ import org.slf4j.LoggerFactory;
  */
 public class UrlUtils {
 
-	public static final TypeReference<List<Map<String, Map<String, Object>>>> TYPE_LIST_MAP_MAP = new TypeReference<List<Map<String, Map<String, Object>>>>() {
-	};
+    public static final TypeReference<List<Map<String, Map<String, Object>>>> TYPE_LIST_MAP_MAP = new TypeReference<List<Map<String, Map<String, Object>>>>() {};
 
-	/**
-	 * The logger for this class.
-	 */
-	private static final Logger LOGGER = LoggerFactory.getLogger(UrlUtils.class);
-	public static final Charset UTF8 = StandardCharsets.UTF_8;
+    /**
+     * The logger for this class.
+     */
+    private static final Logger LOGGER = LoggerFactory.getLogger(UrlUtils.class);
+    public static final Charset UTF8 = StandardCharsets.UTF_8;
 
-	private UrlUtils() {
-		// Utility class.
-	}
+    private UrlUtils() {
+        // Utility class.
+    }
 
-	public static HttpResponse fetchFromUrl(String targetUrl) throws IOException {
-		return fetchFromUrl(targetUrl, UTF8);
-	}
+    public static HttpResponse fetchFromUrl(String targetUrl) throws IOException {
+        return fetchFromUrl(targetUrl, UTF8);
+    }
 
-	public static HttpResponse fetchFromUrl(String targetUrl, String charset) throws IOException {
-		return fetchFromUrl(targetUrl, Charset.forName(charset));
-	}
+    public static HttpResponse fetchFromUrl(String targetUrl, String charset) throws IOException {
+        return fetchFromUrl(targetUrl, Charset.forName(charset));
+    }
 
-	public static HttpResponse fetchFromUrl(String targetUrl, Charset charset) throws IOException {
-		if (targetUrl.startsWith("file:/")) {
-			return readFileUrl(targetUrl, charset);
-		}
-		return readNormalUrl(targetUrl, charset);
-	}
+    public static HttpResponse fetchFromUrl(String targetUrl, Charset charset) throws IOException {
+        if (targetUrl.startsWith("file:/")) {
+            return readFileUrl(targetUrl, charset);
+        }
+        return readNormalUrl(targetUrl, charset);
+    }
 
-	public static HttpResponse readNormalUrl(String targetUrl, Charset charset) throws IOException, ParseException {
-		return readNormalUrl(targetUrl, charset, Collections.emptyList(), null, null);
-	}
+    public static HttpResponse readNormalUrl(String targetUrl, Charset charset) throws IOException, ParseException {
+        return readNormalUrl(targetUrl, charset, Collections.emptyList(), null, null);
+    }
 
-	public static HttpResponse readNormalUrl(String targetUrl, Charset charset, List<Header> headers, String username, String password) throws IOException, ParseException {
-		LOGGER.info("Fetching: {}", targetUrl);
-		HttpClientBuilder clientBuilder = HttpClientBuilder.create()
-				.useSystemProperties()
-				.setDefaultRequestConfig(
-						RequestConfig.custom()
-								.setSocketTimeout(20_000)
-								.setConnectTimeout(10_000)
-								.setConnectionRequestTimeout(10_000)
-								.build());
-		try (CloseableHttpClient client = clientBuilder.build()) {
-			HttpGet get = new HttpGet(targetUrl);
-			if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
-				String auth = username + ":" + password;
-				byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
-				String authHeader = "Basic " + new String(encodedAuth);
-				get.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
-			}
-			boolean hasAccept = false;
-			for (var h : headers) {
-				if ("accept".equalsIgnoreCase(h.getName())) {
-					hasAccept = true;
-				}
-				get.addHeader(h);
-			}
-			if (!hasAccept) {
-				get.addHeader("Accept", "*/*");
-			}
-			CloseableHttpResponse response = client.execute(get);
-			HttpEntity entity = response.getEntity();
-			final int statusCode = response.getStatusLine().getStatusCode();
-			if (entity == null) {
-				return new HttpResponse(statusCode, "", response.getAllHeaders());
-			}
+    public static HttpResponse readNormalUrl(String targetUrl, Charset charset, List<Header> headers, String username, String password) throws IOException, ParseException {
+        LOGGER.info("Fetching: {}", targetUrl);
+        HttpClientBuilder clientBuilder = HttpClientBuilder.create()
+                .useSystemProperties()
+                .setDefaultRequestConfig(
+                        RequestConfig.custom()
+                                .setSocketTimeout(20_000)
+                                .setConnectTimeout(10_000)
+                                .setConnectionRequestTimeout(10_000)
+                                .build());
+        try (CloseableHttpClient client = clientBuilder.build()) {
+            HttpGet get = new HttpGet(targetUrl);
+            if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
+                String auth = username + ":" + password;
+                byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
+                String authHeader = "Basic " + new String(encodedAuth);
+                get.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
+            }
+            boolean hasAccept = false;
+            for (var h : headers) {
+                if ("accept".equalsIgnoreCase(h.getName())) {
+                    hasAccept = true;
+                }
+                get.addHeader(h);
+            }
+            if (!hasAccept) {
+                get.addHeader("Accept", "*/*");
+            }
+            CloseableHttpResponse response = client.execute(get);
+            HttpEntity entity = response.getEntity();
+            final int statusCode = response.getStatusLine().getStatusCode();
+            if (entity == null) {
+                return new HttpResponse(statusCode, "", response.getAllHeaders());
+            }
 
-			String data = entityToString(entity, charset);
-			if (LOGGER.isTraceEnabled()) {
-				LOGGER.trace("Received: {}", Utils.cleanForLogging(data));
-			} else if (LOGGER.isDebugEnabled()) {
-				LOGGER.debug("Received: {}", Utils.cleanForLogging(data, 100));
-			}
+            String data = entityToString(entity, charset);
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Received: {}", Utils.cleanForLogging(data));
+            } else if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Received: {}", Utils.cleanForLogging(data, 100));
+            }
 
-			return new HttpResponse(statusCode, data, response.getAllHeaders());
-		}
-	}
+            return new HttpResponse(statusCode, data, response.getAllHeaders());
+        }
+    }
 
-	private static HttpResponse readFileUrl(String targetUrl, Charset charset) throws IOException {
-		LOGGER.info("Loading: {}", targetUrl);
-		try (InputStream input = new URL(targetUrl).openStream()) {
-			if (input.markSupported()) {
-				input.mark(4);
-				byte[] firstBytes = new byte[3];
-				input.read(firstBytes);
-				charset = guessCharset(firstBytes, charset);
-				input.reset();
-			}
-			final String string = IOUtils.toString(input, charset);
-			return new HttpResponse(200, string);
-		}
-	}
+    private static HttpResponse readFileUrl(String targetUrl, Charset charset) throws IOException {
+        LOGGER.info("Loading: {}", targetUrl);
+        try (InputStream input = new URL(targetUrl).openStream()) {
+            if (input.markSupported()) {
+                input.mark(4);
+                byte[] firstBytes = new byte[3];
+                input.read(firstBytes);
+                charset = guessCharset(firstBytes, charset);
+                input.reset();
+            }
+            final String string = IOUtils.toString(input, charset);
+            return new HttpResponse(200, string);
+        }
+    }
 
-	public static HttpResponse postJsonToUrl(String targetUrl, Object body, String username, String password) throws IOException {
-		return postJsonToUrl(targetUrl, body, Collections.emptyList(), username, password);
-	}
+    public static HttpResponse postJsonToUrl(String targetUrl, Object body, String username, String password) throws IOException {
+        return postJsonToUrl(targetUrl, body, Collections.emptyList(), username, password);
+    }
 
-	public static HttpResponse postJsonToUrl(String targetUrl, Object body, List<Header> headers, String username, String password) throws IOException {
-		LOGGER.info("Posting: {}", targetUrl);
-		final String queryBody = ObjectMapperFactory.get().writeValueAsString(body);
-		return postToUrl(targetUrl, headers, queryBody, username, password);
-	}
+    public static HttpResponse postJsonToUrl(String targetUrl, Object body, List<Header> headers, String username, String password) throws IOException {
+        LOGGER.info("Posting: {}", targetUrl);
+        final String queryBody = ObjectMapperFactory.get().writeValueAsString(body);
+        return postToUrl(targetUrl, headers, queryBody, username, password);
+    }
 
-	public static HttpResponse postToUrl(String targetUrl, String queryBody, String username, String password) throws IOException, ParseException {
-		return postToUrl(targetUrl, Collections.EMPTY_LIST, queryBody, username, password);
-	}
+    public static HttpResponse postToUrl(String targetUrl, String queryBody, String username, String password) throws IOException, ParseException {
+        return postToUrl(targetUrl, Collections.EMPTY_LIST, queryBody, username, password);
+    }
 
-	public static HttpResponse postToUrl(String targetUrl, List<Header> headers, String queryBody, String username, String password) throws IOException, ParseException {
-		HttpClientBuilder builder = HttpClientBuilder.create()
-				.useSystemProperties()
-				.setMaxConnTotal(1)
-				.setDefaultRequestConfig(
-						RequestConfig.custom()
-								.setSocketTimeout(1000 * 60 * 15)
-								.build());
-		try (CloseableHttpClient client = builder.build()) {
-			final HttpPost post = new HttpPost(targetUrl);
-			if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
-				final String auth = username + ":" + password;
-				final byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
-				final String authHeader = "Basic " + new String(encodedAuth);
-				post.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
-			}
-			boolean hasAccept = false;
-			boolean hasContentType = false;
-			for (var h : headers) {
-				if ("accept".equalsIgnoreCase(h.getName())) {
-					hasAccept = true;
-				}
-				post.addHeader(h);
-			}
-			if (!hasAccept) {
-				post.addHeader("Accept", "*/*");
-			}
-			if (!hasContentType) {
-				post.addHeader("Content-Type", "application/json");
-			}
-			post.setEntity(new StringEntity(queryBody));
-			LOGGER.debug("Posting to {}", targetUrl);
-			LOGGER.trace("Posting:\n{}", queryBody);
-			final CloseableHttpResponse response = client.execute(post);
-			final HttpEntity entity = response.getEntity();
-			final int statusCode = response.getStatusLine().getStatusCode();
-			if (entity == null) {
-				LOGGER.debug("Response: {}, no data", statusCode);
-				return new HttpResponse(statusCode, "", response.getAllHeaders());
-			}
-			String data = EntityUtils.toString(entity, UTF8);
-			LOGGER.debug("Response: {}, size: {}", statusCode, data.length());
-			LOGGER.trace("Response:\n{}", data);
-			return new HttpResponse(statusCode, data, response.getAllHeaders());
-		}
-	}
+    public static HttpResponse postToUrl(String targetUrl, List<Header> headers, String queryBody, String username, String password) throws IOException, ParseException {
+        HttpClientBuilder builder = HttpClientBuilder.create()
+                .useSystemProperties()
+                .setMaxConnTotal(1)
+                .setDefaultRequestConfig(
+                        RequestConfig.custom()
+                                .setSocketTimeout(1000 * 60 * 15)
+                                .build());
+        try (CloseableHttpClient client = builder.build()) {
+            final HttpPost post = new HttpPost(targetUrl);
+            if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
+                final String auth = username + ":" + password;
+                final byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
+                final String authHeader = "Basic " + new String(encodedAuth);
+                post.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
+            }
+            boolean hasAccept = false;
+            boolean hasContentType = false;
+            for (var h : headers) {
+                if ("accept".equalsIgnoreCase(h.getName())) {
+                    hasAccept = true;
+                }
+                post.addHeader(h);
+            }
+            if (!hasAccept) {
+                post.addHeader("Accept", "*/*");
+            }
+            if (!hasContentType) {
+                post.addHeader("Content-Type", "application/json");
+            }
+            post.setEntity(new StringEntity(queryBody));
+            LOGGER.debug("Posting to {}", targetUrl);
+            LOGGER.trace("Posting:\n{}", queryBody);
+            final CloseableHttpResponse response = client.execute(post);
+            final HttpEntity entity = response.getEntity();
+            final int statusCode = response.getStatusLine().getStatusCode();
+            if (entity == null) {
+                LOGGER.debug("Response: {}, no data", statusCode);
+                return new HttpResponse(statusCode, "", response.getAllHeaders());
+            }
+            String data = EntityUtils.toString(entity, UTF8);
+            LOGGER.debug("Response: {}, size: {}", statusCode, data.length());
+            LOGGER.trace("Response:\n{}", data);
+            return new HttpResponse(statusCode, data, response.getAllHeaders());
+        }
+    }
 
-	public static class HttpResponse {
+    public static class HttpResponse {
 
-		public HttpResponse(int code, String data) {
-			this(code, data, null);
-		}
+        public HttpResponse(int code, String data) {
+            this(code, data, null);
+        }
 
-		public HttpResponse(int code, String data, Header[] headers) {
-			this.code = code;
-			this.data = data;
-			this.headers = new LinkedHashMap<>();
-			if (headers != null) {
-				for (Header header : headers) {
-					this.headers.put(header.getName().toLowerCase(), header.getValue());
-				}
-			}
-		}
+        public HttpResponse(int code, String data, Header[] headers) {
+            this.code = code;
+            this.data = data;
+            this.headers = new LinkedHashMap<>();
+            if (headers != null) {
+                for (Header header : headers) {
+                    this.headers.put(header.getName().toLowerCase(), header.getValue());
+                }
+            }
+        }
 
-		public final int code;
-		public final String data;
-		public final Map<String, String> headers;
+        public final int code;
+        public final String data;
+        public final Map<String, String> headers;
 
-		public boolean isOkResponse() {
-			return code >= 200 && code < 300;
-		}
+        public boolean isOkResponse() {
+            return code >= 200 && code < 300;
+        }
 
-		public boolean isRedirect() {
-			return code >= 300 && code < 400;
-		}
+        public boolean isRedirect() {
+            return code >= 300 && code < 400;
+        }
 
-		public boolean isError() {
-			return code >= 400;
-		}
-	}
+        public boolean isError() {
+            return code >= 400;
+        }
+    }
 
-	private static final byte[] BOM_UTF16_LE = new byte[]{(byte) 0xFF, (byte) 0xFE};
-	private static final byte[] BOM_UTF16_BE = new byte[]{(byte) 0xFE, (byte) 0xFF};
-	private static final byte[] BOM_UTF8 = new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
+    private static final byte[] BOM_UTF16_LE = new byte[]{(byte) 0xFF, (byte) 0xFE};
+    private static final byte[] BOM_UTF16_BE = new byte[]{(byte) 0xFE, (byte) 0xFF};
+    private static final byte[] BOM_UTF8 = new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
 
-	public static String entityToString(HttpEntity entity, Charset charset) throws IOException {
-		ContentType contentType = ContentType.get(entity);
-		if (contentType != null) {
-			if (contentType.getCharset() != null) {
-				return EntityUtils.toString(entity, charset);
-			}
-		}
-		try (InputStream content = entity.getContent(); BufferedInputStream bufContent = new BufferedInputStream(content)) {
-			byte[] firstBytes = new byte[3];
-			bufContent.mark(3);
-			bufContent.read(firstBytes);
-			bufContent.reset();
-			return IOUtils.toString(bufContent, guessCharset(firstBytes, charset));
-		}
-	}
+    public static String entityToString(HttpEntity entity, Charset charset) throws IOException {
+        ContentType contentType = ContentType.get(entity);
+        if (contentType != null) {
+            if (contentType.getCharset() != null) {
+                return EntityUtils.toString(entity, charset);
+            }
+        }
+        try (InputStream content = entity.getContent(); BufferedInputStream bufContent = new BufferedInputStream(content)) {
+            byte[] firstBytes = new byte[3];
+            bufContent.mark(3);
+            bufContent.read(firstBytes);
+            bufContent.reset();
+            return IOUtils.toString(bufContent, guessCharset(firstBytes, charset));
+        }
+    }
 
-	private static Charset guessCharset(byte[] firstThreeBytes, Charset deflt) {
-		if (startsWith(firstThreeBytes, BOM_UTF16_LE)) {
-			return StandardCharsets.UTF_16LE;
-		}
-		if (startsWith(firstThreeBytes, BOM_UTF16_BE)) {
-			return StandardCharsets.UTF_16BE;
-		}
-		if (startsWith(firstThreeBytes, BOM_UTF8)) {
-			return StandardCharsets.UTF_8;
-		}
-		return deflt;
-	}
+    private static Charset guessCharset(byte[] firstThreeBytes, Charset deflt) {
+        if (startsWith(firstThreeBytes, BOM_UTF16_LE)) {
+            return StandardCharsets.UTF_16LE;
+        }
+        if (startsWith(firstThreeBytes, BOM_UTF16_BE)) {
+            return StandardCharsets.UTF_16BE;
+        }
+        if (startsWith(firstThreeBytes, BOM_UTF8)) {
+            return StandardCharsets.UTF_8;
+        }
+        return deflt;
+    }
 
-	private static boolean startsWith(byte[] content, byte[] probe) {
-		if (probe.length > content.length) {
-			return false;
-		}
-		for (int i = 0; i < probe.length; i++) {
-			if (content[i] != probe[i]) {
-				return false;
-			}
-		}
-		return true;
-	}
+    private static boolean startsWith(byte[] content, byte[] probe) {
+        if (probe.length > content.length) {
+            return false;
+        }
+        for (int i = 0; i < probe.length; i++) {
+            if (content[i] != probe[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

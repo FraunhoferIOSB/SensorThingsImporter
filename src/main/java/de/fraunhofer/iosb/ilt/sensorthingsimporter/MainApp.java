@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -37,56 +37,56 @@ import org.quartz.SchedulerException;
  */
 public class MainApp {
 
-	/**
-	 * @param args the command line arguments
-	 * @throws IOException
-	 * @throws URISyntaxException
-	 * @throws java.net.MalformedURLException
-	 * @throws ServiceFailureException
-	 * @throws org.quartz.SchedulerException
-	 */
-	public static void main(String[] args) throws URISyntaxException, IOException, MalformedURLException, ServiceFailureException, SchedulerException, ConfigurationException {
-		GitVersionInfo.logGitInfo();
-		List<String> arguments = new ArrayList<>(Arrays.asList(args));
-		if (arguments.isEmpty()) {
-			showHelp();
-			System.out.println("Trying to start the configuration GUI...");
-			ImporterGui.main(args);
-		} else if (arguments.contains("--help") || arguments.contains("-help") || arguments.contains("-h")) {
-			showHelp();
-		} else {
-			Options options = new Options().parseArguments(arguments);
-			if (options.getUseScheduler().isSet()) {
-				ImporterScheduler scheduler = new ImporterScheduler();
-				scheduler.loadOptions(options);
-				scheduler.start();
-			} else {
-				ImporterWrapper wrapper = new ImporterWrapper();
-				ImporterScheduler.STATUS_LOGGER.setLogIntervalMs(options.getLogInterval().getValue());
-				ImporterScheduler.STATUS_LOGGER.start();
-				wrapper.doImport(options);
-				ImporterScheduler.STATUS_LOGGER.stop();
-			}
-		}
-	}
+    /**
+     * @param args the command line arguments
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws java.net.MalformedURLException
+     * @throws ServiceFailureException
+     * @throws org.quartz.SchedulerException
+     */
+    public static void main(String[] args) throws URISyntaxException, IOException, MalformedURLException, ServiceFailureException, SchedulerException, ConfigurationException {
+        GitVersionInfo.logGitInfo();
+        List<String> arguments = new ArrayList<>(Arrays.asList(args));
+        if (arguments.isEmpty()) {
+            showHelp();
+            System.out.println("Trying to start the configuration GUI...");
+            ImporterGui.main(args);
+        } else if (arguments.contains("--help") || arguments.contains("-help") || arguments.contains("-h")) {
+            showHelp();
+        } else {
+            Options options = new Options().parseArguments(arguments);
+            if (options.getUseScheduler().isSet()) {
+                ImporterScheduler scheduler = new ImporterScheduler();
+                scheduler.loadOptions(options);
+                scheduler.start();
+            } else {
+                ImporterWrapper wrapper = new ImporterWrapper();
+                ImporterScheduler.STATUS_LOGGER.setLogIntervalMs(options.getLogInterval().getValue());
+                ImporterScheduler.STATUS_LOGGER.start();
+                wrapper.doImport(options);
+                ImporterScheduler.STATUS_LOGGER.stop();
+            }
+        }
+    }
 
-	public static void showHelp() {
-		Options options = new Options();
-		for (Option option : options.getOptions()) {
-			StringBuilder text = new StringBuilder();
-			for (String key : option.getKeys()) {
-				text.append(key).append(" ");
-			}
-			for (Parameter param : option.getParameters()) {
-				text.append("[").append(param.getName()).append("] ");
-			}
-			text.append(":\n");
-			for (String descLine : option.getDescription()) {
-				text.append("    ").append(descLine).append("\n");
-			}
-			text.append("    envionment variable: ").append(option.getEnvironmentName()).append("\n");
-			System.out.println(text.toString());
-		}
-	}
+    public static void showHelp() {
+        Options options = new Options();
+        for (Option option : options.getOptions()) {
+            StringBuilder text = new StringBuilder();
+            for (String key : option.getKeys()) {
+                text.append(key).append(" ");
+            }
+            for (Parameter param : option.getParameters()) {
+                text.append("[").append(param.getName()).append("] ");
+            }
+            text.append(":\n");
+            for (String descLine : option.getDescription()) {
+                text.append("    ").append(descLine).append("\n");
+            }
+            text.append("    envionment variable: ").append(option.getEnvironmentName()).append("\n");
+            System.out.println(text.toString());
+        }
+    }
 
 }

@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2020 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,40 +36,40 @@ import org.apache.commons.csv.CSVRecord;
  */
 public class RecordConverterGroovy implements RecordConverter, AnnotatedConfigurable<SensorThingsService, Object> {
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Script", description = "The script that implements RecordConverter")
-	@EditorString.EdOptsString(lines = 20,
-			dflt = ""
-			+ "Class Script implements RecordConverter {\n"
-			+ "  public List<Observation> convert(CSVRecord record) throws ImportException {\n"
-			+ "    // Your code here\n"
-			+ "  }\n"
-			+ "}")
-	private String script;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Script", description = "The script that implements RecordConverter")
+    @EditorString.EdOptsString(lines = 20,
+            dflt = ""
+                    + "Class Script implements RecordConverter {\n"
+                    + "  public List<Observation> convert(CSVRecord record) throws ImportException {\n"
+                    + "    // Your code here\n"
+                    + "  }\n"
+                    + "}")
+    private String script;
 
-	private final GroovyClassLoader gcl;
-	private Class<RecordConverter> scriptClass;
-	private RecordConverter scriptInstance;
+    private final GroovyClassLoader gcl;
+    private Class<RecordConverter> scriptClass;
+    private RecordConverter scriptInstance;
 
-	public RecordConverterGroovy() {
-		gcl = new GroovyClassLoader(getClass().getClassLoader());
-	}
+    public RecordConverterGroovy() {
+        gcl = new GroovyClassLoader(getClass().getClassLoader());
+    }
 
-	@Override
-	public void init(SensorThingsService service) throws ImportException {
-		try {
-			GroovyCodeSource groovyCodeSource = new GroovyCodeSource(script, "RecordConverterClass", "/importer");
-			scriptClass = gcl.parseClass(groovyCodeSource);
-			scriptInstance = scriptClass.getDeclaredConstructor().newInstance();
-			scriptInstance.init(service);
-		} catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-			throw new ImportException("Failed to create script instance", ex);
-		}
-	}
+    @Override
+    public void init(SensorThingsService service) throws ImportException {
+        try {
+            GroovyCodeSource groovyCodeSource = new GroovyCodeSource(script, "RecordConverterClass", "/importer");
+            scriptClass = gcl.parseClass(groovyCodeSource);
+            scriptInstance = scriptClass.getDeclaredConstructor().newInstance();
+            scriptInstance.init(service);
+        } catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
+            throw new ImportException("Failed to create script instance", ex);
+        }
+    }
 
-	@Override
-	public List<Observation> convert(CSVRecord record, ErrorLog errorLog) throws ImportException {
-		return scriptInstance.convert(record, errorLog);
-	}
+    @Override
+    public List<Observation> convert(CSVRecord record, ErrorLog errorLog) throws ImportException {
+        return scriptInstance.convert(record, errorLog);
+    }
 
 }

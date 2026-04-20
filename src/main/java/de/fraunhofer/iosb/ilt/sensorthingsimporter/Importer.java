@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -27,29 +27,29 @@ import java.util.List;
  */
 public interface Importer extends Iterable<List<Observation>> {
 
-	/**
-	 * Tell the importer to give lots of output.
-	 *
-	 * @param verbose flag indicating that the importer should give lots of
-	 * output.
-	 */
-	public default void setVerbose(boolean verbose) {
-		// does nothing by default
-	}
+    /**
+     * Tell the importer to give lots of output.
+     *
+     * @param verbose flag indicating that the importer should give lots of
+     * output.
+     */
+    public default void setVerbose(boolean verbose) {
+        // does nothing by default
+    }
 
-	public default void setNoAct(boolean noAct) {
-		// does nothing by default
-	}
+    public default void setNoAct(boolean noAct) {
+        // does nothing by default
+    }
 
-	public default void setProgressTracker(ProgressTracker tracker) {
-		// does nothing by default
-	}
+    public default void setProgressTracker(ProgressTracker tracker) {
+        // does nothing by default
+    }
 
-	public default String getErrorLog() {
-		return "";
-	}
+    public default String getErrorLog() {
+        return "";
+    }
 
-	public default int getErrorCount() {
-		return 0;
-	}
+    public default int getErrorCount() {
+        return 0;
+    }
 }

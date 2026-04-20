@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2024 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,85 +30,85 @@ import java.util.List;
 
 public class StringListGeneratorTimeStrings implements StringListGenerator {
 
-	@ConfigurableField(editor = EditorInt.class,
-			label = "Now Minus", description = "The number of hours to subtract from now.")
-	@EditorInt.EdOptsInt(dflt = 1)
-	private int minus = 0;
+    @ConfigurableField(editor = EditorInt.class,
+            label = "Now Minus", description = "The number of hours to subtract from now.")
+    @EditorInt.EdOptsInt(dflt = 1)
+    private int minus = 0;
 
-	@ConfigurableField(editor = EditorInt.class,
-			label = "Item Count", description = "The number of items to generate.")
-	@EditorInt.EdOptsInt(dflt = 1)
-	private int count = 0;
+    @ConfigurableField(editor = EditorInt.class,
+            label = "Item Count", description = "The number of items to generate.")
+    @EditorInt.EdOptsInt(dflt = 1)
+    private int count = 0;
 
-	@ConfigurableField(editor = EditorInt.class,
-			label = "Delta", description = "The number if hours to add to the time each step.")
-	@EditorInt.EdOptsInt(dflt = 1)
-	private int delta = 1;
+    @ConfigurableField(editor = EditorInt.class,
+            label = "Delta", description = "The number if hours to add to the time each step.")
+    @EditorInt.EdOptsInt(dflt = 1)
+    private int delta = 1;
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Zone", description = "The timezone to convert the time to.")
-	@EditorString.EdOptsString(dflt = "Z")
-	private String zone = "+01:00";
+    @ConfigurableField(editor = EditorString.class,
+            label = "Zone", description = "The timezone to convert the time to.")
+    @EditorString.EdOptsString(dflt = "Z")
+    private String zone = "+01:00";
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Format", description = "The forat to output")
-	@EditorString.EdOptsString(dflt = "yyyyMMddHHmmss")
-	private String format = "yyyyMMddHHmmss";
+    @ConfigurableField(editor = EditorString.class,
+            label = "Format", description = "The forat to output")
+    @EditorString.EdOptsString(dflt = "yyyyMMddHHmmss")
+    private String format = "yyyyMMddHHmmss";
 
-	@Override
-	public List<String> get() {
-		ZoneId zoneId = ZoneId.of(zone);
-		ZonedDateTime value = Instant.now()
-				.truncatedTo(ChronoUnit.HOURS)
-				.minus(minus, ChronoUnit.HOURS)
-				.atZone(zoneId);
-		List<String> result = new ArrayList<>();
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
-		for (int i = 0; i < count; i++) {
-			result.add(formatter.format(value));
-			value = value.plus(delta, ChronoUnit.HOURS);
-		}
-		return result;
-	}
+    @Override
+    public List<String> get() {
+        ZoneId zoneId = ZoneId.of(zone);
+        ZonedDateTime value = Instant.now()
+                .truncatedTo(ChronoUnit.HOURS)
+                .minus(minus, ChronoUnit.HOURS)
+                .atZone(zoneId);
+        List<String> result = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
+        for (int i = 0; i < count; i++) {
+            result.add(formatter.format(value));
+            value = value.plus(delta, ChronoUnit.HOURS);
+        }
+        return result;
+    }
 
-	public int getMinus() {
-		return minus;
-	}
+    public int getMinus() {
+        return minus;
+    }
 
-	public void setMinus(int minus) {
-		this.minus = minus;
-	}
+    public void setMinus(int minus) {
+        this.minus = minus;
+    }
 
-	public int getCount() {
-		return count;
-	}
+    public int getCount() {
+        return count;
+    }
 
-	public void setCount(int count) {
-		this.count = count;
-	}
+    public void setCount(int count) {
+        this.count = count;
+    }
 
-	public int getDelta() {
-		return delta;
-	}
+    public int getDelta() {
+        return delta;
+    }
 
-	public void setDelta(int delta) {
-		this.delta = delta;
-	}
+    public void setDelta(int delta) {
+        this.delta = delta;
+    }
 
-	public String getZone() {
-		return zone;
-	}
+    public String getZone() {
+        return zone;
+    }
 
-	public void setZone(String zone) {
-		this.zone = zone;
-	}
+    public void setZone(String zone) {
+        this.zone = zone;
+    }
 
-	public String getFormat() {
-		return format;
-	}
+    public String getFormat() {
+        return format;
+    }
 
-	public void setFormat(String format) {
-		this.format = format;
-	}
+    public void setFormat(String format) {
+        this.format = format;
+    }
 
 }

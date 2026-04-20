@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2020 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,21 +27,21 @@ import org.junit.Test;
  */
 public class ParserTimeTest {
 
-	public ParserTimeTest() {
-	}
+    public ParserTimeTest() {
+    }
 
-	/**
-	 * Test of parse method, of class ParserTime.
-	 */
-	@Test
-	public void testParse_String() {
-		ParserTime instance = new ParserTime();
-		instance.setFormat("yyyy-MM-dd HH:mm:ssXXX");
-		instance.setZone("");
+    /**
+     * Test of parse method, of class ParserTime.
+     */
+    @Test
+    public void testParse_String() {
+        ParserTime instance = new ParserTime();
+        instance.setFormat("yyyy-MM-dd HH:mm:ssXXX");
+        instance.setZone("");
 
-		ZonedDateTime expResult = ZonedDateTime.parse("2020-03-29T00:00:00+01:00");
-		ZonedDateTime result = instance.parse("2020-03-29 00:00:00+01:00");
-		Assert.assertEquals(expResult, result);
-	}
+        ZonedDateTime expResult = ZonedDateTime.parse("2020-03-29T00:00:00+01:00");
+        ZonedDateTime result = instance.parse("2020-03-29 00:00:00+01:00");
+        Assert.assertEquals(expResult, result);
+    }
 
 }

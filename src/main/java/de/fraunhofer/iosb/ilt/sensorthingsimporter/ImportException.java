@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -23,25 +23,25 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter;
  */
 public class ImportException extends Exception {
 
-	private static final long serialVersionUID = -1365036034620856087L;
+    private static final long serialVersionUID = -1365036034620856087L;
 
-	public ImportException() {
-	}
+    public ImportException() {
+    }
 
-	public ImportException(String message) {
-		super(message);
-	}
+    public ImportException(String message) {
+        super(message);
+    }
 
-	public ImportException(Throwable cause) {
-		super(cause);
-	}
+    public ImportException(Throwable cause) {
+        super(cause);
+    }
 
-	public ImportException(String message, Throwable cause) {
-		super(message, cause);
-	}
+    public ImportException(String message, Throwable cause) {
+        super(message, cause);
+    }
 
-	public ImportException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
-		super(message, cause, enableSuppression, writableStackTrace);
-	}
+    public ImportException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
+    }
 
 }

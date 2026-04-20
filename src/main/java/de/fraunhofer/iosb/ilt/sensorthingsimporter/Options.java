@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -39,125 +39,125 @@ import org.slf4j.LoggerFactory;
  */
 public class Options {
 
-	/**
-	 * The logger for this class.
-	 */
-	private static final Logger LOGGER = LoggerFactory.getLogger(Options.class);
-	private static final Comparator<String> KEY_COMPARATOR = (String o1, String o2) -> {
-		if (o1.length() == o2.length()) {
-			return String.CASE_INSENSITIVE_ORDER.compare(o1, o2);
-		}
-		return Integer.compare(o1.length(), o2.length());
-	};
-	private final Set<String> keys = new HashSet<>();
-	private final Map<String, Option> optionMap = new TreeMap<>(KEY_COMPARATOR);
-	private final List<Option> options = new ArrayList<>();
+    /**
+     * The logger for this class.
+     */
+    private static final Logger LOGGER = LoggerFactory.getLogger(Options.class);
+    private static final Comparator<String> KEY_COMPARATOR = (String o1, String o2) -> {
+        if (o1.length() == o2.length()) {
+            return String.CASE_INSENSITIVE_ORDER.compare(o1, o2);
+        }
+        return Integer.compare(o1.length(), o2.length());
+    };
+    private final Set<String> keys = new HashSet<>();
+    private final Map<String, Option> optionMap = new TreeMap<>(KEY_COMPARATOR);
+    private final List<Option> options = new ArrayList<>();
 
-	private final OptionToggle noAct;
-	private final OptionSingle<String> fileName;
-	private final OptionToggle useScheduler;
-	private final OptionSingle<Long> logInterval;
+    private final OptionToggle noAct;
+    private final OptionSingle<String> fileName;
+    private final OptionToggle useScheduler;
+    private final OptionSingle<Long> logInterval;
 
-	public Options() {
-		noAct = addOption(
-				new OptionToggle("-noact", "-n")
-						.setEnvironmentName("noAct")
-						.setDescription("Read the file and give output, but do not actually post observations."));
-		fileName = addOption(
-				new OptionSingle<String>("-config", "-c")
-						.setParam(new ParameterString("file path", ""))
-						.setEnvironmentName("configFile")
-						.setDescription("The path to the config json file."));
-		useScheduler = addOption(
-				new OptionToggle("-scheduler", "-s")
-						.setEnvironmentName("useScheduler")
-						.setDescription("Use the scheduler to start imports. The config file must be a scheduler config in this case."));
-		logInterval = addOption(
-				new OptionSingle<Long>("-loginterval", "-i")
-						.setParam(new ParameterLong("interval", 10000l))
-						.setEnvironmentName("logInterval")
-						.setDescription("The delay between log messages."));
-	}
+    public Options() {
+        noAct = addOption(
+                new OptionToggle("-noact", "-n")
+                        .setEnvironmentName("noAct")
+                        .setDescription("Read the file and give output, but do not actually post observations."));
+        fileName = addOption(
+                new OptionSingle<String>("-config", "-c")
+                        .setParam(new ParameterString("file path", ""))
+                        .setEnvironmentName("configFile")
+                        .setDescription("The path to the config json file."));
+        useScheduler = addOption(
+                new OptionToggle("-scheduler", "-s")
+                        .setEnvironmentName("useScheduler")
+                        .setDescription("Use the scheduler to start imports. The config file must be a scheduler config in this case."));
+        logInterval = addOption(
+                new OptionSingle<Long>("-loginterval", "-i")
+                        .setParam(new ParameterLong("interval", 10000l))
+                        .setEnvironmentName("logInterval")
+                        .setDescription("The delay between log messages."));
+    }
 
-	public List<Option> getOptions() {
-		return options;
-	}
+    public List<Option> getOptions() {
+        return options;
+    }
 
-	private <T extends Option> T addOption(T o) {
-		for (String key : o.getKeys()) {
-			if (keys.contains(key)) {
-				throw new IllegalStateException("Key " + key + " is defined by more than one option.");
-			}
-			keys.add(key);
-			optionMap.put(key, o);
-		}
-		options.add(o);
-		return o;
-	}
+    private <T extends Option> T addOption(T o) {
+        for (String key : o.getKeys()) {
+            if (keys.contains(key)) {
+                throw new IllegalStateException("Key " + key + " is defined by more than one option.");
+            }
+            keys.add(key);
+            optionMap.put(key, o);
+        }
+        options.add(o);
+        return o;
+    }
 
-	public Options parseArguments(List<String> args) {
-		List<String> arguments = new ArrayList<>(args);
-		while (!arguments.isEmpty()) {
-			String key = arguments.get(0);
-			if (!key.startsWith("-")) {
-				// Not an option.
-				LOGGER.debug("Not an option: {}", key);
-				continue;
-			}
+    public Options parseArguments(List<String> args) {
+        List<String> arguments = new ArrayList<>(args);
+        while (!arguments.isEmpty()) {
+            String key = arguments.get(0);
+            if (!key.startsWith("-")) {
+                // Not an option.
+                LOGGER.debug("Not an option: {}", key);
+                continue;
+            }
 
-			Option option = optionMap.get(key);
-			if (option == null) {
-				for (String optionKey : optionMap.keySet()) {
-					if (key.startsWith(optionKey)) {
-						option = optionMap.get(optionKey);
-						break;
-					}
-				}
-			}
+            Option option = optionMap.get(key);
+            if (option == null) {
+                for (String optionKey : optionMap.keySet()) {
+                    if (key.startsWith(optionKey)) {
+                        option = optionMap.get(optionKey);
+                        break;
+                    }
+                }
+            }
 
-			if (option == null) {
-				LOGGER.debug("Unknown option: {}", key);
-				arguments.remove(0);
-			} else {
-				option.consume(arguments);
-			}
-		}
-		return this;
-	}
+            if (option == null) {
+                LOGGER.debug("Unknown option: {}", key);
+                arguments.remove(0);
+            } else {
+                option.consume(arguments);
+            }
+        }
+        return this;
+    }
 
-	public OptionToggle getNoAct() {
-		return noAct;
-	}
+    public OptionToggle getNoAct() {
+        return noAct;
+    }
 
-	public OptionSingle<String> getFileName() {
-		return fileName;
-	}
+    public OptionSingle<String> getFileName() {
+        return fileName;
+    }
 
-	public OptionToggle getUseScheduler() {
-		return useScheduler;
-	}
+    public OptionToggle getUseScheduler() {
+        return useScheduler;
+    }
 
-	public OptionSingle<Long> getLogInterval() {
-		return logInterval;
-	}
+    public OptionSingle<Long> getLogInterval() {
+        return logInterval;
+    }
 
-	public static boolean getEnv(String name, boolean dflt) {
-		String value = System.getenv(name);
-		if (Utils.isNullOrEmpty(value)) {
-			LOGGER.info("Parameter {} not set, using default value: {}", name, dflt);
-			return dflt;
-		}
-		LOGGER.info("Parameter {} set with value: {}", name, value);
-		return Boolean.parseBoolean(value);
-	}
+    public static boolean getEnv(String name, boolean dflt) {
+        String value = System.getenv(name);
+        if (Utils.isNullOrEmpty(value)) {
+            LOGGER.info("Parameter {} not set, using default value: {}", name, dflt);
+            return dflt;
+        }
+        LOGGER.info("Parameter {} set with value: {}", name, value);
+        return Boolean.parseBoolean(value);
+    }
 
-	public static String getEnv(String name, String dflt) {
-		String value = System.getenv(name);
-		if (Utils.isNullOrEmpty(value)) {
-			LOGGER.info("Parameter {} not set, using default value: {}", name, dflt);
-			return dflt;
-		}
-		LOGGER.info("Parameter {} set with value: {}", name, value);
-		return value;
-	}
+    public static String getEnv(String name, String dflt) {
+        String value = System.getenv(name);
+        if (Utils.isNullOrEmpty(value)) {
+            LOGGER.info("Parameter {} not set, using default value: {}", name, dflt);
+            return dflt;
+        }
+        LOGGER.info("Parameter {} set with value: {}", name, value);
+        return value;
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -41,84 +41,84 @@ import java.util.Map;
  */
 public class ValidatorNewer implements Validator, Configurable<SensorThingsService, Object> {
 
-	private EditorNull editor = new EditorNull("Validator", "Validates the observation against the datastream");
-	private final Map<Id, Instant> datastreamCache = new HashMap<>();
-	private final Map<Id, Instant> multiDatastreamCache = new HashMap<>();
+    private EditorNull editor = new EditorNull("Validator", "Validates the observation against the datastream");
+    private final Map<Id, Instant> datastreamCache = new HashMap<>();
+    private final Map<Id, Instant> multiDatastreamCache = new HashMap<>();
 
-	@Override
-	public boolean isValid(Observation obs) throws ImportException {
-		try {
-			Instant latest;
-			Datastream ds = obs.getDatastream();
-			if (ds == null) {
-				MultiDatastream mds = obs.getMultiDatastream();
-				if (mds == null) {
-					throw new ImportException("Observation has no Datastream of Multidatastream set!");
-				}
-				latest = getTimeForMultiDatastream(mds);
-			} else {
-				latest = getTimeForDatastream(ds);
-			}
-			TimeObject phenomenonTime = obs.getPhenomenonTime();
-			Instant obsInstant;
-			if (phenomenonTime.isInterval()) {
-				obsInstant = phenomenonTime.getAsInterval().getStart();
-			} else {
-				obsInstant = phenomenonTime.getAsDateTime().toInstant();
-			}
-			return latest.isBefore(obsInstant);
-		} catch (ServiceFailureException ex) {
-			throw new ImportException("Failed to validate.", ex);
-		}
-	}
+    @Override
+    public boolean isValid(Observation obs) throws ImportException {
+        try {
+            Instant latest;
+            Datastream ds = obs.getDatastream();
+            if (ds == null) {
+                MultiDatastream mds = obs.getMultiDatastream();
+                if (mds == null) {
+                    throw new ImportException("Observation has no Datastream of Multidatastream set!");
+                }
+                latest = getTimeForMultiDatastream(mds);
+            } else {
+                latest = getTimeForDatastream(ds);
+            }
+            TimeObject phenomenonTime = obs.getPhenomenonTime();
+            Instant obsInstant;
+            if (phenomenonTime.isInterval()) {
+                obsInstant = phenomenonTime.getAsInterval().getStart();
+            } else {
+                obsInstant = phenomenonTime.getAsDateTime().toInstant();
+            }
+            return latest.isBefore(obsInstant);
+        } catch (ServiceFailureException ex) {
+            throw new ImportException("Failed to validate.", ex);
+        }
+    }
 
-	private Instant getTimeForDatastream(Datastream ds) throws ServiceFailureException {
-		Id dsId = ds.getId();
-		Instant latest = datastreamCache.get(dsId);
-		if (latest == null) {
-			Observation firstObs = ds.observations().query().select("@iot.id", "phenomenonTime").orderBy("phenomenonTime desc").first();
-			if (firstObs == null) {
-				latest = Instant.MIN;
-			} else {
-				TimeObject phenomenonTime = firstObs.getPhenomenonTime();
-				if (phenomenonTime.isInterval()) {
-					latest = phenomenonTime.getAsInterval().getStart();
-				} else {
-					latest = phenomenonTime.getAsDateTime().toInstant();
-				}
-			}
-			datastreamCache.put(dsId, latest);
-		}
-		return latest;
-	}
+    private Instant getTimeForDatastream(Datastream ds) throws ServiceFailureException {
+        Id dsId = ds.getId();
+        Instant latest = datastreamCache.get(dsId);
+        if (latest == null) {
+            Observation firstObs = ds.observations().query().select("@iot.id", "phenomenonTime").orderBy("phenomenonTime desc").first();
+            if (firstObs == null) {
+                latest = Instant.MIN;
+            } else {
+                TimeObject phenomenonTime = firstObs.getPhenomenonTime();
+                if (phenomenonTime.isInterval()) {
+                    latest = phenomenonTime.getAsInterval().getStart();
+                } else {
+                    latest = phenomenonTime.getAsDateTime().toInstant();
+                }
+            }
+            datastreamCache.put(dsId, latest);
+        }
+        return latest;
+    }
 
-	private Instant getTimeForMultiDatastream(MultiDatastream mds) throws ServiceFailureException {
-		Id dsId = mds.getId();
-		Instant latest = multiDatastreamCache.get(dsId);
-		if (latest == null) {
-			Observation firstObs = mds.observations().query().select("@iot.id", "phenomenonTime").orderBy("phenomenonTime desc").first();
-			if (firstObs == null) {
-				latest = Instant.MIN;
-			} else {
-				TimeObject phenomenonTime = firstObs.getPhenomenonTime();
-				if (phenomenonTime.isInterval()) {
-					latest = phenomenonTime.getAsInterval().getStart();
-				} else {
-					latest = phenomenonTime.getAsDateTime().toInstant();
-				}
-			}
-			multiDatastreamCache.put(dsId, latest);
-		}
-		return latest;
-	}
+    private Instant getTimeForMultiDatastream(MultiDatastream mds) throws ServiceFailureException {
+        Id dsId = mds.getId();
+        Instant latest = multiDatastreamCache.get(dsId);
+        if (latest == null) {
+            Observation firstObs = mds.observations().query().select("@iot.id", "phenomenonTime").orderBy("phenomenonTime desc").first();
+            if (firstObs == null) {
+                latest = Instant.MIN;
+            } else {
+                TimeObject phenomenonTime = firstObs.getPhenomenonTime();
+                if (phenomenonTime.isInterval()) {
+                    latest = phenomenonTime.getAsInterval().getStart();
+                } else {
+                    latest = phenomenonTime.getAsDateTime().toInstant();
+                }
+            }
+            multiDatastreamCache.put(dsId, latest);
+        }
+        return latest;
+    }
 
-	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
-	}
+    @Override
+    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
+    }
 
-	@Override
-	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-		return editor;
-	}
+    @Override
+    public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+        return editor;
+    }
 
 }

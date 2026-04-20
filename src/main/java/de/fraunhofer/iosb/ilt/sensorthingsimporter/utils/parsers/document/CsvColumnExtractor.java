@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2017 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,151 +51,151 @@ import org.slf4j.LoggerFactory;
  */
 public class CsvColumnExtractor implements DocumentParser {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(CsvColumnExtractor.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(CsvColumnExtractor.class.getName());
 
-	private EditorMap<Map<String, Object>> editor;
-	private EditorList<DatastreamMapper, EditorSubclass<SensorThingsService, Object, DatastreamMapper>> editorDsMappers;
-	private EditorList<Parser, EditorSubclass<SensorThingsService, Object, Parser>> editorParsers;
-	private EditorInt editorRowSkip;
-	private EditorString editorCharSet;
-	private EditorString editorDelimiter;
-	private EditorBoolean editorTabDelim;
+    private EditorMap<Map<String, Object>> editor;
+    private EditorList<DatastreamMapper, EditorSubclass<SensorThingsService, Object, DatastreamMapper>> editorDsMappers;
+    private EditorList<Parser, EditorSubclass<SensorThingsService, Object, Parser>> editorParsers;
+    private EditorInt editorRowSkip;
+    private EditorString editorCharSet;
+    private EditorString editorDelimiter;
+    private EditorBoolean editorTabDelim;
 
-	private List<Parser> parsers;
-	private List<DatastreamMapper> dsms;
+    private List<Parser> parsers;
+    private List<DatastreamMapper> dsms;
 
-	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
-		getConfigEditor(context, edtCtx).setConfig(config);
-		parsers = editorParsers.getValue();
-		dsms = editorDsMappers.getValue();
-	}
+    @Override
+    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+        getConfigEditor(context, edtCtx).setConfig(config);
+        parsers = editorParsers.getValue();
+        dsms = editorDsMappers.getValue();
+    }
 
-	@Override
-	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-		if (editor == null) {
-			editor = new EditorMap<>();
+    @Override
+    public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+        if (editor == null) {
+            editor = new EditorMap<>();
 
-			EditorFactory<EditorSubclass<SensorThingsService, Object, DatastreamMapper>> factoryDsm;
-			factoryDsm = () -> {
-				return new EditorSubclass<>(context, edtCtx, DatastreamMapper.class, "Datastream Mapper", "Mapper that returns the Datastream for one column, or a MultiDatastream for all columns.");
-			};
-			editorDsMappers = new EditorList<>(factoryDsm, "Datastream Mappers", "A Mapper for each column, or a single mapper for a multiDatastream.");
-			editor.addOption("dsMappers", editorDsMappers, false);
+            EditorFactory<EditorSubclass<SensorThingsService, Object, DatastreamMapper>> factoryDsm;
+            factoryDsm = () -> {
+                return new EditorSubclass<>(context, edtCtx, DatastreamMapper.class, "Datastream Mapper", "Mapper that returns the Datastream for one column, or a MultiDatastream for all columns.");
+            };
+            editorDsMappers = new EditorList<>(factoryDsm, "Datastream Mappers", "A Mapper for each column, or a single mapper for a multiDatastream.");
+            editor.addOption("dsMappers", editorDsMappers, false);
 
-			EditorFactory<EditorSubclass<SensorThingsService, Object, Parser>> factoryParser;
-			factoryParser = () -> {
-				return new EditorSubclass<>(context, edtCtx, Parser.class, "Data Parsers", "A parser to parse string data.");
-			};
-			editorParsers = new EditorList<>(factoryParser, "Data Parsers", "Parsers the parse the columns. 1 for each column, or a single to use the same for all columns.");
-			editor.addOption("parsers", editorParsers, false);
+            EditorFactory<EditorSubclass<SensorThingsService, Object, Parser>> factoryParser;
+            factoryParser = () -> {
+                return new EditorSubclass<>(context, edtCtx, Parser.class, "Data Parsers", "A parser to parse string data.");
+            };
+            editorParsers = new EditorList<>(factoryParser, "Data Parsers", "Parsers the parse the columns. 1 for each column, or a single to use the same for all columns.");
+            editor.addOption("parsers", editorParsers, false);
 
-			editorRowSkip = new EditorInt(0, 99999, 1, 0, "Rowskip", "Number of headers to skip.");
-			editor.addOption("duration", editorRowSkip, true);
+            editorRowSkip = new EditorInt(0, 99999, 1, 0, "Rowskip", "Number of headers to skip.");
+            editor.addOption("duration", editorRowSkip, true);
 
-			editorCharSet = new EditorString("UTF-8", 1, "Characterset", "The character set to use when parsing the csv file (default UTF-8).");
-			editor.addOption("charset", editorCharSet, true);
+            editorCharSet = new EditorString("UTF-8", 1, "Characterset", "The character set to use when parsing the csv file (default UTF-8).");
+            editor.addOption("charset", editorCharSet, true);
 
-			editorDelimiter = new EditorString("", 1, "delimiter", "The delimiter to use instead of comma.");
-			editor.addOption("delimiter", editorDelimiter, true);
+            editorDelimiter = new EditorString("", 1, "delimiter", "The delimiter to use instead of comma.");
+            editor.addOption("delimiter", editorDelimiter, true);
 
-			editorTabDelim = new EditorBoolean(false, "Tab Delimited", "Use tab as delimiter instead of comma.");
-			editor.addOption("tab", editorTabDelim, true);
-		}
-		return editor;
-	}
+            editorTabDelim = new EditorBoolean(false, "Tab Delimited", "Use tab as delimiter instead of comma.");
+            editor.addOption("tab", editorTabDelim, true);
+        }
+        return editor;
+    }
 
-	private List<Observation> process(String data, ErrorLog errorLog) throws IOException, ImportException {
-		CSVFormat format = CSVFormat.DEFAULT;
-		if (editorTabDelim.getValue()) {
-			format = format.withDelimiter('\t');
-		}
-		String delim = editorDelimiter.getValue();
-		if (delim.length() > 0) {
-			format = format.withDelimiter(delim.charAt(0));
-		}
-		CSVParser parser = CSVParser.parse(data, format);
+    private List<Observation> process(String data, ErrorLog errorLog) throws IOException, ImportException {
+        CSVFormat format = CSVFormat.DEFAULT;
+        if (editorTabDelim.getValue()) {
+            format = format.withDelimiter('\t');
+        }
+        String delim = editorDelimiter.getValue();
+        if (delim.length() > 0) {
+            format = format.withDelimiter(delim.charAt(0));
+        }
+        CSVParser parser = CSVParser.parse(data, format);
 
-		int rowSkip = editorRowSkip.getValue();
-		List<List<Object>> results = new ArrayList<>();
-		List<Boolean> hasData = new ArrayList<>();
-		for (CSVRecord record : parser) {
-			if (rowSkip > 0) {
-				rowSkip--;
-				continue;
-			}
-			int column = 0;
-			for (String value : record) {
-				while (column >= results.size()) {
-					results.add(new ArrayList<>());
-					hasData.add(Boolean.FALSE);
-					if (column >= parsers.size()) {
-						parsers.add(parsers.get(parsers.size() - 1));
-					}
-				}
-				List<Object> result = results.get(column);
-				if (value.isEmpty()) {
-					result.add(null);
-				} else {
-					Parser resultParser = parsers.get(column);
-					result.add(resultParser.parse(value));
-					hasData.set(column, Boolean.TRUE);
-				}
-				column++;
-			}
-		}
-		List<Observation> observations = new ArrayList<>();
-		int dataCount = 0;
-		for (Boolean colHasData : hasData) {
-			if (colHasData) {
-				dataCount++;
-			}
-		}
+        int rowSkip = editorRowSkip.getValue();
+        List<List<Object>> results = new ArrayList<>();
+        List<Boolean> hasData = new ArrayList<>();
+        for (CSVRecord record : parser) {
+            if (rowSkip > 0) {
+                rowSkip--;
+                continue;
+            }
+            int column = 0;
+            for (String value : record) {
+                while (column >= results.size()) {
+                    results.add(new ArrayList<>());
+                    hasData.add(Boolean.FALSE);
+                    if (column >= parsers.size()) {
+                        parsers.add(parsers.get(parsers.size() - 1));
+                    }
+                }
+                List<Object> result = results.get(column);
+                if (value.isEmpty()) {
+                    result.add(null);
+                } else {
+                    Parser resultParser = parsers.get(column);
+                    result.add(resultParser.parse(value));
+                    hasData.set(column, Boolean.TRUE);
+                }
+                column++;
+            }
+        }
+        List<Observation> observations = new ArrayList<>();
+        int dataCount = 0;
+        for (Boolean colHasData : hasData) {
+            if (colHasData) {
+                dataCount++;
+            }
+        }
 
-		MultiDatastream mds;
-		List<List<Object>> mdsResult = null;
-		if (dsms.size() == 1 && dataCount > 1) {
-			mds = dsms.get(0).getMultiDatastreamFor(null, errorLog);
-			if (mds != null) {
-				mdsResult = new ArrayList<>();
-				Observation obs = new Observation(mdsResult, mds);
-				observations.add(obs);
-			}
-		}
+        MultiDatastream mds;
+        List<List<Object>> mdsResult = null;
+        if (dsms.size() == 1 && dataCount > 1) {
+            mds = dsms.get(0).getMultiDatastreamFor(null, errorLog);
+            if (mds != null) {
+                mdsResult = new ArrayList<>();
+                Observation obs = new Observation(mdsResult, mds);
+                observations.add(obs);
+            }
+        }
 
-		int dataColumn = 0;
-		for (int column = 0; column < results.size(); column++) {
-			if (hasData.get(column)) {
-				if (mdsResult == null) {
-					Observation obs = new Observation();
-					obs.setResult(results.get(column));
-					Datastream ds = dsms.get(dataColumn).getDatastreamFor(null, errorLog);
-					if (ds != null) {
-						obs.setDatastream(ds);
-						dataColumn++;
-						observations.add(obs);
-					}
-				} else {
-					mdsResult.add(results.get(column));
-				}
-			}
-		}
-		return observations;
-	}
+        int dataColumn = 0;
+        for (int column = 0; column < results.size(); column++) {
+            if (hasData.get(column)) {
+                if (mdsResult == null) {
+                    Observation obs = new Observation();
+                    obs.setResult(results.get(column));
+                    Datastream ds = dsms.get(dataColumn).getDatastreamFor(null, errorLog);
+                    if (ds != null) {
+                        obs.setDatastream(ds);
+                        dataColumn++;
+                        observations.add(obs);
+                    }
+                } else {
+                    mdsResult.add(results.get(column));
+                }
+            }
+        }
+        return observations;
+    }
 
-	@Override
-	public List<Observation> process(Datastream ds, ErrorLog errorLog, String input) throws ImportException {
-		try {
-			return process(input, errorLog);
-		} catch (IOException exc) {
-			LOGGER.debug("Exception: {}", exc.getMessage());
-			throw new ImportException(exc);
-		}
-	}
+    @Override
+    public List<Observation> process(Datastream ds, ErrorLog errorLog, String input) throws ImportException {
+        try {
+            return process(input, errorLog);
+        } catch (IOException exc) {
+            LOGGER.debug("Exception: {}", exc.getMessage());
+            throw new ImportException(exc);
+        }
+    }
 
-	@Override
-	public List<Observation> process(MultiDatastream mds, ErrorLog errorLog, String... inputs) throws ImportException {
-		throw new UnsupportedOperationException("Not supported yet.");
-	}
+    @Override
+    public List<Observation> process(MultiDatastream mds, ErrorLog errorLog, String... inputs) throws ImportException {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 
 }

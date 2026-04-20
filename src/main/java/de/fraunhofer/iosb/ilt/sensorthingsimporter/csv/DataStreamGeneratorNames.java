@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2020 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,212 +50,211 @@ import org.slf4j.LoggerFactory;
  */
 public class DataStreamGeneratorNames implements DatastreamGenerator, AnnotatedConfigurable<SensorThingsService, Object> {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(DataStreamGeneratorNames.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(DataStreamGeneratorNames.class.getName());
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Thing Filter", description = "A filter that will be used to find the Thing for the Datastream to create.")
-	@EditorString.EdOptsString(dflt = "name eq {nameColumn}", lines = 3)
-	private String filterThing;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Thing Filter", description = "A filter that will be used to find the Thing for the Datastream to create.")
+    @EditorString.EdOptsString(dflt = "name eq {nameColumn}", lines = 3)
+    private String filterThing;
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Sensor Filter", description = "A filter that will be used to find the Sensor for the Datastream to create.")
-	@EditorString.EdOptsString(dflt = "name eq {nameColumn}", lines = 3)
-	private String filterSensor;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Sensor Filter", description = "A filter that will be used to find the Sensor for the Datastream to create.")
+    @EditorString.EdOptsString(dflt = "name eq {nameColumn}", lines = 3)
+    private String filterSensor;
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "ObsProp Filter", description = "A filter that will be used to find the Sensor for the Datastream to create.")
-	@EditorString.EdOptsString(dflt = "name eq {nameColumn}", lines = 3)
-	private String filterObsProp;
+    @ConfigurableField(editor = EditorString.class,
+            label = "ObsProp Filter", description = "A filter that will be used to find the Sensor for the Datastream to create.")
+    @EditorString.EdOptsString(dflt = "name eq {nameColumn}", lines = 3)
+    private String filterObsProp;
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Name", description = "The name")
-	@EditorString.EdOptsString(dflt = "{nameColumn}", lines = 1)
-	private String templateName;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Name", description = "The name")
+    @EditorString.EdOptsString(dflt = "{nameColumn}", lines = 1)
+    private String templateName;
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Description", description = "The description")
-	@EditorString.EdOptsString(dflt = "{descColumn}", lines = 1)
-	private String templateDescription;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Description", description = "The description")
+    @EditorString.EdOptsString(dflt = "{descColumn}", lines = 1)
+    private String templateDescription;
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Properties", description = "Template used to generate properties.")
-	@EditorString.EdOptsString(lines = 4)
-	private String templateProperties;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Properties", description = "Template used to generate properties.")
+    @EditorString.EdOptsString(lines = 4)
+    private String templateProperties;
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "UoM Name", description = "The name of the Unit Of Measurement")
-	@EditorString.EdOptsString(dflt = "{column}", lines = 1)
-	private String templateUomName;
+    @ConfigurableField(editor = EditorString.class,
+            label = "UoM Name", description = "The name of the Unit Of Measurement")
+    @EditorString.EdOptsString(dflt = "{column}", lines = 1)
+    private String templateUomName;
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "UoM Symbol", description = "The symbol of the Unit Of Measurement")
-	@EditorString.EdOptsString(dflt = "{column}", lines = 1)
-	private String templateUomSymbol;
+    @ConfigurableField(editor = EditorString.class,
+            label = "UoM Symbol", description = "The symbol of the Unit Of Measurement")
+    @EditorString.EdOptsString(dflt = "{column}", lines = 1)
+    private String templateUomSymbol;
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "UoM Definition", description = "The definition of the Unit Of Measurement")
-	@EditorString.EdOptsString(dflt = "{column}", lines = 1)
-	private String templateUomDef;
+    @ConfigurableField(editor = EditorString.class,
+            label = "UoM Definition", description = "The definition of the Unit Of Measurement")
+    @EditorString.EdOptsString(dflt = "{column}", lines = 1)
+    private String templateUomDef;
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Obs Type", description = "The type of observations")
-	@EditorString.EdOptsString(dflt = "\"http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement", lines = 1)
-	private String templateObsType;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Obs Type", description = "The type of observations")
+    @EditorString.EdOptsString(dflt = "\"http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement", lines = 1)
+    private String templateObsType;
 
-	private final Map<String, Thing> cacheThings = new HashMap<>();
-	private final Map<String, Sensor> cacheSensors = new HashMap<>();
-	private final Map<String, ObservedProperty> cacheObsProps = new HashMap<>();
+    private final Map<String, Thing> cacheThings = new HashMap<>();
+    private final Map<String, Sensor> cacheSensors = new HashMap<>();
+    private final Map<String, ObservedProperty> cacheObsProps = new HashMap<>();
 
-	private SensorThingsService service;
-	private FrostUtils frostUtils;
+    private SensorThingsService service;
+    private FrostUtils frostUtils;
 
-	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
-		service = context;
-		frostUtils = new FrostUtils(context);
-		AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
-	}
+    @Override
+    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+        service = context;
+        frostUtils = new FrostUtils(context);
+        AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
+    }
 
-	@Override
-	public Datastream createDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
-		Thing thing = getThingFor(record, errorLog);
-		Sensor sensor = getSensorFor(record, errorLog);
-		ObservedProperty obsProp = getObsPropFor(record, errorLog);
-		if (thing == null || sensor == null || obsProp == null) {
-			return null;
-		}
-		Datastream ds = new Datastream();
-		ds.setName(Translator.fillTemplate(templateName, record, StringType.PLAIN, true));
-		ds.setDescription(Translator.fillTemplate(templateDescription, record, StringType.PLAIN, true));
-		ds.setObservationType(Translator.fillTemplate(templateObsType, record, StringType.PLAIN, true));
-		String propertiesString = Translator.fillTemplate(templateProperties, record, StringType.JSON, false);
-		ds.setProperties(JsonUtils.jsonToMap(propertiesString));
-		UnitOfMeasurement uom = new UnitOfMeasurement(
-				Translator.fillTemplate(templateUomName, record, StringType.PLAIN, true),
-				Translator.fillTemplate(templateUomSymbol, record, StringType.PLAIN, true),
-				Translator.fillTemplate(templateUomDef, record, StringType.PLAIN, true)
-		);
-		ds.setUnitOfMeasurement(uom);
-		ds.setThing(thing);
-		ds.setSensor(sensor);
-		ds.setObservedProperty(obsProp);
-		try {
-			frostUtils.create(ds);
-		} catch (ServiceFailureException ex) {
-			throw new ImportException("Failed to create Datastream", ex);
-		}
-		return ds;
-	}
+    @Override
+    public Datastream createDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
+        Thing thing = getThingFor(record, errorLog);
+        Sensor sensor = getSensorFor(record, errorLog);
+        ObservedProperty obsProp = getObsPropFor(record, errorLog);
+        if (thing == null || sensor == null || obsProp == null) {
+            return null;
+        }
+        Datastream ds = new Datastream();
+        ds.setName(Translator.fillTemplate(templateName, record, StringType.PLAIN, true));
+        ds.setDescription(Translator.fillTemplate(templateDescription, record, StringType.PLAIN, true));
+        ds.setObservationType(Translator.fillTemplate(templateObsType, record, StringType.PLAIN, true));
+        String propertiesString = Translator.fillTemplate(templateProperties, record, StringType.JSON, false);
+        ds.setProperties(JsonUtils.jsonToMap(propertiesString));
+        UnitOfMeasurement uom = new UnitOfMeasurement(
+                Translator.fillTemplate(templateUomName, record, StringType.PLAIN, true),
+                Translator.fillTemplate(templateUomSymbol, record, StringType.PLAIN, true),
+                Translator.fillTemplate(templateUomDef, record, StringType.PLAIN, true));
+        ds.setUnitOfMeasurement(uom);
+        ds.setThing(thing);
+        ds.setSensor(sensor);
+        ds.setObservedProperty(obsProp);
+        try {
+            frostUtils.create(ds);
+        } catch (ServiceFailureException ex) {
+            throw new ImportException("Failed to create Datastream", ex);
+        }
+        return ds;
+    }
 
-	public Thing getThingFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
-		try {
-			String filter = Translator.fillTemplate(filterThing, record, StringType.URL, true);
-			Thing t = getThingFor(filter, errorLog);
-			return t;
-		} catch (ServiceFailureException ex) {
-			LOGGER.error("Failed to fetch datastream.", ex);
-			throw new IllegalArgumentException(ex);
-		}
-	}
+    public Thing getThingFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
+        try {
+            String filter = Translator.fillTemplate(filterThing, record, StringType.URL, true);
+            Thing t = getThingFor(filter, errorLog);
+            return t;
+        } catch (ServiceFailureException ex) {
+            LOGGER.error("Failed to fetch datastream.", ex);
+            throw new IllegalArgumentException(ex);
+        }
+    }
 
-	public Sensor getSensorFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
-		try {
-			String filter = Translator.fillTemplate(filterSensor, record, StringType.URL, true);
-			Sensor s = getSensorFor(filter, errorLog);
-			return s;
-		} catch (ServiceFailureException ex) {
-			LOGGER.error("Failed to fetch datastream.", ex);
-			throw new IllegalArgumentException(ex);
-		}
-	}
+    public Sensor getSensorFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
+        try {
+            String filter = Translator.fillTemplate(filterSensor, record, StringType.URL, true);
+            Sensor s = getSensorFor(filter, errorLog);
+            return s;
+        } catch (ServiceFailureException ex) {
+            LOGGER.error("Failed to fetch datastream.", ex);
+            throw new IllegalArgumentException(ex);
+        }
+    }
 
-	public ObservedProperty getObsPropFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
-		try {
-			String filter = Translator.fillTemplate(filterObsProp, record, StringType.URL, true);
-			ObservedProperty o = getObsPropFor(filter, errorLog);
-			return o;
-		} catch (ServiceFailureException ex) {
-			LOGGER.error("Failed to fetch datastream.", ex);
-			throw new IllegalArgumentException(ex);
-		}
-	}
+    public ObservedProperty getObsPropFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
+        try {
+            String filter = Translator.fillTemplate(filterObsProp, record, StringType.URL, true);
+            ObservedProperty o = getObsPropFor(filter, errorLog);
+            return o;
+        } catch (ServiceFailureException ex) {
+            LOGGER.error("Failed to fetch datastream.", ex);
+            throw new IllegalArgumentException(ex);
+        }
+    }
 
-	private Thing getThingFor(String filter, ErrorLog errorLog) throws ServiceFailureException, ImportException {
-		Thing t = cacheThings.get(filter);
-		if (t != null) {
-			return t;
-		}
-		if (cacheThings.containsKey(filter)) {
-			// We previously had found nothing. Don't search again.
-			return null;
-		}
-		Query<Thing> query = service.things().query().filter(filter);
-		EntityList<Thing> streams = query.list();
-		if (streams.size() > 1) {
-			LOGGER.error("Found incorrect number of Things: {} for filter: {}", streams.size(), filter);
-			throw new ImportException("Found incorrect number of Things: " + streams.size() + " for filter: " + filter);
-		} else if (!streams.isEmpty()) {
-			t = streams.iterator().next();
-			LOGGER.debug("Found Thing {} for filter {}.", t.getId(), filter);
-		}
-		if (t == null) {
-			LOGGER.error("Found no Thing for filter: {}.", filter);
-			errorLog.addError("Thing not found");
-		}
-		cacheThings.put(filter, t);
-		return t;
-	}
+    private Thing getThingFor(String filter, ErrorLog errorLog) throws ServiceFailureException, ImportException {
+        Thing t = cacheThings.get(filter);
+        if (t != null) {
+            return t;
+        }
+        if (cacheThings.containsKey(filter)) {
+            // We previously had found nothing. Don't search again.
+            return null;
+        }
+        Query<Thing> query = service.things().query().filter(filter);
+        EntityList<Thing> streams = query.list();
+        if (streams.size() > 1) {
+            LOGGER.error("Found incorrect number of Things: {} for filter: {}", streams.size(), filter);
+            throw new ImportException("Found incorrect number of Things: " + streams.size() + " for filter: " + filter);
+        } else if (!streams.isEmpty()) {
+            t = streams.iterator().next();
+            LOGGER.debug("Found Thing {} for filter {}.", t.getId(), filter);
+        }
+        if (t == null) {
+            LOGGER.error("Found no Thing for filter: {}.", filter);
+            errorLog.addError("Thing not found");
+        }
+        cacheThings.put(filter, t);
+        return t;
+    }
 
-	private Sensor getSensorFor(String filter, ErrorLog errorLog) throws ServiceFailureException, ImportException {
-		Sensor s = cacheSensors.get(filter);
-		if (s != null) {
-			return s;
-		}
-		if (cacheSensors.containsKey(filter)) {
-			// We previously had found nothing. Don't search again.
-			return null;
-		}
-		Query<Sensor> query = service.sensors().query().filter(filter);
-		EntityList<Sensor> streams = query.list();
-		if (streams.size() > 1) {
-			LOGGER.error("Found incorrect number of Sensors: {} for filter: {}", streams.size(), filter);
-			throw new ImportException("Found incorrect number of Sensors: " + streams.size() + " for filter: " + filter);
-		} else if (!streams.isEmpty()) {
-			s = streams.iterator().next();
-			LOGGER.debug("Found Sensor {} for filter {}.", s.getId(), filter);
-		}
-		if (s == null) {
-			LOGGER.error("Found no Sensor for filter: {}.", filter);
-			errorLog.addError("Sensor not found");
-		}
-		cacheSensors.put(filter, s);
-		return s;
-	}
+    private Sensor getSensorFor(String filter, ErrorLog errorLog) throws ServiceFailureException, ImportException {
+        Sensor s = cacheSensors.get(filter);
+        if (s != null) {
+            return s;
+        }
+        if (cacheSensors.containsKey(filter)) {
+            // We previously had found nothing. Don't search again.
+            return null;
+        }
+        Query<Sensor> query = service.sensors().query().filter(filter);
+        EntityList<Sensor> streams = query.list();
+        if (streams.size() > 1) {
+            LOGGER.error("Found incorrect number of Sensors: {} for filter: {}", streams.size(), filter);
+            throw new ImportException("Found incorrect number of Sensors: " + streams.size() + " for filter: " + filter);
+        } else if (!streams.isEmpty()) {
+            s = streams.iterator().next();
+            LOGGER.debug("Found Sensor {} for filter {}.", s.getId(), filter);
+        }
+        if (s == null) {
+            LOGGER.error("Found no Sensor for filter: {}.", filter);
+            errorLog.addError("Sensor not found");
+        }
+        cacheSensors.put(filter, s);
+        return s;
+    }
 
-	private ObservedProperty getObsPropFor(String filter, ErrorLog errorLog) throws ServiceFailureException, ImportException {
-		ObservedProperty o = cacheObsProps.get(filter);
-		if (o != null) {
-			return o;
-		}
-		if (cacheObsProps.containsKey(filter)) {
-			// We previously had found nothing. Don't search again.
-			return null;
-		}
-		Query<ObservedProperty> query = service.observedProperties().query().filter(filter);
-		EntityList<ObservedProperty> streams = query.list();
-		if (streams.size() > 1) {
-			LOGGER.error("Found incorrect number of ObservedProperties: {} for filter: {}", streams.size(), filter);
-			throw new ImportException("Found incorrect number of ObservedProperties: " + streams.size() + " for filter: " + filter);
-		} else if (!streams.isEmpty()) {
-			o = streams.iterator().next();
-			LOGGER.debug("Found ObservedProperties {} for filter {}.", o.getId(), filter);
-		}
-		if (o == null) {
-			LOGGER.error("Found no ObservedProperties for filter: {}.", filter);
-			errorLog.addError("ObsProp not found");
-		}
-		cacheObsProps.put(filter, o);
-		return o;
-	}
+    private ObservedProperty getObsPropFor(String filter, ErrorLog errorLog) throws ServiceFailureException, ImportException {
+        ObservedProperty o = cacheObsProps.get(filter);
+        if (o != null) {
+            return o;
+        }
+        if (cacheObsProps.containsKey(filter)) {
+            // We previously had found nothing. Don't search again.
+            return null;
+        }
+        Query<ObservedProperty> query = service.observedProperties().query().filter(filter);
+        EntityList<ObservedProperty> streams = query.list();
+        if (streams.size() > 1) {
+            LOGGER.error("Found incorrect number of ObservedProperties: {} for filter: {}", streams.size(), filter);
+            throw new ImportException("Found incorrect number of ObservedProperties: " + streams.size() + " for filter: " + filter);
+        } else if (!streams.isEmpty()) {
+            o = streams.iterator().next();
+            LOGGER.debug("Found ObservedProperties {} for filter {}.", o.getId(), filter);
+        }
+        if (o == null) {
+            LOGGER.error("Found no ObservedProperties for filter: {}.", filter);
+            errorLog.addError("ObsProp not found");
+        }
+        cacheObsProps.put(filter, o);
+        return o;
+    }
 
 }

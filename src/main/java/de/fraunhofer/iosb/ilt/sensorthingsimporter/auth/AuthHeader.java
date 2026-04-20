@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2019 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,38 +30,38 @@ import org.apache.http.impl.client.CloseableHttpClient;
  */
 public class AuthHeader implements AuthMethod {
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Header Name",
-			description = "The name of the authentication header to use.")
-	@EditorString.EdOptsString()
-	private String headerName;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Header Name",
+            description = "The name of the authentication header to use.")
+    @EditorString.EdOptsString()
+    private String headerName;
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Header Value",
-			description = "The value of the authentication header to use.")
-	@EditorString.EdOptsString()
-	private String headerValue;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Header Value",
+            description = "The value of the authentication header to use.")
+    @EditorString.EdOptsString()
+    private String headerValue;
 
-	@Override
-	public void setAuth(SensorThingsService service) {
-		service.setTokenManager(new TokenManager() {
-			@Override
-			public void addAuthHeader(HttpRequest hr) {
-				hr.addHeader(headerName, headerValue);
-			}
+    @Override
+    public void setAuth(SensorThingsService service) {
+        service.setTokenManager(new TokenManager() {
+            @Override
+            public void addAuthHeader(HttpRequest hr) {
+                hr.addHeader(headerName, headerValue);
+            }
 
-			@Override
-			public TokenManager setHttpClient(CloseableHttpClient chc) {
-				// We don't need a HTTPClient.
-				return this;
-			}
+            @Override
+            public TokenManager setHttpClient(CloseableHttpClient chc) {
+                // We don't need a HTTPClient.
+                return this;
+            }
 
-			@Override
-			public CloseableHttpClient getHttpClient() {
-				// We don't need a HTTPClient.
-				return null;
-			}
-		});
-	}
+            @Override
+            public CloseableHttpClient getHttpClient() {
+                // We don't need a HTTPClient.
+                return null;
+            }
+        });
+    }
 
 }

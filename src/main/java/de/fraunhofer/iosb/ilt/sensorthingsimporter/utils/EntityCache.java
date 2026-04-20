@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2020 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,105 +35,105 @@ import java.util.Map;
  */
 public class EntityCache<U, T extends Entity<T>> {
 
-	private final Map<U, T> entitiesByLocalId = new LinkedHashMap<>();
-	private final Map<String, T> entitiesByName = new LinkedHashMap<>();
+    private final Map<U, T> entitiesByLocalId = new LinkedHashMap<>();
+    private final Map<String, T> entitiesByName = new LinkedHashMap<>();
 
-	private final PropertyExtractor<U, T> localIdExtractor;
-	private final PropertyExtractor<String, T> nameExtractor;
+    private final PropertyExtractor<U, T> localIdExtractor;
+    private final PropertyExtractor<String, T> nameExtractor;
 
-	public EntityCache(PropertyExtractor<U, T> localIdExtractor, PropertyExtractor<String, T> nameExtractor) {
-		this.localIdExtractor = localIdExtractor;
-		this.nameExtractor = nameExtractor;
-	}
+    public EntityCache(PropertyExtractor<U, T> localIdExtractor, PropertyExtractor<String, T> nameExtractor) {
+        this.localIdExtractor = localIdExtractor;
+        this.nameExtractor = nameExtractor;
+    }
 
-	public T get(U localId) {
-		return entitiesByLocalId.get(localId);
-	}
+    public T get(U localId) {
+        return entitiesByLocalId.get(localId);
+    }
 
-	public T getByName(String name) {
-		return entitiesByName.get(name);
-	}
+    public T getByName(String name) {
+        return entitiesByName.get(name);
+    }
 
-	public boolean containsId(U localId) {
-		return entitiesByLocalId.containsKey(localId);
-	}
+    public boolean containsId(U localId) {
+        return entitiesByLocalId.containsKey(localId);
+    }
 
-	public boolean isEmpty() {
-		return entitiesByLocalId.isEmpty();
-	}
+    public boolean isEmpty() {
+        return entitiesByLocalId.isEmpty();
+    }
 
-	public int load(BaseDao<T> dao, String filter) throws ServiceFailureException {
-		return load(dao, filter, "", "");
-	}
+    public int load(BaseDao<T> dao, String filter) throws ServiceFailureException {
+        return load(dao, filter, "", "");
+    }
 
-	public int load(BaseDao<T> dao, String filter, String select, String expand) throws ServiceFailureException {
-		Query<T> query = dao.query();
-		if (!select.isEmpty()) {
-			query.select(select);
-		}
-		if (!expand.isEmpty()) {
-			query.expand(expand);
-		}
-		if (!Utils.isNullOrEmpty(filter)) {
-			query.filter(filter);
-		}
-		EntityList<T> entities = query.top(10000).orderBy("id asc").list();
-		Iterator<T> it = entities.fullIterator();
-		int count = 0;
-		while (it.hasNext()) {
-			T entitiy = it.next();
-			if (add(entitiy)) {
-				count++;
-			}
-		}
-		return count;
-	}
+    public int load(BaseDao<T> dao, String filter, String select, String expand) throws ServiceFailureException {
+        Query<T> query = dao.query();
+        if (!select.isEmpty()) {
+            query.select(select);
+        }
+        if (!expand.isEmpty()) {
+            query.expand(expand);
+        }
+        if (!Utils.isNullOrEmpty(filter)) {
+            query.filter(filter);
+        }
+        EntityList<T> entities = query.top(10000).orderBy("id asc").list();
+        Iterator<T> it = entities.fullIterator();
+        int count = 0;
+        while (it.hasNext()) {
+            T entitiy = it.next();
+            if (add(entitiy)) {
+                count++;
+            }
+        }
+        return count;
+    }
 
-	public void add(Collection<T> entities) {
-		entities.stream().forEach(e -> add(e));
-	}
+    public void add(Collection<T> entities) {
+        entities.stream().forEach(e -> add(e));
+    }
 
-	public boolean add(T entity) {
-		boolean hasLocalId = false;
-		try {
-			U localId = localIdExtractor.extractFrom(entity);
-			if (localId != null) {
-				entitiesByLocalId.put(localId, entity);
-				hasLocalId = true;
-			}
-		} catch (RuntimeException ex) {
-			// probably no localId, ignore.
-		}
-		if (nameExtractor != null) {
-			String name = nameExtractor.extractFrom(entity);
-			entitiesByName.put(name, entity);
-		}
-		return hasLocalId;
-	}
+    public boolean add(T entity) {
+        boolean hasLocalId = false;
+        try {
+            U localId = localIdExtractor.extractFrom(entity);
+            if (localId != null) {
+                entitiesByLocalId.put(localId, entity);
+                hasLocalId = true;
+            }
+        } catch (RuntimeException ex) {
+            // probably no localId, ignore.
+        }
+        if (nameExtractor != null) {
+            String name = nameExtractor.extractFrom(entity);
+            entitiesByName.put(name, entity);
+        }
+        return hasLocalId;
+    }
 
-	/**
-	 * Register a NULL value for the given localId. This can be used to cache
-	 * the fact that the given localId does not have an Entity.
-	 *
-	 * @param localId The localId to cache.
-	 * @return the old value for the given localId, or null if there was no old
-	 * value registered.
-	 */
-	public T registerNull(U localId) {
-		return entitiesByLocalId.put(localId, null);
-	}
+    /**
+     * Register a NULL value for the given localId. This can be used to cache
+     * the fact that the given localId does not have an Entity.
+     *
+     * @param localId The localId to cache.
+     * @return the old value for the given localId, or null if there was no old
+     * value registered.
+     */
+    public T registerNull(U localId) {
+        return entitiesByLocalId.put(localId, null);
+    }
 
-	public Collection<T> valuesWithLocalId() {
-		return entitiesByLocalId.values();
-	}
+    public Collection<T> valuesWithLocalId() {
+        return entitiesByLocalId.values();
+    }
 
-	public Collection<T> valuesWithName() {
-		return entitiesByName.values();
-	}
+    public Collection<T> valuesWithName() {
+        return entitiesByName.values();
+    }
 
-	public static interface PropertyExtractor<U, T extends Entity<T>> {
+    public static interface PropertyExtractor<U, T extends Entity<T>> {
 
-		public U extractFrom(T entity);
-	}
+        public U extractFrom(T entity);
+    }
 
 }

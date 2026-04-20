@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2020 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,151 +44,151 @@ import org.slf4j.LoggerFactory;
  */
 public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<Object, Object> {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(UrlGeneratorBouncer.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(UrlGeneratorBouncer.class.getName());
 
-	@ConfigurableField(editor = EditorSubclass.class,
-			label = "Input Url", description = "The input url(s)")
-	@EditorSubclass.EdOptsSubclass(iface = UrlGenerator.class)
-	private UrlGenerator inputUrl;
+    @ConfigurableField(editor = EditorSubclass.class,
+            label = "Input Url", description = "The input url(s)")
+    @EditorSubclass.EdOptsSubclass(iface = UrlGenerator.class)
+    private UrlGenerator inputUrl;
 
-	@ConfigurableField(
-			label = "Sort",
-			description = "Sort the urls received from the input url.",
-			editor = EditorBoolean.class)
-	@EditorBoolean.EdOptsBool()
-	private boolean sort;
+    @ConfigurableField(
+            label = "Sort",
+            description = "Sort the urls received from the input url.",
+            editor = EditorBoolean.class)
+    @EditorBoolean.EdOptsBool()
+    private boolean sort;
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Filter", description = "The regular expression filter to use.")
-	@EditorString.EdOptsString(dflt = ".*")
-	private String filterRegex;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Filter", description = "The regular expression filter to use.")
+    @EditorString.EdOptsString(dflt = ".*")
+    private String filterRegex;
 
-	@ConfigurableField(editor = EditorBoolean.class,
-			label = "Filter Removes", description = "If true, the filter removes matching item from the set. If false, the filter allows matching items.")
-	@EditorBoolean.EdOptsBool()
-	private boolean filterRemoves;
+    @ConfigurableField(editor = EditorBoolean.class,
+            label = "Filter Removes", description = "If true, the filter removes matching item from the set. If false, the filter allows matching items.")
+    @EditorBoolean.EdOptsBool()
+    private boolean filterRemoves;
 
-	@ConfigurableField(editor = EditorString.class, optional = true,
-			label = "Splitter", description = "The characters to use to split the input into urls.")
-	@EditorString.EdOptsString(dflt = "\\n\\r ")
-	private String splitter;
+    @ConfigurableField(editor = EditorString.class, optional = true,
+            label = "Splitter", description = "The characters to use to split the input into urls.")
+    @EditorString.EdOptsString(dflt = "\\n\\r ")
+    private String splitter;
 
-	@Override
-	public Iterable<URL> urls(ErrorLog errorLog) {
-		return new proxyIterable(this, inputUrl, errorLog);
-	}
+    @Override
+    public Iterable<URL> urls(ErrorLog errorLog) {
+        return new proxyIterable(this, inputUrl, errorLog);
+    }
 
-	private static class proxyIterable implements Iterable<URL> {
+    private static class proxyIterable implements Iterable<URL> {
 
-		private final UrlGeneratorBouncer bouncer;
-		private final UrlGenerator parentGenerator;
-		private final ErrorLog errorLog;
+        private final UrlGeneratorBouncer bouncer;
+        private final UrlGenerator parentGenerator;
+        private final ErrorLog errorLog;
 
-		public proxyIterable(UrlGeneratorBouncer bouncer, UrlGenerator parentGenerator, ErrorLog errorLog) {
-			this.bouncer = bouncer;
-			this.parentGenerator = parentGenerator;
-			this.errorLog = errorLog;
-		}
+        public proxyIterable(UrlGeneratorBouncer bouncer, UrlGenerator parentGenerator, ErrorLog errorLog) {
+            this.bouncer = bouncer;
+            this.parentGenerator = parentGenerator;
+            this.errorLog = errorLog;
+        }
 
-		@Override
-		public Iterator<URL> iterator() {
-			return new proxyIterator(bouncer, parentGenerator.urls(errorLog).iterator(), errorLog);
-		}
+        @Override
+        public Iterator<URL> iterator() {
+            return new proxyIterator(bouncer, parentGenerator.urls(errorLog).iterator(), errorLog);
+        }
 
-	}
+    }
 
-	private static class proxyIterator implements Iterator<URL> {
+    private static class proxyIterator implements Iterator<URL> {
 
-		private final UrlGeneratorBouncer bouncer;
-		private final Iterator<URL> parentIterator;
-		private Iterator<String> currentIterator;
-		private Pattern filter;
-		private String splitter;
-		private URL currentParent;
-		private ErrorLog errorLog;
+        private final UrlGeneratorBouncer bouncer;
+        private final Iterator<URL> parentIterator;
+        private Iterator<String> currentIterator;
+        private Pattern filter;
+        private String splitter;
+        private URL currentParent;
+        private ErrorLog errorLog;
 
-		public proxyIterator(UrlGeneratorBouncer bouncer, Iterator<URL> parentIterator, ErrorLog errorLog) {
-			this.bouncer = bouncer;
-			this.parentIterator = parentIterator;
-			this.errorLog = errorLog;
-			this.splitter = StringUtils.replaceEach(
-					bouncer.splitter,
-					new String[]{"\\n", "\\r", "\\t"},
-					new String[]{"\n", "\r", "\t"});
-			if (!Utils.isNullOrEmpty(bouncer.filterRegex)) {
-				filter = Pattern.compile(bouncer.filterRegex);
-			}
-			try {
-				nextParent();
-			} catch (ImportException ex) {
-				throw new IllegalStateException(ex);
-			}
-		}
+        public proxyIterator(UrlGeneratorBouncer bouncer, Iterator<URL> parentIterator, ErrorLog errorLog) {
+            this.bouncer = bouncer;
+            this.parentIterator = parentIterator;
+            this.errorLog = errorLog;
+            this.splitter = StringUtils.replaceEach(
+                    bouncer.splitter,
+                    new String[]{"\\n", "\\r", "\\t"},
+                    new String[]{"\n", "\r", "\t"});
+            if (!Utils.isNullOrEmpty(bouncer.filterRegex)) {
+                filter = Pattern.compile(bouncer.filterRegex);
+            }
+            try {
+                nextParent();
+            } catch (ImportException ex) {
+                throw new IllegalStateException(ex);
+            }
+        }
 
-		@Override
-		public boolean hasNext() {
-			return parentIterator.hasNext() || currentIterator.hasNext();
-		}
+        @Override
+        public boolean hasNext() {
+            return parentIterator.hasNext() || currentIterator.hasNext();
+        }
 
-		@Override
-		public URL next() {
-			try {
-				if (currentIterator.hasNext()) {
-					String next = currentIterator.next();
-					final int hasHttp = next.indexOf("http");
-					if (hasHttp >= 0) {
-						next = next.substring(hasHttp);
-					}
-					return new URL(currentParent, next);
-				} else {
-					if (!parentIterator.hasNext()) {
-						return null;
-					}
-					nextParent();
-					return next();
-				}
-			} catch (MalformedURLException | ImportException ex) {
-				throw new IllegalStateException(ex);
-			}
-		}
+        @Override
+        public URL next() {
+            try {
+                if (currentIterator.hasNext()) {
+                    String next = currentIterator.next();
+                    final int hasHttp = next.indexOf("http");
+                    if (hasHttp >= 0) {
+                        next = next.substring(hasHttp);
+                    }
+                    return new URL(currentParent, next);
+                } else {
+                    if (!parentIterator.hasNext()) {
+                        return null;
+                    }
+                    nextParent();
+                    return next();
+                }
+            } catch (MalformedURLException | ImportException ex) {
+                throw new IllegalStateException(ex);
+            }
+        }
 
-		private void nextParent() throws ImportException {
-			if (parentIterator.hasNext()) {
-				URL nextParentUrl = parentIterator.next();
-				String fetchedFromUrl;
-				try {
-					currentParent = new URL(nextParentUrl.toString().trim());
-					fetchedFromUrl = UrlUtils.fetchFromUrl(currentParent.toString()).data;
-					String[] split = StringUtils.split(fetchedFromUrl, splitter);
-					List<String> inList = new ArrayList<>(split.length);
-					for (String item : split) {
-						item = item.trim();
-						item = StringUtils.replace(item, " ", "%20");
-						if (!item.isEmpty()) {
-							inList.add(item.trim());
-						}
-					}
-					List<String> outList;
-					if (filter == null) {
-						outList = inList;
-					} else {
-						outList = new ArrayList<>();
-						for (String item : inList) {
-							final boolean matches = filter.matcher(item).matches();
-							if (matches != bouncer.filterRemoves) {
-								outList.add(item);
-							}
-						}
-					}
-					if (bouncer.sort) {
-						outList.sort(null);
-					}
-					currentIterator = outList.iterator();
-				} catch (IOException exc) {
-					LOGGER.error("Failed to handle URL: {}; {}", currentParent, exc.getMessage());
-					errorLog.addError("Failed to download", Objects.toString(currentParent), 0);
-				}
-			}
-		}
-	}
+        private void nextParent() throws ImportException {
+            if (parentIterator.hasNext()) {
+                URL nextParentUrl = parentIterator.next();
+                String fetchedFromUrl;
+                try {
+                    currentParent = new URL(nextParentUrl.toString().trim());
+                    fetchedFromUrl = UrlUtils.fetchFromUrl(currentParent.toString()).data;
+                    String[] split = StringUtils.split(fetchedFromUrl, splitter);
+                    List<String> inList = new ArrayList<>(split.length);
+                    for (String item : split) {
+                        item = item.trim();
+                        item = StringUtils.replace(item, " ", "%20");
+                        if (!item.isEmpty()) {
+                            inList.add(item.trim());
+                        }
+                    }
+                    List<String> outList;
+                    if (filter == null) {
+                        outList = inList;
+                    } else {
+                        outList = new ArrayList<>();
+                        for (String item : inList) {
+                            final boolean matches = filter.matcher(item).matches();
+                            if (matches != bouncer.filterRemoves) {
+                                outList.add(item);
+                            }
+                        }
+                    }
+                    if (bouncer.sort) {
+                        outList.sort(null);
+                    }
+                    currentIterator = outList.iterator();
+                } catch (IOException exc) {
+                    LOGGER.error("Failed to handle URL: {}; {}", currentParent, exc.getMessage());
+                    errorLog.addError("Failed to download", Objects.toString(currentParent), 0);
+                }
+            }
+        }
+    }
 }

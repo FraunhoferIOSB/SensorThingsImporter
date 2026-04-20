@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -28,34 +28,34 @@ import javafx.stage.Stage;
 
 public class ImporterGui extends Application {
 
-	@Override
-	public void start(Stage stage) throws Exception {
-		FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/Scene.fxml"));
-		Parent root = loader.load();
-		FXMLController controller = loader.getController();
+    @Override
+    public void start(Stage stage) throws Exception {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/Scene.fxml"));
+        Parent root = loader.load();
+        FXMLController controller = loader.getController();
 
-		Scene scene = new Scene(root);
-		scene.getStylesheets().add("/styles/Styles.css");
+        Scene scene = new Scene(root);
+        scene.getStylesheets().add("/styles/Styles.css");
 
-		stage.setTitle("SensorThings Importer");
-		stage.setScene(scene);
-		stage.show();
-		stage.setOnCloseRequest(e -> controller.close());
-	}
+        stage.setTitle("SensorThings Importer");
+        stage.setScene(scene);
+        stage.show();
+        stage.setOnCloseRequest(e -> controller.close());
+    }
 
-	/**
-	 * The main() method is ignored in correctly deployed JavaFX application.
-	 * main() serves only as fallback in case the application can not be
-	 * launched through deployment artifacts, e.g., in IDEs with limited FX
-	 * support. NetBeans ignores main().
-	 *
-	 * @param args the command line arguments
-	 * @throws IOException
-	 * @throws URISyntaxException
-	 * @throws ServiceFailureException
-	 */
-	public static void main(String[] args) throws IOException, URISyntaxException, ServiceFailureException {
-		Application.launch(args);
-	}
+    /**
+     * The main() method is ignored in correctly deployed JavaFX application.
+     * main() serves only as fallback in case the application can not be
+     * launched through deployment artifacts, e.g., in IDEs with limited FX
+     * support. NetBeans ignores main().
+     *
+     * @param args the command line arguments
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws ServiceFailureException
+     */
+    public static void main(String[] args) throws IOException, URISyntaxException, ServiceFailureException {
+        Application.launch(args);
+    }
 
 }

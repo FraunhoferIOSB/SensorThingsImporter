@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -23,31 +23,31 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.options;
  */
 public class ParameterLong implements Parameter<Long> {
 
-	private final String name;
-	private Long value;
+    private final String name;
+    private Long value;
 
-	/**
-	 * @param name The name of the parameter used in the help.
-	 * @param value The default value.
-	 */
-	public ParameterLong(String name, Long value) {
-		this.name = name;
-		this.value = value;
-	}
+    /**
+     * @param name The name of the parameter used in the help.
+     * @param value The default value.
+     */
+    public ParameterLong(String name, Long value) {
+        this.name = name;
+        this.value = value;
+    }
 
-	@Override
-	public Long parse(String arg) {
-		value = Long.parseLong(arg);
-		return value;
-	}
+    @Override
+    public Long parse(String arg) {
+        value = Long.parseLong(arg);
+        return value;
+    }
 
-	@Override
-	public Long getValue() {
-		return value;
-	}
+    @Override
+    public Long getValue() {
+        return value;
+    }
 
-	@Override
-	public String getName() {
-		return name;
-	}
+    @Override
+    public String getName() {
+        return name;
+    }
 }

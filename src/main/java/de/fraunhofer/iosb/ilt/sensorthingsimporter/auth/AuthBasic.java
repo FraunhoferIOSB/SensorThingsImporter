@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2019 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,50 +42,50 @@ import org.slf4j.LoggerFactory;
  */
 public class AuthBasic implements AuthMethod {
 
-	/**
-	 * The logger for this class.
-	 */
-	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(AuthBasic.class);
+    /**
+     * The logger for this class.
+     */
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(AuthBasic.class);
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Username",
-			description = "The username to use for authentication")
-	@EditorString.EdOptsString()
-	private String username;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Username",
+            description = "The username to use for authentication")
+    @EditorString.EdOptsString()
+    private String username;
 
-	@ConfigurableField(editor = EditorPassword.class,
-			label = "Password",
-			description = "The password to use for authentication")
-	@EditorPassword.EdOptsPassword()
-	private String password;
+    @ConfigurableField(editor = EditorPassword.class,
+            label = "Password",
+            description = "The password to use for authentication")
+    @EditorPassword.EdOptsPassword()
+    private String password;
 
-	@ConfigurableField(editor = EditorBoolean.class,
-			label = "IgnoreSslErrors",
-			description = "Ignore SSL certificate errors. This is a bad idea unless you know what you are doing.")
-	@EditorBoolean.EdOptsBool()
-	private boolean ignoreSslErrors;
+    @ConfigurableField(editor = EditorBoolean.class,
+            label = "IgnoreSslErrors",
+            description = "Ignore SSL certificate errors. This is a bad idea unless you know what you are doing.")
+    @EditorBoolean.EdOptsBool()
+    private boolean ignoreSslErrors;
 
-	@Override
-	public void setAuth(SensorThingsService service) {
-		try {
-			CredentialsProvider credsProvider = new BasicCredentialsProvider();
-			URL url = service.getEndpoint();
-			credsProvider.setCredentials(
-					new AuthScope(url.getHost(), url.getPort()),
-					new UsernamePasswordCredentials(username, password));
+    @Override
+    public void setAuth(SensorThingsService service) {
+        try {
+            CredentialsProvider credsProvider = new BasicCredentialsProvider();
+            URL url = service.getEndpoint();
+            credsProvider.setCredentials(
+                    new AuthScope(url.getHost(), url.getPort()),
+                    new UsernamePasswordCredentials(username, password));
 
-			HttpClientBuilder clientBuilder = service.getClientBuilder()
-					.setDefaultCredentialsProvider(credsProvider);
+            HttpClientBuilder clientBuilder = service.getClientBuilder()
+                    .setDefaultCredentialsProvider(credsProvider);
 
-			if (ignoreSslErrors) {
-				SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(new SSLContextBuilder().loadTrustMaterial((X509Certificate[] chain, String authType) -> true).build());
-				clientBuilder.setSSLSocketFactory(sslsf);
-			}
+            if (ignoreSslErrors) {
+                SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(new SSLContextBuilder().loadTrustMaterial((X509Certificate[] chain, String authType) -> true).build());
+                clientBuilder.setSSLSocketFactory(sslsf);
+            }
 
-			service.rebuildHttpClient();
-		} catch (NoSuchAlgorithmException | KeyManagementException | KeyStoreException ex) {
-			LOGGER.error("Failed to initialise basic auth.", ex);
-		}
-	}
+            service.rebuildHttpClient();
+        } catch (NoSuchAlgorithmException | KeyManagementException | KeyStoreException ex) {
+            LOGGER.error("Failed to initialise basic auth.", ex);
+        }
+    }
 
 }

@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2017 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,131 +52,131 @@ import org.slf4j.LoggerFactory;
  */
 public class JsonConverter implements DocumentParser {
 
-	/**
-	 * The logger for this class.
-	 */
-	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(JsonConverter.class);
+    /**
+     * The logger for this class.
+     */
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(JsonConverter.class);
 
-	private EditorMap<Map<String, Object>> editor;
-	private EditorClass<SensorThingsService, Object, ParserTime> editorTimeParser;
-	private EditorSubclass<SensorThingsService, Object, Parser> editorResultParser;
-	private EditorString editorPathList;
-	private EditorString editorPathPhenTime;
-	private EditorString editorPathResult;
+    private EditorMap<Map<String, Object>> editor;
+    private EditorClass<SensorThingsService, Object, ParserTime> editorTimeParser;
+    private EditorSubclass<SensorThingsService, Object, Parser> editorResultParser;
+    private EditorString editorPathList;
+    private EditorString editorPathPhenTime;
+    private EditorString editorPathResult;
 
-	private String[] listPathParts;
-	private String[] phenTimePathParts;
-	private String[] resultPathParts;
-	private Parser resultParser;
-	private ParserTime timeParser;
+    private String[] listPathParts;
+    private String[] phenTimePathParts;
+    private String[] resultPathParts;
+    private Parser resultParser;
+    private ParserTime timeParser;
 
-	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
-		getConfigEditor(context, edtCtx).setConfig(config);
-		String listPath = editorPathList.getValue();
-		listPathParts = listPath.split("/");
-		String phenTimePath = editorPathPhenTime.getValue();
-		phenTimePathParts = phenTimePath.split("/");
-		String resultPath = editorPathResult.getValue();
-		resultPathParts = resultPath.split("/");
-		resultParser = editorResultParser.getValue();
-		timeParser = editorTimeParser.getValue();
-	}
+    @Override
+    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+        getConfigEditor(context, edtCtx).setConfig(config);
+        String listPath = editorPathList.getValue();
+        listPathParts = listPath.split("/");
+        String phenTimePath = editorPathPhenTime.getValue();
+        phenTimePathParts = phenTimePath.split("/");
+        String resultPath = editorPathResult.getValue();
+        resultPathParts = resultPath.split("/");
+        resultParser = editorResultParser.getValue();
+        timeParser = editorTimeParser.getValue();
+    }
 
-	@Override
-	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-		if (editor == null) {
-			editor = new EditorMap<>();
+    @Override
+    public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+        if (editor == null) {
+            editor = new EditorMap<>();
 
-			editorTimeParser = new EditorClass<>(context, edtCtx, ParserTime.class, "Time Parser", "The parser to use for parsing times.");
-			editor.addOption("timeParser", editorTimeParser, false);
+            editorTimeParser = new EditorClass<>(context, edtCtx, ParserTime.class, "Time Parser", "The parser to use for parsing times.");
+            editor.addOption("timeParser", editorTimeParser, false);
 
-			editorResultParser = new EditorSubclass<>(context, edtCtx, Parser.class, "Result Parser", "The parser to use for parsing results.");
-			editor.addOption("resultParser", editorResultParser, false);
+            editorResultParser = new EditorSubclass<>(context, edtCtx, Parser.class, "Result Parser", "The parser to use for parsing results.");
+            editor.addOption("resultParser", editorResultParser, false);
 
-			editorPathList = new EditorString("rows", 1, "List Path", "The path in the JSON document that points the the array holding the observations.");
-			editor.addOption("pathList", editorPathList, false);
+            editorPathList = new EditorString("rows", 1, "List Path", "The path in the JSON document that points the the array holding the observations.");
+            editor.addOption("pathList", editorPathList, false);
 
-			editorPathPhenTime = new EditorString("DATAORA", 1, "PhenomenonTime Path", "The path inside each element in the list, that holds the phenomenonTime");
-			editor.addOption("pathPhenTime", editorPathPhenTime, false);
+            editorPathPhenTime = new EditorString("DATAORA", 1, "PhenomenonTime Path", "The path inside each element in the list, that holds the phenomenonTime");
+            editor.addOption("pathPhenTime", editorPathPhenTime, false);
 
-			editorPathResult = new EditorString("VALORE", 1, "Result Path", "The path inside each element in the list, that holds the result");
-			editor.addOption("pathResult", editorPathResult, false);
+            editorPathResult = new EditorString("VALORE", 1, "Result Path", "The path inside each element in the list, that holds the result");
+            editor.addOption("pathResult", editorPathResult, false);
 
-		}
-		return editor;
+        }
+        return editor;
 
-	}
+    }
 
-	@Override
-	public List<Observation> process(Datastream ds, ErrorLog errorLog, String input) throws ImportException {
-		try {
-			ObjectMapper mapper = new ObjectMapper();
-			mapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
-			JsonNode json = mapper.readTree(input);
+    @Override
+    public List<Observation> process(Datastream ds, ErrorLog errorLog, String input) throws ImportException {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
+            JsonNode json = mapper.readTree(input);
 
-			JsonNode listJson = JsonUtils.walk(json, listPathParts);
-			if (!listJson.isArray()) {
-				throw new ImportException("List path did not lead to an array.");
-			}
+            JsonNode listJson = JsonUtils.walk(json, listPathParts);
+            if (!listJson.isArray()) {
+                throw new ImportException("List path did not lead to an array.");
+            }
 
-			List<Observation> observationList = new ArrayList<>();
-			for (JsonNode element : listJson) {
-				ZonedDateTime phenTime = timeParser.parse(JsonUtils.walk(element, phenTimePathParts).asText());
-				Object result = resultParser.parse(JsonUtils.walk(element, resultPathParts));
-				Observation obs = new Observation(result, ds);
-				obs.setPhenomenonTime(new TimeObject(phenTime));
-				observationList.add(obs);
-			}
+            List<Observation> observationList = new ArrayList<>();
+            for (JsonNode element : listJson) {
+                ZonedDateTime phenTime = timeParser.parse(JsonUtils.walk(element, phenTimePathParts).asText());
+                Object result = resultParser.parse(JsonUtils.walk(element, resultPathParts));
+                Observation obs = new Observation(result, ds);
+                obs.setPhenomenonTime(new TimeObject(phenTime));
+                observationList.add(obs);
+            }
 
-			return observationList;
-		} catch (IOException ex) {
-			LOGGER.error("Failed to parse.", ex);
-			throw new ImportException(ex);
-		}
-	}
+            return observationList;
+        } catch (IOException ex) {
+            LOGGER.error("Failed to parse.", ex);
+            throw new ImportException(ex);
+        }
+    }
 
-	@Override
-	public List<Observation> process(MultiDatastream mds, ErrorLog errorLog, String... inputs) throws ImportException {
-		Map<ZonedDateTime, Observation> observationsMap = new HashMap<>();
-		ObjectMapper mapper = new ObjectMapper();
-		int resultIndex = 0;
-		try {
-			for (String input : inputs) {
-				JsonNode json = mapper.readTree(input);
+    @Override
+    public List<Observation> process(MultiDatastream mds, ErrorLog errorLog, String... inputs) throws ImportException {
+        Map<ZonedDateTime, Observation> observationsMap = new HashMap<>();
+        ObjectMapper mapper = new ObjectMapper();
+        int resultIndex = 0;
+        try {
+            for (String input : inputs) {
+                JsonNode json = mapper.readTree(input);
 
-				JsonNode listJson = JsonUtils.walk(json, listPathParts);
-				if (!listJson.isArray()) {
-					throw new ImportException("List path did not lead to an array.");
-				}
+                JsonNode listJson = JsonUtils.walk(json, listPathParts);
+                if (!listJson.isArray()) {
+                    throw new ImportException("List path did not lead to an array.");
+                }
 
-				Map<ZonedDateTime, Observation> updatedMap = new HashMap<>();
-				for (JsonNode element : listJson) {
-					ZonedDateTime phenTime = timeParser.parse(JsonUtils.walk(element, phenTimePathParts).asText());
-					Object result = resultParser.parse(JsonUtils.walk(element, resultPathParts).asText());
-					if (resultIndex == 0) {
-						Object[] resultArr = new Object[inputs.length];
-						resultArr[resultIndex] = result;
-						Observation obs = new Observation(resultArr, mds);
-						obs.setPhenomenonTime(new TimeObject(phenTime));
-						updatedMap.put(phenTime, obs);
-					} else {
-						Observation obs = observationsMap.get(phenTime);
-						if (obs != null) {
-							((Object[]) obs.getResult())[resultIndex] = result;
-							updatedMap.put(phenTime, obs);
-						}
-					}
-				}
-				resultIndex++;
-				observationsMap.clear();
-				observationsMap.putAll(updatedMap);
-			}
-			return new ArrayList<>(observationsMap.values());
-		} catch (IOException ex) {
-			LOGGER.error("Failed to parse.", ex);
-			throw new ImportException(ex);
-		}
-	}
+                Map<ZonedDateTime, Observation> updatedMap = new HashMap<>();
+                for (JsonNode element : listJson) {
+                    ZonedDateTime phenTime = timeParser.parse(JsonUtils.walk(element, phenTimePathParts).asText());
+                    Object result = resultParser.parse(JsonUtils.walk(element, resultPathParts).asText());
+                    if (resultIndex == 0) {
+                        Object[] resultArr = new Object[inputs.length];
+                        resultArr[resultIndex] = result;
+                        Observation obs = new Observation(resultArr, mds);
+                        obs.setPhenomenonTime(new TimeObject(phenTime));
+                        updatedMap.put(phenTime, obs);
+                    } else {
+                        Observation obs = observationsMap.get(phenTime);
+                        if (obs != null) {
+                            ((Object[]) obs.getResult())[resultIndex] = result;
+                            updatedMap.put(phenTime, obs);
+                        }
+                    }
+                }
+                resultIndex++;
+                observationsMap.clear();
+                observationsMap.putAll(updatedMap);
+            }
+            return new ArrayList<>(observationsMap.values());
+        } catch (IOException ex) {
+            LOGGER.error("Failed to parse.", ex);
+            throw new ImportException(ex);
+        }
+    }
 
 }

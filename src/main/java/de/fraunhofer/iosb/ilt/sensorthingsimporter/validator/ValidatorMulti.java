@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2017 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,40 +37,40 @@ import java.util.Map;
  */
 public class ValidatorMulti implements Validator, Configurable<SensorThingsService, Object> {
 
-	private EditorMap<Map<String, Object>> editor;
-	private EditorList<Validator, EditorSubclass<SensorThingsService, Object, Validator>> editorValidators;
+    private EditorMap<Map<String, Object>> editor;
+    private EditorList<Validator, EditorSubclass<SensorThingsService, Object, Validator>> editorValidators;
 
-	public List<Validator> validators;
+    public List<Validator> validators;
 
-	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
-		getConfigEditor(context, edtCtx).setConfig(config);
-		validators = editorValidators.getValue();
-	}
+    @Override
+    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+        getConfigEditor(context, edtCtx).setConfig(config);
+        validators = editorValidators.getValue();
+    }
 
-	@Override
-	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-		if (editor == null) {
-			editor = new EditorMap<>();
+    @Override
+    public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+        if (editor == null) {
+            editor = new EditorMap<>();
 
-			EditorFactory<EditorSubclass<SensorThingsService, Object, Validator>> factory;
-			factory = () -> {
-				return new EditorSubclass<>(context, edtCtx, Validator.class, "Validators", "The validators to use.");
-			};
-			editorValidators = new EditorList<>(factory, "Validators", "The validators to use.");
-			editor.addOption("validators", editorValidators, false);
-		}
-		return editor;
-	}
+            EditorFactory<EditorSubclass<SensorThingsService, Object, Validator>> factory;
+            factory = () -> {
+                return new EditorSubclass<>(context, edtCtx, Validator.class, "Validators", "The validators to use.");
+            };
+            editorValidators = new EditorList<>(factory, "Validators", "The validators to use.");
+            editor.addOption("validators", editorValidators, false);
+        }
+        return editor;
+    }
 
-	@Override
-	public boolean isValid(Observation obs) throws ImportException {
-		for (Validator validator : validators) {
-			if (!validator.isValid(obs)) {
-				return false;
-			}
-		}
-		return true;
-	}
+    @Override
+    public boolean isValid(Observation obs) throws ImportException {
+        for (Validator validator : validators) {
+            if (!validator.isValid(obs)) {
+                return false;
+            }
+        }
+        return true;
+    }
 
 }

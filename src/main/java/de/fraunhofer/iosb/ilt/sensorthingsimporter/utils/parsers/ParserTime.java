@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2017 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,56 +35,56 @@ import java.time.format.DateTimeFormatter;
  */
 public class ParserTime implements ParserZonedDateTime, AnnotatedConfigurable<Object, Object> {
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Format", description = "The format to use when parsing the time. Default: yyyy-MM-dd HH:mm:ssXXX")
-	@EditorString.EdOptsString(dflt = "yyyy-MM-dd HH:mm:ssXXX")
-	private String format;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Format", description = "The format to use when parsing the time. Default: yyyy-MM-dd HH:mm:ssXXX")
+    @EditorString.EdOptsString(dflt = "yyyy-MM-dd HH:mm:ssXXX")
+    private String format;
 
-	@ConfigurableField(editor = EditorString.class, optional = true,
-			label = "Zone", description = "The timezone to use when the parsed time did not contain a timezone.")
-	@EditorString.EdOptsString()
-	private String zone;
+    @ConfigurableField(editor = EditorString.class, optional = true,
+            label = "Zone", description = "The timezone to use when the parsed time did not contain a timezone.")
+    @EditorString.EdOptsString()
+    private String zone;
 
-	DateTimeFormatter formatter;
+    DateTimeFormatter formatter;
 
-	@Override
-	public void configure(JsonElement config, Object context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
-		AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
-		init();
-	}
+    @Override
+    public void configure(JsonElement config, Object context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+        AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
+        init();
+    }
 
-	private void init() {
-		formatter = DateTimeFormatter.ofPattern(format);
-		if (!Utils.isNullOrEmpty(zone)) {
-			formatter = formatter.withZone(ZoneId.of(zone));
-		}
-	}
+    private void init() {
+        formatter = DateTimeFormatter.ofPattern(format);
+        if (!Utils.isNullOrEmpty(zone)) {
+            formatter = formatter.withZone(ZoneId.of(zone));
+        }
+    }
 
-	public String getFormat() {
-		return format;
-	}
+    public String getFormat() {
+        return format;
+    }
 
-	public void setFormat(String format) {
-		this.format = format;
-		init();
-	}
+    public void setFormat(String format) {
+        this.format = format;
+        init();
+    }
 
-	public String getZone() {
-		return zone;
-	}
+    public String getZone() {
+        return zone;
+    }
 
-	public void setZone(String zone) {
-		this.zone = zone;
-		init();
-	}
+    public void setZone(String zone) {
+        this.zone = zone;
+        init();
+    }
 
-	@Override
-	public ZonedDateTime parse(String time) {
-		return ZonedDateTime.from(formatter.parse(time));
-	}
+    @Override
+    public ZonedDateTime parse(String time) {
+        return ZonedDateTime.from(formatter.parse(time));
+    }
 
-	@Override
-	public ZonedDateTime parse(JsonNode time) {
-		return ZonedDateTime.from(formatter.parse(time.asText()));
-	}
+    @Override
+    public ZonedDateTime parse(JsonNode time) {
+        return ZonedDateTime.from(formatter.parse(time.asText()));
+    }
 }

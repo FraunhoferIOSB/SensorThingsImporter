@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,66 +29,66 @@ import java.util.List;
  */
 public class OptionSingle<T> extends OptionBase<OptionSingle<T>> {
 
-	public Parameter<T> parameter;
+    public Parameter<T> parameter;
 
-	/**
-	 * @param keys The keys, longest first!
-	 */
-	public OptionSingle(String... keys) {
-		super(keys);
-	}
+    /**
+     * @param keys The keys, longest first!
+     */
+    public OptionSingle(String... keys) {
+        super(keys);
+    }
 
-	@Override
-	public OptionSingle<T> getThis() {
-		return this;
-	}
+    @Override
+    public OptionSingle<T> getThis() {
+        return this;
+    }
 
-	public OptionSingle<T> setParam(Parameter<T> param) {
-		this.parameter = param;
-		return this;
-	}
+    public OptionSingle<T> setParam(Parameter<T> param) {
+        this.parameter = param;
+        return this;
+    }
 
-	public String findValue(List<String> args) {
-		String first = args.remove(0);
-		String matchedKey = findKey(first);
-		if (matchedKey.isEmpty()) {
-			throw new IllegalStateException("First argument does not mach any key! " + first);
-		}
-		if (first.length() > matchedKey.length()) {
-			// parameter is glued to key
-			return first.substring(matchedKey.length());
-		}
-		return args.remove(0);
-	}
+    public String findValue(List<String> args) {
+        String first = args.remove(0);
+        String matchedKey = findKey(first);
+        if (matchedKey.isEmpty()) {
+            throw new IllegalStateException("First argument does not mach any key! " + first);
+        }
+        if (first.length() > matchedKey.length()) {
+            // parameter is glued to key
+            return first.substring(matchedKey.length());
+        }
+        return args.remove(0);
+    }
 
-	@Override
-	public void consume(List<String> args) {
-		parameter.parse(findValue(args));
-		setSet(true);
-	}
+    @Override
+    public void consume(List<String> args) {
+        parameter.parse(findValue(args));
+        setSet(true);
+    }
 
-	@Override
-	public OptionSingle<T> readFromEnvironment(String name) {
-		String envValue = Options.getEnv(name, "");
-		if (!Utils.isNullOrEmpty(envValue)) {
-			parameter.parse(envValue);
-		}
-		return this;
-	}
+    @Override
+    public OptionSingle<T> readFromEnvironment(String name) {
+        String envValue = Options.getEnv(name, "");
+        if (!Utils.isNullOrEmpty(envValue)) {
+            parameter.parse(envValue);
+        }
+        return this;
+    }
 
-	public T getValue() {
-		return parameter.getValue();
-	}
+    public T getValue() {
+        return parameter.getValue();
+    }
 
-	@Override
-	public OptionSingle<T> setDescription(String... description) {
-		super.setDescription(description);
-		return this;
-	}
+    @Override
+    public OptionSingle<T> setDescription(String... description) {
+        super.setDescription(description);
+        return this;
+    }
 
-	@Override
-	public List<Parameter> getParameters() {
-		return Arrays.asList(new Parameter[]{parameter});
-	}
+    @Override
+    public List<Parameter> getParameters() {
+        return Arrays.asList(new Parameter[]{parameter});
+    }
 
 }

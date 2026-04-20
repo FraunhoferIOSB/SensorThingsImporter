@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -27,34 +27,34 @@ import java.util.List;
  */
 public class OptionToggle extends OptionBase<OptionToggle> {
 
-	public OptionToggle(String... keys) {
-		super(keys);
-	}
+    public OptionToggle(String... keys) {
+        super(keys);
+    }
 
-	@Override
-	public OptionToggle getThis() {
-		return this;
-	}
+    @Override
+    public OptionToggle getThis() {
+        return this;
+    }
 
-	@Override
-	public void consume(List<String> args) {
-		String first = args.remove(0);
-		String matchedKey = findKey(first);
-		if (matchedKey.isEmpty()) {
-			throw new IllegalStateException("First argument does not mach any key!");
-		}
-		setSet(true);
-	}
+    @Override
+    public void consume(List<String> args) {
+        String first = args.remove(0);
+        String matchedKey = findKey(first);
+        if (matchedKey.isEmpty()) {
+            throw new IllegalStateException("First argument does not mach any key!");
+        }
+        setSet(true);
+    }
 
-	@Override
-	public OptionToggle readFromEnvironment(String name) {
-		return setSet(Options.getEnv(name, false));
-	}
+    @Override
+    public OptionToggle readFromEnvironment(String name) {
+        return setSet(Options.getEnv(name, false));
+    }
 
-	@Override
-	public OptionToggle setDescription(String... description) {
-		super.setDescription(description);
-		return this;
-	}
+    @Override
+    public OptionToggle setDescription(String... description) {
+        super.setDescription(description);
+        return this;
+    }
 
 }

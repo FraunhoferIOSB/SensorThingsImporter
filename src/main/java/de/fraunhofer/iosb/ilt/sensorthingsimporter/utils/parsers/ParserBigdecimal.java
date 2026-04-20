@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2017 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,68 +32,69 @@ import org.apache.commons.lang3.StringUtils;
  */
 public class ParserBigdecimal implements Parser<BigDecimal>, AnnotatedConfigurable<SensorThingsService, Object> {
 
-	public enum DecimalSeparator {
-		POINT,
-		COMMA,
-		DETECT
-	}
-	@ConfigurableField(editor = EditorBoolean.class,
-			label = "Truncate 0s", description = "Drop trailing zeroes from results.")
-	@EditorBoolean.EdOptsBool()
-	private boolean dropTailingZeroes;
+    public enum DecimalSeparator {
+        POINT,
+        COMMA,
+        DETECT
+    }
 
-	@ConfigurableField(editor = EditorEnum.class,
-			label = "Decimal Separator", description = "What decimal separator should be used?")
-	@EditorEnum.EdOptsEnum(sourceType = DecimalSeparator.class, dflt = "DETECT")
-	private DecimalSeparator decimalSeparator;
+    @ConfigurableField(editor = EditorBoolean.class,
+            label = "Truncate 0s", description = "Drop trailing zeroes from results.")
+    @EditorBoolean.EdOptsBool()
+    private boolean dropTailingZeroes;
 
-	@Override
-	public BigDecimal parse(JsonNode value) {
-		try {
-			BigDecimal bigDecimal = new BigDecimal(value.asText());
-			if (dropTailingZeroes) {
-				return bigDecimal.stripTrailingZeros();
-			}
-			return bigDecimal;
-		} catch (NumberFormatException ex) {
-			return null;
-		}
-	}
+    @ConfigurableField(editor = EditorEnum.class,
+            label = "Decimal Separator", description = "What decimal separator should be used?")
+    @EditorEnum.EdOptsEnum(sourceType = DecimalSeparator.class, dflt = "DETECT")
+    private DecimalSeparator decimalSeparator;
 
-	@Override
-	public BigDecimal parse(final String value) {
-		String valueString = value.trim();
-		switch (decimalSeparator) {
-			case COMMA:
-				valueString = convertFromComma(valueString);
-				break;
+    @Override
+    public BigDecimal parse(JsonNode value) {
+        try {
+            BigDecimal bigDecimal = new BigDecimal(value.asText());
+            if (dropTailingZeroes) {
+                return bigDecimal.stripTrailingZeros();
+            }
+            return bigDecimal;
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
 
-			case POINT:
-				// Nothing to do here.
-				break;
+    @Override
+    public BigDecimal parse(final String value) {
+        String valueString = value.trim();
+        switch (decimalSeparator) {
+            case COMMA:
+                valueString = convertFromComma(valueString);
+                break;
 
-			case DETECT:
-				int idxComma = value.indexOf(',');
-				int idxPoint = value.indexOf('.');
-				if (idxComma > idxPoint) {
-					valueString = convertFromComma(valueString);
-				}
-				break;
-		}
-		try {
-			BigDecimal bigDecimal = new BigDecimal(valueString);
-			if (dropTailingZeroes) {
-				return bigDecimal.stripTrailingZeros();
-			}
-			return bigDecimal;
-		} catch (NumberFormatException ex) {
-			return null;
-		}
-	}
+            case POINT:
+                // Nothing to do here.
+                break;
 
-	private String convertFromComma(String valueString) {
-		valueString = StringUtils.replace(valueString, ".", "");
-		valueString = StringUtils.replace(valueString, ",", ".");
-		return valueString;
-	}
+            case DETECT:
+                int idxComma = value.indexOf(',');
+                int idxPoint = value.indexOf('.');
+                if (idxComma > idxPoint) {
+                    valueString = convertFromComma(valueString);
+                }
+                break;
+        }
+        try {
+            BigDecimal bigDecimal = new BigDecimal(valueString);
+            if (dropTailingZeroes) {
+                return bigDecimal.stripTrailingZeros();
+            }
+            return bigDecimal;
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private String convertFromComma(String valueString) {
+        valueString = StringUtils.replace(valueString, ".", "");
+        valueString = StringUtils.replace(valueString, ",", ".");
+        return valueString;
+    }
 }

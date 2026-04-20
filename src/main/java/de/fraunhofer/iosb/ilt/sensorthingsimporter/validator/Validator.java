@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -30,21 +30,21 @@ import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
  */
 public interface Validator {
 
-	public default void setObservationUploader(ObservationUploader uploader) {
-	}
+    public default void setObservationUploader(ObservationUploader uploader) {
+    }
 
-	public boolean isValid(Observation obs) throws ImportException;
+    public boolean isValid(Observation obs) throws ImportException;
 
-	/**
-	 * Always returns true.
-	 */
-	@ConfigurableClass
-	public static class ValidatorNull extends AbstractConfigurable<SensorThingsService, Object> implements Validator {
+    /**
+     * Always returns true.
+     */
+    @ConfigurableClass
+    public static class ValidatorNull extends AbstractConfigurable<SensorThingsService, Object> implements Validator {
 
-		@Override
-		public boolean isValid(Observation obs) throws ImportException {
-			return true;
-		}
+        @Override
+        public boolean isValid(Observation obs) throws ImportException {
+            return true;
+        }
 
-	}
+    }
 }

@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2024 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,18 +25,18 @@ import java.util.List;
 
 public class StringListGenStatic implements StringListGenerator {
 
-	@ConfigurableField(editor = EditorList.class,
-			label = "Replacements", description = "The values to replace {key} with.")
-	@EditorList.EdOptsList(editor = EditorString.class, minCount = 1, labelText = "Add Replace Value")
-	@EditorString.EdOptsString()
-	private List<String> strings;
+    @ConfigurableField(editor = EditorList.class,
+            label = "Replacements", description = "The values to replace {key} with.")
+    @EditorList.EdOptsList(editor = EditorString.class, minCount = 1, labelText = "Add Replace Value")
+    @EditorString.EdOptsString()
+    private List<String> strings;
 
-	@Override
-	public List<String> get() {
-		if (strings == null) {
-			return Collections.emptyList();
-		}
-		return strings;
-	}
+    @Override
+    public List<String> get() {
+        if (strings == null) {
+            return Collections.emptyList();
+        }
+        return strings;
+    }
 
 }

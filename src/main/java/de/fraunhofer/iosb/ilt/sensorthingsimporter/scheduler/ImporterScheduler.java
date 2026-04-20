@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2018 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,119 +48,119 @@ import org.slf4j.LoggerFactory;
  */
 public class ImporterScheduler implements AnnotatedConfigurable<Void, Void> {
 
-	/**
-	 * The logger for this class.
-	 */
-	private static final Logger LOGGER = LoggerFactory.getLogger(ImporterScheduler.class);
+    /**
+     * The logger for this class.
+     */
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImporterScheduler.class);
 
-	public static final long DEFAULT_LOG_INTERVAL = 10000;
-	public static final ChangingStatusLogger STATUS_LOGGER = new ChangingStatusLogger(LOGGER).setLogIntervalMs(DEFAULT_LOG_INTERVAL);
+    public static final long DEFAULT_LOG_INTERVAL = 10000;
+    public static final ChangingStatusLogger STATUS_LOGGER = new ChangingStatusLogger(LOGGER).setLogIntervalMs(DEFAULT_LOG_INTERVAL);
 
-	@ConfigurableField(editor = EditorList.class,
-			label = "Schedules",
-			description = "The schedules to schedule.")
-	@EditorList.EdOptsList(editor = EditorClass.class)
-	@EditorClass.EdOptsClass(clazz = Schedule.class)
-	private List<Schedule> schedules;
+    @ConfigurableField(editor = EditorList.class,
+            label = "Schedules",
+            description = "The schedules to schedule.")
+    @EditorList.EdOptsList(editor = EditorClass.class)
+    @EditorClass.EdOptsClass(clazz = Schedule.class)
+    private List<Schedule> schedules;
 
-	@ConfigurableField(editor = EditorLong.class, optional = true,
-			label = "LogInterval",
-			description = "Delay in ms between log messages")
-	@EditorLong.EdOptsLong(dflt = DEFAULT_LOG_INTERVAL)
-	private long logInterval = DEFAULT_LOG_INTERVAL;
+    @ConfigurableField(editor = EditorLong.class, optional = true,
+            label = "LogInterval",
+            description = "Delay in ms between log messages")
+    @EditorLong.EdOptsLong(dflt = DEFAULT_LOG_INTERVAL)
+    private long logInterval = DEFAULT_LOG_INTERVAL;
 
-	private boolean noAct = false;
-	private Scheduler scheduler;
-	private File basePath;
+    private boolean noAct = false;
+    private Scheduler scheduler;
+    private File basePath;
 
-	private Thread shutdownHook;
+    private Thread shutdownHook;
 
-	public void loadOptions(Options options) throws IOException, ConfigurationException {
-		noAct = options.getNoAct().isSet();
-		String fileName = options.getFileName().getValue();
-		LOGGER.info("Loading schedule from {}", fileName);
-		File file = new File(fileName);
-		basePath = file.getAbsoluteFile().getParentFile();
-		LOGGER.info("Setting base path to {}", basePath);
-		String config = FileUtils.readFileToString(file, "UTF-8");
-		setConfig(config);
-	}
+    public void loadOptions(Options options) throws IOException, ConfigurationException {
+        noAct = options.getNoAct().isSet();
+        String fileName = options.getFileName().getValue();
+        LOGGER.info("Loading schedule from {}", fileName);
+        File file = new File(fileName);
+        basePath = file.getAbsoluteFile().getParentFile();
+        LOGGER.info("Setting base path to {}", basePath);
+        String config = FileUtils.readFileToString(file, "UTF-8");
+        setConfig(config);
+    }
 
-	public void setConfig(String config) throws ConfigurationException {
-		JsonElement json = JsonParser.parseString(config);
-		configure(json, null, null, null);
-	}
+    public void setConfig(String config) throws ConfigurationException {
+        JsonElement json = JsonParser.parseString(config);
+        configure(json, null, null, null);
+    }
 
-	public void start() throws SchedulerException {
-		scheduler = StdSchedulerFactory.getDefaultScheduler();
-		addShutdownHook();
-		scheduler.start();
-		STATUS_LOGGER.setLogIntervalMs(logInterval);
-		STATUS_LOGGER.start();
+    public void start() throws SchedulerException {
+        scheduler = StdSchedulerFactory.getDefaultScheduler();
+        addShutdownHook();
+        scheduler.start();
+        STATUS_LOGGER.setLogIntervalMs(logInterval);
+        STATUS_LOGGER.start();
 
-		int i = 0;
-		for (final Schedule schedule : schedules) {
-			String triggerName = "trigger" + i;
-			String jobName = "job" + i;
-			File file = new File(basePath, schedule.getFileName());
-			String fileName = file.getAbsolutePath();
-			LOGGER.info("Adding job {} with schedule {} from file {}", jobName, schedule.getCronLine(), fileName);
+        int i = 0;
+        for (final Schedule schedule : schedules) {
+            String triggerName = "trigger" + i;
+            String jobName = "job" + i;
+            File file = new File(basePath, schedule.getFileName());
+            String fileName = file.getAbsolutePath();
+            LOGGER.info("Adding job {} with schedule {} from file {}", jobName, schedule.getCronLine(), fileName);
 
-			JobDetail jobDetail = JobBuilder.newJob(ImporterJob.class)
-					.withIdentity(jobName)
-					.usingJobData(ImporterJob.KEY_FILENAME, fileName)
-					.usingJobData(ImporterJob.KEY_SHELLSCRIPT, schedule.isShellScript())
-					.usingJobData(ImporterJob.KEY_NO_ACT, noAct)
-					.build();
+            JobDetail jobDetail = JobBuilder.newJob(ImporterJob.class)
+                    .withIdentity(jobName)
+                    .usingJobData(ImporterJob.KEY_FILENAME, fileName)
+                    .usingJobData(ImporterJob.KEY_SHELLSCRIPT, schedule.isShellScript())
+                    .usingJobData(ImporterJob.KEY_NO_ACT, noAct)
+                    .build();
 
-			CronTrigger trigger = TriggerBuilder.newTrigger()
-					.withIdentity(triggerName)
-					.withSchedule(CronScheduleBuilder.cronSchedule(schedule.getCronLine()))
-					.build();
+            CronTrigger trigger = TriggerBuilder.newTrigger()
+                    .withIdentity(triggerName)
+                    .withSchedule(CronScheduleBuilder.cronSchedule(schedule.getCronLine()))
+                    .build();
 
-			scheduler.scheduleJob(jobDetail, trigger);
-			i++;
-		}
+            scheduler.scheduleJob(jobDetail, trigger);
+            i++;
+        }
 
-	}
+    }
 
-	private synchronized void addShutdownHook() {
-		if (this.shutdownHook == null) {
-			this.shutdownHook = new Thread(() -> {
-				LOGGER.info("Shutting down...");
-				STATUS_LOGGER.stop();
-				try {
-					if (scheduler != null) {
-						scheduler.shutdown();
-					}
-				} catch (SchedulerException ex) {
-					LOGGER.warn("Exception stopping scheduler.", ex);
-				}
-			});
-			Runtime.getRuntime().addShutdownHook(shutdownHook);
-		}
-	}
+    private synchronized void addShutdownHook() {
+        if (this.shutdownHook == null) {
+            this.shutdownHook = new Thread(() -> {
+                LOGGER.info("Shutting down...");
+                STATUS_LOGGER.stop();
+                try {
+                    if (scheduler != null) {
+                        scheduler.shutdown();
+                    }
+                } catch (SchedulerException ex) {
+                    LOGGER.warn("Exception stopping scheduler.", ex);
+                }
+            });
+            Runtime.getRuntime().addShutdownHook(shutdownHook);
+        }
+    }
 
-	/**
-	 * @return the noAct
-	 */
-	public boolean isNoAct() {
-		return noAct;
-	}
+    /**
+     * @return the noAct
+     */
+    public boolean isNoAct() {
+        return noAct;
+    }
 
-	/**
-	 * @param noAct the noAct to set
-	 */
-	public void setNoAct(boolean noAct) {
-		this.noAct = noAct;
-	}
+    /**
+     * @param noAct the noAct to set
+     */
+    public void setNoAct(boolean noAct) {
+        this.noAct = noAct;
+    }
 
-	public long getLogInterval() {
-		return logInterval;
-	}
+    public long getLogInterval() {
+        return logInterval;
+    }
 
-	public void setLogInterval(long logInterval) {
-		this.logInterval = logInterval;
-	}
+    public void setLogInterval(long logInterval) {
+        this.logInterval = logInterval;
+    }
 
 }

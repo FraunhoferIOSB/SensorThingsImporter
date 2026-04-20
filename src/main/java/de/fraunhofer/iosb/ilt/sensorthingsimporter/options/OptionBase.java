@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -28,120 +28,120 @@ import java.util.List;
  */
 public abstract class OptionBase<T extends OptionBase> implements Option {
 
-	/**
-	 * A List because order is important.
-	 */
-	private List<String> keys = new ArrayList<>();
-	private boolean set = false;
-	private String[] description = {""};
-	/**
-	 * The name of the environment variable that can be used to set this option.
-	 */
-	private String environmentName;
+    /**
+     * A List because order is important.
+     */
+    private List<String> keys = new ArrayList<>();
+    private boolean set = false;
+    private String[] description = {""};
+    /**
+     * The name of the environment variable that can be used to set this option.
+     */
+    private String environmentName;
 
-	/**
-	 *
-	 * @param keys The keys, longest first!
-	 */
-	public OptionBase(String... keys) {
-		for (String key : keys) {
-			this.keys.add(key.toLowerCase());
-		}
-	}
+    /**
+     *
+     * @param keys The keys, longest first!
+     */
+    public OptionBase(String... keys) {
+        for (String key : keys) {
+            this.keys.add(key.toLowerCase());
+        }
+    }
 
-	public abstract T getThis();
+    public abstract T getThis();
 
-	public abstract T readFromEnvironment(String name);
+    public abstract T readFromEnvironment(String name);
 
-	@Override
-	public boolean matches(String arg) {
-		for (String key : keys) {
-			if (arg.startsWith(key)) {
-				return true;
-			}
-		}
-		return false;
-	}
+    @Override
+    public boolean matches(String arg) {
+        for (String key : keys) {
+            if (arg.startsWith(key)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-	/**
-	 * Returns the first key that matches the argument. Never returns null.
-	 *
-	 * @param arg The argument to match.
-	 * @return The first key found, or an empty string if none matched.
-	 */
-	public String findKey(String arg) {
-		if (arg == null) {
-			throw new IllegalArgumentException("Null arguments not allowed.");
-		}
-		arg = arg.toLowerCase();
-		for (String key : getKeys()) {
-			if (arg.startsWith(key)) {
-				return key;
-			}
-		}
-		return "";
-	}
+    /**
+     * Returns the first key that matches the argument. Never returns null.
+     *
+     * @param arg The argument to match.
+     * @return The first key found, or an empty string if none matched.
+     */
+    public String findKey(String arg) {
+        if (arg == null) {
+            throw new IllegalArgumentException("Null arguments not allowed.");
+        }
+        arg = arg.toLowerCase();
+        for (String key : getKeys()) {
+            if (arg.startsWith(key)) {
+                return key;
+            }
+        }
+        return "";
+    }
 
-	@Override
-	public List<String> getKeys() {
-		return Collections.unmodifiableList(keys);
-	}
+    @Override
+    public List<String> getKeys() {
+        return Collections.unmodifiableList(keys);
+    }
 
-	/**
-	 * @return the description
-	 */
-	@Override
-	public String[] getDescription() {
-		return description;
-	}
+    /**
+     * @return the description
+     */
+    @Override
+    public String[] getDescription() {
+        return description;
+    }
 
-	/**
-	 * @param description the description to set
-	 * @return this
-	 */
-	public T setDescription(String... description) {
-		this.description = description;
-		return getThis();
-	}
+    /**
+     * @param description the description to set
+     * @return this
+     */
+    public T setDescription(String... description) {
+        this.description = description;
+        return getThis();
+    }
 
-	/**
-	 * The name of the environment variable that can be used to set this option.
-	 *
-	 * @return the environmentName
-	 */
-	@Override
-	public String getEnvironmentName() {
-		return environmentName;
-	}
+    /**
+     * The name of the environment variable that can be used to set this option.
+     *
+     * @return the environmentName
+     */
+    @Override
+    public String getEnvironmentName() {
+        return environmentName;
+    }
 
-	/**
-	 * The name of the environment variable that can be used to set this option.
-	 *
-	 * @param environmentName the environmentName to set
-	 * @return this
-	 */
-	@Override
-	public T setEnvironmentName(String environmentName) {
-		this.environmentName = environmentName;
-		readFromEnvironment(environmentName);
-		return getThis();
-	}
+    /**
+     * The name of the environment variable that can be used to set this option.
+     *
+     * @param environmentName the environmentName to set
+     * @return this
+     */
+    @Override
+    public T setEnvironmentName(String environmentName) {
+        this.environmentName = environmentName;
+        readFromEnvironment(environmentName);
+        return getThis();
+    }
 
-	/**
-	 * @return the set
-	 */
-	@Override
-	public boolean isSet() {
-		return set;
-	}
+    /**
+     * @return the set
+     */
+    @Override
+    public boolean isSet() {
+        return set;
+    }
 
-	/**
-	 * @param set the set to set
-	 * @return this
-	 */
-	protected T setSet(boolean set) {
-		this.set = set;
-		return getThis();
-	}
+    /**
+     * @param set the set to set
+     * @return this
+     */
+    protected T setSet(boolean set) {
+        this.set = set;
+        return getThis();
+    }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -39,58 +39,58 @@ import org.slf4j.LoggerFactory;
  */
 public class DsMapperFixed implements DatastreamMapper, AnnotatedConfigurable<SensorThingsService, Object> {
 
-	/**
-	 * The logger for this class.
-	 */
-	private static final Logger LOGGER = LoggerFactory.getLogger(DsMapperFixed.class);
+    /**
+     * The logger for this class.
+     */
+    private static final Logger LOGGER = LoggerFactory.getLogger(DsMapperFixed.class);
 
-	private SensorThingsService service;
+    private SensorThingsService service;
 
-	private Datastream ds;
-	private MultiDatastream mds;
+    private Datastream ds;
+    private MultiDatastream mds;
 
-	@ConfigurableField(editor = EditorInt.class, label = "Datastream ID", description = "The datastream id to add the observations to.")
-	@EditorInt.EdOptsInt()
-	private int dsId;
+    @ConfigurableField(editor = EditorInt.class, label = "Datastream ID", description = "The datastream id to add the observations to.")
+    @EditorInt.EdOptsInt()
+    private int dsId;
 
-	public DsMapperFixed() {
-		this.ds = null;
-	}
+    public DsMapperFixed() {
+        this.ds = null;
+    }
 
-	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
-		service = context;
-		AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
-	}
+    @Override
+    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+        service = context;
+        AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
+    }
 
-	private void init(boolean multi) {
-		try {
-			if (multi) {
-				mds = service.multiDatastreams().find(dsId);
-				LOGGER.info("Using fixed multiDatastream: {}", mds.getName());
-			} else {
-				ds = service.datastreams().find(dsId);
-				LOGGER.info("Using fixed datatsream: {}", ds.getName());
-			}
-		} catch (ServiceFailureException exc) {
-			throw new IllegalArgumentException("Could not fetch (multi)datastream for id " + dsId, exc);
-		}
-	}
+    private void init(boolean multi) {
+        try {
+            if (multi) {
+                mds = service.multiDatastreams().find(dsId);
+                LOGGER.info("Using fixed multiDatastream: {}", mds.getName());
+            } else {
+                ds = service.datastreams().find(dsId);
+                LOGGER.info("Using fixed datatsream: {}", ds.getName());
+            }
+        } catch (ServiceFailureException exc) {
+            throw new IllegalArgumentException("Could not fetch (multi)datastream for id " + dsId, exc);
+        }
+    }
 
-	@Override
-	public Datastream getDatastreamFor(CSVRecord record, ErrorLog errorLog) {
-		if (ds == null) {
-			init(false);
-		}
-		return ds;
-	}
+    @Override
+    public Datastream getDatastreamFor(CSVRecord record, ErrorLog errorLog) {
+        if (ds == null) {
+            init(false);
+        }
+        return ds;
+    }
 
-	@Override
-	public MultiDatastream getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) {
-		if (mds == null) {
-			init(true);
-		}
-		return mds;
-	}
+    @Override
+    public MultiDatastream getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) {
+        if (mds == null) {
+            init(true);
+        }
+        return mds;
+    }
 
 }

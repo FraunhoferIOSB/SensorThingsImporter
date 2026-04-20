@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -39,44 +39,44 @@ import org.threeten.extra.Minutes;
  */
 public class ValidatorBefore implements Validator, Configurable<SensorThingsService, Object> {
 
-	private EditorMap<Map<String, Object>> editor;
-	private EditorInt editorDays;
-	private EditorInt editorMinutes;
+    private EditorMap<Map<String, Object>> editor;
+    private EditorInt editorDays;
+    private EditorInt editorMinutes;
 
-	private Instant refTime;
+    private Instant refTime;
 
-	@Override
-	public boolean isValid(Observation obs) throws ImportException {
-		TimeObject phenomenonTime = obs.getPhenomenonTime();
-		Instant obsInstant;
-		if (phenomenonTime.isInterval()) {
-			obsInstant = phenomenonTime.getAsInterval().getStart();
-		} else {
-			obsInstant = phenomenonTime.getAsDateTime().toInstant();
-		}
-		return refTime.isAfter(obsInstant);
-	}
+    @Override
+    public boolean isValid(Observation obs) throws ImportException {
+        TimeObject phenomenonTime = obs.getPhenomenonTime();
+        Instant obsInstant;
+        if (phenomenonTime.isInterval()) {
+            obsInstant = phenomenonTime.getAsInterval().getStart();
+        } else {
+            obsInstant = phenomenonTime.getAsDateTime().toInstant();
+        }
+        return refTime.isAfter(obsInstant);
+    }
 
-	@Override
-	public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
-		getConfigEditor(context, edtCtx).setConfig(config);
-		Instant now = Instant.now();
-		refTime = now.minus(Days.of(editorDays.getValue()));
-		refTime = refTime.minus(Minutes.of(editorMinutes.getValue()));
-	}
+    @Override
+    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
+        getConfigEditor(context, edtCtx).setConfig(config);
+        Instant now = Instant.now();
+        refTime = now.minus(Days.of(editorDays.getValue()));
+        refTime = refTime.minus(Minutes.of(editorMinutes.getValue()));
+    }
 
-	@Override
-	public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-		if (editor == null) {
-			editor = new EditorMap<>();
+    @Override
+    public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
+        if (editor == null) {
+            editor = new EditorMap<>();
 
-			editorDays = new EditorInt(0, 999999, 1, 1, "days", "The number of days before now.");
-			editor.addOption("days", editorDays, false);
+            editorDays = new EditorInt(0, 999999, 1, 1, "days", "The number of days before now.");
+            editor.addOption("days", editorDays, false);
 
-			editorMinutes = new EditorInt(0, 999999, 1, 0, "minutes", "The number of minutes before now.");
-			editor.addOption("minutes", editorMinutes, false);
-		}
-		return editor;
-	}
+            editorMinutes = new EditorInt(0, 999999, 1, 0, "minutes", "The number of minutes before now.");
+            editor.addOption("minutes", editorMinutes, false);
+        }
+        return editor;
+    }
 
 }

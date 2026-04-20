@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -24,9 +24,9 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.options;
  */
 public interface Parameter<T> {
 
-	public T parse(String arg);
+    public T parse(String arg);
 
-	public T getValue();
+    public T getValue();
 
-	public String getName();
+    public String getName();
 }

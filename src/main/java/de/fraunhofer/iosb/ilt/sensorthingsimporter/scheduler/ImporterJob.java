@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2018 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,84 +42,84 @@ import org.slf4j.LoggerFactory;
 @DisallowConcurrentExecution
 public class ImporterJob implements Job {
 
-	/**
-	 * The logger for this class.
-	 */
-	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ImporterJob.class);
-	public static final String KEY_FILENAME = "fileName";
-	public static final String KEY_SHELLSCRIPT = "shellScript";
-	public static final String KEY_NO_ACT = "noAct";
+    /**
+     * The logger for this class.
+     */
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ImporterJob.class);
+    public static final String KEY_FILENAME = "fileName";
+    public static final String KEY_SHELLSCRIPT = "shellScript";
+    public static final String KEY_NO_ACT = "noAct";
 
-	@Override
-	public void execute(JobExecutionContext context) throws JobExecutionException {
-		String importerFileName = "unknown";
-		try {
-			JobDataMap jobDataMap = context.getJobDetail().getJobDataMap();
-			importerFileName = jobDataMap.getString(KEY_FILENAME);
-			boolean shellScript = jobDataMap.getBoolean(KEY_SHELLSCRIPT);
-			boolean noAct = jobDataMap.getBooleanValue(KEY_NO_ACT);
-			if (shellScript) {
-				executeShellScript(importerFileName);
-			} else {
-				executeImport(importerFileName, noAct);
-			}
-		} catch (IOException ex) {
-			LOGGER.error("Failed to load configuration.", ex);
-			throw new JobExecutionException("Failed to load configuration", ex);
-		} catch (Exception exc) {
-			LOGGER.error("ImporterJob " + importerFileName + " caused an exception!", exc);
-		}
-	}
+    @Override
+    public void execute(JobExecutionContext context) throws JobExecutionException {
+        String importerFileName = "unknown";
+        try {
+            JobDataMap jobDataMap = context.getJobDetail().getJobDataMap();
+            importerFileName = jobDataMap.getString(KEY_FILENAME);
+            boolean shellScript = jobDataMap.getBoolean(KEY_SHELLSCRIPT);
+            boolean noAct = jobDataMap.getBooleanValue(KEY_NO_ACT);
+            if (shellScript) {
+                executeShellScript(importerFileName);
+            } else {
+                executeImport(importerFileName, noAct);
+            }
+        } catch (IOException ex) {
+            LOGGER.error("Failed to load configuration.", ex);
+            throw new JobExecutionException("Failed to load configuration", ex);
+        } catch (Exception exc) {
+            LOGGER.error("ImporterJob " + importerFileName + " caused an exception!", exc);
+        }
+    }
 
-	private void executeShellScript(String importerFileName) throws IOException {
-		LOGGER.info("Starting {}", importerFileName);
-		Process process = new ProcessBuilder(importerFileName)
-				.redirectErrorStream(true)
-				.start();
-		CompletableFuture<String> outputFuture = readInputStream(process.getInputStream());
-		try {
-			process.onExit().get();
-			LOGGER.info("Script output:\n{}", outputFuture.get());
-		} catch (InterruptedException | ExecutionException ex) {
-			LOGGER.error("Exception waiting for script.", ex);
-		}
-	}
+    private void executeShellScript(String importerFileName) throws IOException {
+        LOGGER.info("Starting {}", importerFileName);
+        Process process = new ProcessBuilder(importerFileName)
+                .redirectErrorStream(true)
+                .start();
+        CompletableFuture<String> outputFuture = readInputStream(process.getInputStream());
+        try {
+            process.onExit().get();
+            LOGGER.info("Script output:\n{}", outputFuture.get());
+        } catch (InterruptedException | ExecutionException ex) {
+            LOGGER.error("Exception waiting for script.", ex);
+        }
+    }
 
-	private void executeImport(String importerFileName, boolean noAct) throws IOException {
-		String config = loadFile(importerFileName);
-		ImporterWrapper importer = new ImporterWrapper();
-		importer.setName(importerFileName);
-		importer.doImport(config, noAct, null);
-	}
+    private void executeImport(String importerFileName, boolean noAct) throws IOException {
+        String config = loadFile(importerFileName);
+        ImporterWrapper importer = new ImporterWrapper();
+        importer.setName(importerFileName);
+        importer.doImport(config, noAct, null);
+    }
 
-	public static String loadFile(String fileName) throws IOException {
-		File file = new File(fileName);
-		if (file.exists()) {
-			String config = FileUtils.readFileToString(file, "UTF-8");
-			return config;
-		} else {
-			String config = Options.getEnv(fileName, "");
-			if (!Utils.isNullOrEmpty(config)) {
-				return config;
-			}
-		}
-		LOGGER.error("Could not load configuration from {}. Not a file, nor an environment variable.", fileName);
-		return null;
-	}
+    public static String loadFile(String fileName) throws IOException {
+        File file = new File(fileName);
+        if (file.exists()) {
+            String config = FileUtils.readFileToString(file, "UTF-8");
+            return config;
+        } else {
+            String config = Options.getEnv(fileName, "");
+            if (!Utils.isNullOrEmpty(config)) {
+                return config;
+            }
+        }
+        LOGGER.error("Could not load configuration from {}. Not a file, nor an environment variable.", fileName);
+        return null;
+    }
 
-	public static CompletableFuture<String> readInputStream(InputStream is) {
-		return CompletableFuture.supplyAsync(() -> {
-			try (InputStreamReader isr = new InputStreamReader(is); BufferedReader br = new BufferedReader(isr)) {
-				StringBuilder result = new StringBuilder();
-				String inputLine;
-				while ((inputLine = br.readLine()) != null) {
-					result.append(inputLine).append(System.lineSeparator());
-				}
-				return result.toString();
-			} catch (Throwable e) {
-				throw new RuntimeException("Exception reading string.", e);
-			}
-		});
-	}
+    public static CompletableFuture<String> readInputStream(InputStream is) {
+        return CompletableFuture.supplyAsync(() -> {
+            try (InputStreamReader isr = new InputStreamReader(is); BufferedReader br = new BufferedReader(isr)) {
+                StringBuilder result = new StringBuilder();
+                String inputLine;
+                while ((inputLine = br.readLine()) != null) {
+                    result.append(inputLine).append(System.lineSeparator());
+                }
+                return result.toString();
+            } catch (Throwable e) {
+                throw new RuntimeException("Exception reading string.", e);
+            }
+        });
+    }
 
 }

@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2020 Fraunhofer IOSB
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,21 +31,21 @@ import java.util.Arrays;
  */
 public class UrlGeneratorFixed implements UrlGenerator, AnnotatedConfigurable<Object, Object> {
 
-	@ConfigurableField(editor = EditorString.class,
-			label = "Url", description = "The URL.")
-	@EditorString.EdOptsString()
-	private String url;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Url", description = "The URL.")
+    @EditorString.EdOptsString()
+    private String url;
 
-	@Override
-	public Iterable<URL> urls(ErrorLog errorLog) {
-		return () -> {
-			try {
-				URL u = new URL(url);
-				return Arrays.asList(u).iterator();
-			} catch (MalformedURLException ex) {
-				throw new IllegalArgumentException("Not a valid URL: " + url, ex);
-			}
-		};
-	}
+    @Override
+    public Iterable<URL> urls(ErrorLog errorLog) {
+        return () -> {
+            try {
+                URL u = new URL(url);
+                return Arrays.asList(u).iterator();
+            } catch (MalformedURLException ex) {
+                throw new IllegalArgumentException("Not a valid URL: " + url, ex);
+            }
+        };
+    }
 
 }

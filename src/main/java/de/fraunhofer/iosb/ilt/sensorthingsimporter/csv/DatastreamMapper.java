@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
+ * Copyright (C) 2026 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131
  * Karlsruhe, Germany.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,15 +29,15 @@ import org.apache.commons.csv.CSVRecord;
  */
 public interface DatastreamMapper {
 
-	/**
-	 * Get the Datastream to be used for the given record.
-	 *
-	 * @param record The record to get the Datastream for.
-	 * @param errorLog The error logger to log non-fatal errors to.
-	 * @return The Datastream to use for the given record.
-	 * @throws ImportException if there is a permanent failure.
-	 */
-	public Datastream getDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException;
+    /**
+     * Get the Datastream to be used for the given record.
+     *
+     * @param record The record to get the Datastream for.
+     * @param errorLog The error logger to log non-fatal errors to.
+     * @return The Datastream to use for the given record.
+     * @throws ImportException if there is a permanent failure.
+     */
+    public Datastream getDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException;
 
-	public MultiDatastream getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException;
+    public MultiDatastream getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException;
 }
