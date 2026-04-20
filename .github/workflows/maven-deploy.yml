@@ -47,7 +47,7 @@ jobs:
         GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
         SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-      run: mvn -B deploy -P release --settings maven-ci-settings.xml
+      run: mvn -B deploy -P release --settings scripts/maven-ci-settings.xml
 
     - name: Build and Push Docker
       env:
@@ -56,6 +56,6 @@ jobs:
       run: |
         mvn -B dockerfile:build -P release
         mvn -B dockerfile:tag@tag-version -P release
-        mvn -B dockerfile:push@push-latest -P release -Ddockerfile.useMavenSettingsForAuth=true --settings maven-ci-settings.xml
-        mvn -B dockerfile:push@push-version -P release -Ddockerfile.useMavenSettingsForAuth=true --settings maven-ci-settings.xml
+        mvn -B dockerfile:push@push-latest -P release -Ddockerfile.useMavenSettingsForAuth=true --settings scripts/maven-ci-settings.xml
+        mvn -B dockerfile:push@push-version -P release -Ddockerfile.useMavenSettingsForAuth=true --settings scripts/maven-ci-settings.xml
 
