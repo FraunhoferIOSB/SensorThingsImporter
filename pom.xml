@@ -339,7 +339,7 @@
                     </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>version.maven.plugin.gpg</artifactId>
+                        <artifactId>maven-gpg-plugin</artifactId>
                         <version>${version.maven.plugin.gpg}</version>
                         <executions>
                             <execution>
