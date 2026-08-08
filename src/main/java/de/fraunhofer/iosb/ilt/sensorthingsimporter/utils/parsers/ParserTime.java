@@ -17,7 +17,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
@@ -28,6 +27,7 @@ import de.fraunhofer.iosb.ilt.sta.Utils;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import tools.jackson.databind.JsonNode;
 
 /**
  *

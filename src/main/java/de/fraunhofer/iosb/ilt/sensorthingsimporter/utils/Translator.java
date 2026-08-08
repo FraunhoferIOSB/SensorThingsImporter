@@ -17,8 +17,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.AbstractConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
@@ -26,7 +24,6 @@ import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.sta.Utils;
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -37,11 +34,10 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
-/**
- *
- * @author scf
- */
 public class Translator extends AbstractConfigurable<Void, Void> {
 
     public static enum StringType {
@@ -77,7 +73,7 @@ public class Translator extends AbstractConfigurable<Void, Void> {
         try {
             ObjectMapper mapper = new ObjectMapper();
             replaces.putAll(mapper.readValue(json, TYPE_REF_MAP_STRING_STRING));
-        } catch (IOException ex) {
+        } catch (JacksonException ex) {
             throw new RuntimeException("Failed to parse mapping.", ex);
         }
     }

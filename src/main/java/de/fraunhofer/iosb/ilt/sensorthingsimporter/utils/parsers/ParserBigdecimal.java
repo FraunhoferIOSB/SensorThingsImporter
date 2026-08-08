@@ -17,7 +17,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
@@ -25,6 +24,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorEnum;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
 import org.apache.commons.lang3.StringUtils;
+import tools.jackson.databind.JsonNode;
 
 /**
  *

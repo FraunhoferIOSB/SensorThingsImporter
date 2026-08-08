@@ -17,7 +17,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import de.fraunhofer.iosb.ilt.sta.Utils;
 import de.fraunhofer.iosb.ilt.sta.jackson.ObjectMapperFactory;
 import java.io.BufferedInputStream;
@@ -47,6 +46,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.core.type.TypeReference;
 
 /**
  *
@@ -54,7 +54,9 @@ import org.slf4j.LoggerFactory;
  */
 public class UrlUtils {
 
-    public static final TypeReference<List<Map<String, Map<String, Object>>>> TYPE_LIST_MAP_MAP = new TypeReference<List<Map<String, Map<String, Object>>>>() {};
+    public static final TypeReference<List<Map<String, Map<String, Object>>>> TYPE_LIST_MAP_MAP = new TypeReference<List<Map<String, Map<String, Object>>>>() {
+        // empty by design
+    };
 
     /**
      * The logger for this class.

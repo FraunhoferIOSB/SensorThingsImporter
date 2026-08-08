@@ -17,9 +17,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.document;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
@@ -37,18 +34,20 @@ import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
-import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.LoggerFactory;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Converts Json to Observations.
- *
- * @author scf
  */
 public class JsonConverter implements DocumentParser {
 
@@ -111,8 +110,9 @@ public class JsonConverter implements DocumentParser {
     @Override
     public List<Observation> process(Datastream ds, ErrorLog errorLog, String input) throws ImportException {
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            mapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
+            ObjectMapper mapper = JsonMapper.builder()
+                    .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+                    .build();
             JsonNode json = mapper.readTree(input);
 
             JsonNode listJson = JsonUtils.walk(json, listPathParts);
@@ -130,7 +130,7 @@ public class JsonConverter implements DocumentParser {
             }
 
             return observationList;
-        } catch (IOException ex) {
+        } catch (JacksonException ex) {
             LOGGER.error("Failed to parse.", ex);
             throw new ImportException(ex);
         }
@@ -152,8 +152,8 @@ public class JsonConverter implements DocumentParser {
 
                 Map<ZonedDateTime, Observation> updatedMap = new HashMap<>();
                 for (JsonNode element : listJson) {
-                    ZonedDateTime phenTime = timeParser.parse(JsonUtils.walk(element, phenTimePathParts).asText());
-                    Object result = resultParser.parse(JsonUtils.walk(element, resultPathParts).asText());
+                    ZonedDateTime phenTime = timeParser.parse(JsonUtils.walk(element, phenTimePathParts).asString());
+                    Object result = resultParser.parse(JsonUtils.walk(element, resultPathParts).asString());
                     if (resultIndex == 0) {
                         Object[] resultArr = new Object[inputs.length];
                         resultArr[resultIndex] = result;
@@ -173,7 +173,7 @@ public class JsonConverter implements DocumentParser {
                 observationsMap.putAll(updatedMap);
             }
             return new ArrayList<>(observationsMap.values());
-        } catch (IOException ex) {
+        } catch (JacksonException ex) {
             LOGGER.error("Failed to parse.", ex);
             throw new ImportException(ex);
         }

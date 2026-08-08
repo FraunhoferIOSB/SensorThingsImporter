@@ -17,17 +17,18 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  *
@@ -96,8 +97,9 @@ public class JsonUtils {
 
     public static ObjectMapper getMapper() {
         if (mapper == null) {
-            mapper = new ObjectMapper();
-            mapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
+            mapper = JsonMapper.builder()
+                    .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+                    .build();
         }
         return mapper;
     }
@@ -105,7 +107,7 @@ public class JsonUtils {
     public static Map<String, Object> jsonToMap(String json) {
         try {
             return getMapper().readValue(json, TYPE_MAP_STRING_OBJECT);
-        } catch (IOException ex) {
+        } catch (JacksonException ex) {
             LOGGER.warn("Failed to parse json to Map: {}", ex.getMessage());
             LOGGER.debug("Exception: ", ex);
             return new HashMap<>();

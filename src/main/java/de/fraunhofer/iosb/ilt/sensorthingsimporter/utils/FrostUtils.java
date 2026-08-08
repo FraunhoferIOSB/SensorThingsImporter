@@ -17,8 +17,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.Utils;
 import de.fraunhofer.iosb.ilt.sta.jackson.ObjectMapperFactory;
@@ -68,6 +66,8 @@ import org.geotools.referencing.CRS;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.threeten.extra.Interval;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * @author scf
@@ -387,7 +387,7 @@ public final class FrostUtils {
                 LOGGER.debug("Location changed from {} to {}", foiToUpdate.getFeature(), newFeature.getFeature());
                 foiToUpdate.setFeature(newFeature.getFeature());
             }
-        } catch (final JsonProcessingException exc) {
+        } catch (final JacksonException exc) {
             LOGGER.error("Failed to compare geoJson objects.", exc);
         }
 
@@ -638,7 +638,7 @@ public final class FrostUtils {
                 LOGGER.debug("Location changed from {} to {}", locationToUpdate.getLocation(), newLocation.getLocation());
                 locationToUpdate.setLocation(newLocation.getLocation());
             }
-        } catch (final JsonProcessingException exc) {
+        } catch (final JacksonException exc) {
             LOGGER.error("Failed to compare geoJson objects.", exc);
         }
         if (updated) {

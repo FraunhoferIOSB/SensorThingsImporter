@@ -17,13 +17,13 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.Configurable;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorNull;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
+import tools.jackson.databind.JsonNode;
 
 /**
  *
