@@ -56,12 +56,12 @@
         <version.commons.collections>4.5.0</version.commons.collections>
         <version.commons.csv>1.14.1</version.commons.csv>
         <version.commons.io>2.22.0</version.commons.io>
-        <version.configurable>0.37</version.configurable>
+        <version.configurable>0.38</version.configurable>
         <version.geotools>35.0</version.geotools>
         <version.groovy>3.0.25</version.groovy>
         <version.javax-activation>1.1.1</version.javax-activation>
         <version.junit>4.13.2</version.junit>
-        <version.logback>1.5.38</version.logback>
+        <version.logback>1.6.1</version.logback>
 
         <!-- maven plugin versions -->
         <version.maven.plugin.central-publishing>0.11.0</version.maven.plugin.central-publishing>
@@ -72,7 +72,7 @@
         <version.maven.plugin.javadoc>3.12.0</version.maven.plugin.javadoc>
         <version.maven.plugin.shade>3.6.2</version.maven.plugin.shade>
         <version.maven.plugin.source>3.4.0</version.maven.plugin.source>
-        <version.maven.plugin.spotless>3.8.0</version.maven.plugin.spotless>
+        <version.maven.plugin.spotless>3.9.0</version.maven.plugin.spotless>
 
         <version.openjfx>23.0.2</version.openjfx>
         <version.quartz>2.5.2</version.quartz>
