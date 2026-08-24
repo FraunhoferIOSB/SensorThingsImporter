@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.records;
 
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
@@ -23,10 +23,9 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
-import org.apache.commons.csv.CSVRecord;
 
 /**
- * Finds Datastreams based on a CSV Record.
+ * Finds Datastreams based on a Tuple.
  */
 public interface DatastreamMapper extends AnnotatedConfigurable<Object, Object> {
 
@@ -42,7 +41,7 @@ public interface DatastreamMapper extends AnnotatedConfigurable<Object, Object> 
      * @return The Datastream to use for the given record.
      * @throws ImportException if there is a permanent failure.
      */
-    public Datastream getDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException;
+    public Datastream getDatastreamFor(Tuple record, ErrorLog errorLog) throws ImportException;
 
-    public MultiDatastream getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException;
+    public MultiDatastream getMultiDatastreamFor(Tuple record, ErrorLog errorLog) throws ImportException;
 }

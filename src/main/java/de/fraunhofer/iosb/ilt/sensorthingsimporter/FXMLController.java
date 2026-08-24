@@ -37,11 +37,14 @@ import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import javafx.stage.FileChooser;
 import org.apache.commons.io.FileUtils;
 import org.quartz.SchedulerException;
@@ -73,60 +76,57 @@ public class FXMLController implements Initializable {
     private ConfigEditor<?> configEditorImport;
     private ConfigEditor<?> configEditorSchedule;
     private final FileChooser fileChooser = new FileChooser();
+    private File openedFile;
 
     private final ExecutorService executor = Executors.newFixedThreadPool(1);
 
     @FXML
     private void actionLoad(ActionEvent event) throws ConfigurationException {
         if (toggleScheduler.isSelected()) {
-            loadScheduler();
+            loadFromFile("Load Scheduler");
         } else {
-            loadImporter();
+            loadFromFile("Load Importer");
         }
     }
 
-    private void loadImporter() {
-        JsonElement json = loadFromFile("Load Importer");
-        if (json == null) {
+    private void loadFromFile(String title) {
+        fileChooser.setTitle(title);
+        File file = fileChooser.showOpenDialog(paneConfig.getScene().getWindow());
+        loadFromFile(file);
+    }
+
+    private void loadFromFile(File file) {
+        if (file == null) {
             return;
         }
-        configEditorImport = ConfigEditors
-                .buildEditorFromClass(ImporterWrapper.class, null, null)
-                .get();
-        configEditorImport.setConfig(json);
-        replaceEditor();
-    }
-
-    private void loadScheduler() throws ConfigurationException {
-        JsonElement json = loadFromFile("Load Scheduler");
-        if (json == null) {
-            return;
-        }
-        configEditorSchedule = ConfigEditors
-                .buildEditorFromClass(ImporterScheduler.class, null, null)
-                .get();
-        configEditorSchedule.setConfig(json);
-        replaceEditor();
-    }
-
-    private JsonElement loadFromFile(String title) {
+        openedFile = file;
+        String config;
         try {
-            fileChooser.setTitle(title);
-            File file = fileChooser.showOpenDialog(paneConfig.getScene().getWindow());
-            if (file == null) {
-                return null;
-            }
-            String config = FileUtils.readFileToString(file, "UTF-8");
-            JsonElement json = new JsonParser().parse(config);
-            return json;
+            config = FileUtils.readFileToString(file, "UTF-8");
         } catch (IOException ex) {
             LOGGER.error("Failed to read file", ex);
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("failed to read file");
             alert.setContentText(ex.getLocalizedMessage());
             alert.showAndWait();
+            return;
         }
-        return null;
+        JsonElement json = JsonParser.parseString(config);
+        if (json == null) {
+            return;
+        }
+        if (toggleScheduler.isSelected()) {
+            configEditorSchedule = ConfigEditors
+                    .buildEditorFromClass(ImporterScheduler.class, null, null)
+                    .get();
+            configEditorSchedule.setConfig(json);
+        } else {
+            configEditorImport = ConfigEditors
+                    .buildEditorFromClass(ImporterWrapper.class, null, null)
+                    .get();
+            configEditorImport.setConfig(json);
+        }
+        replaceEditor();
     }
 
     @FXML
@@ -151,6 +151,8 @@ public class FXMLController implements Initializable {
     private void saveToFile(JsonElement json, String title) {
         String config = new GsonBuilder().setPrettyPrinting().create().toJson(json);
         fileChooser.setTitle(title);
+        fileChooser.setInitialDirectory(openedFile.getParentFile());
+        fileChooser.setInitialFileName(openedFile.getName());
         File file = fileChooser.showSaveDialog(paneConfig.getScene().getWindow());
         if (file == null) {
             return;
@@ -234,6 +236,7 @@ public class FXMLController implements Initializable {
         configEditorSchedule = ConfigEditors
                 .buildEditorFromClass(ImporterScheduler.class, null, null)
                 .get();
+        makeDropTarget(paneConfig, this::loadFromFile);
 
         replaceEditor();
     }
@@ -244,4 +247,32 @@ public class FXMLController implements Initializable {
         List<Runnable> remaining = executor.shutdownNow();
         LOGGER.info("Remaining threads: {}", remaining.size());
     }
+
+    public static void makeDropTarget(Node node, FileAction action) {
+        node.setOnDragOver(event -> {
+            if (event.getGestureSource() != node && event.getDragboard().hasFiles()) {
+                event.acceptTransferModes(TransferMode.COPY);
+            }
+            event.consume();
+        });
+        node.setOnDragDropped(event -> {
+            Dragboard db = event.getDragboard();
+            boolean success = false;
+            if (db.hasFiles()) {
+                List<File> files = db.getFiles();
+                for (var file : files) {
+                    action.call(file);
+                }
+                success = true;
+            }
+            event.setDropCompleted(success);
+            event.consume();
+        });
+    }
+
+    public static interface FileAction {
+
+        abstract public void call(File file);
+    }
+
 }

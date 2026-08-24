@@ -15,19 +15,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.datagen;
 
-import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
-import de.fraunhofer.iosb.ilt.configurable.Utils;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterable;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils.HttpResponse;
+import de.fraunhofer.iosb.ilt.sta.Utils;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -38,18 +39,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- *
- * @author hylke
- */
-public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<Object, Object> {
+public class DataGeneratorBouncer implements DataGenerator {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(UrlGeneratorBouncer.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(DataGeneratorBouncer.class.getName());
 
     @ConfigurableField(editor = EditorSubclass.class,
             label = "Input Url", description = "The input url(s)")
-    @EditorSubclass.EdOptsSubclass(iface = UrlGenerator.class)
-    private UrlGenerator inputUrl;
+    @EditorSubclass.EdOptsSubclass(iface = DataGenerator.class)
+    private DataGenerator inputData;
 
     @ConfigurableField(
             label = "Sort",
@@ -73,43 +70,86 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
     @EditorString.EdOptsString(dflt = "\\n\\r ")
     private String splitter;
 
-    @Override
-    public Iterable<URL> urls(ErrorLog errorLog) {
-        return new proxyIterable(this, inputUrl, errorLog);
+    public DataGenerator getInputData() {
+        return inputData;
     }
 
-    private static class proxyIterable implements Iterable<URL> {
+    public DataGeneratorBouncer setInputData(DataGenerator inputData) {
+        this.inputData = inputData;
+        return this;
+    }
 
-        private final UrlGeneratorBouncer bouncer;
-        private final UrlGenerator parentGenerator;
+    public boolean getSort() {
+        return sort;
+    }
+
+    public DataGeneratorBouncer setSort(boolean sort) {
+        this.sort = sort;
+        return this;
+    }
+
+    public String getFilterRegex() {
+        return filterRegex;
+    }
+
+    public DataGeneratorBouncer setFilterRegex(String filterRegex) {
+        this.filterRegex = filterRegex;
+        return this;
+    }
+
+    public boolean getFilterRemoves() {
+        return filterRemoves;
+    }
+
+    public DataGeneratorBouncer setFilterRemoves(boolean filterRemoves) {
+        this.filterRemoves = filterRemoves;
+        return this;
+    }
+
+    public String getSplitter() {
+        return splitter;
+    }
+
+    public DataGeneratorBouncer setSplitter(String splitter) {
+        this.splitter = splitter;
+        return this;
+    }
+
+    @Override
+    public InspectingIterable<HttpResponse> items(ErrorLog errorLog) {
+        return new ProxyIterable(this, errorLog);
+    }
+
+    private static class ProxyIterable implements InspectingIterable<HttpResponse> {
+
+        private final DataGeneratorBouncer bouncer;
         private final ErrorLog errorLog;
 
-        public proxyIterable(UrlGeneratorBouncer bouncer, UrlGenerator parentGenerator, ErrorLog errorLog) {
+        public ProxyIterable(DataGeneratorBouncer bouncer, ErrorLog errorLog) {
             this.bouncer = bouncer;
-            this.parentGenerator = parentGenerator;
             this.errorLog = errorLog;
         }
 
         @Override
-        public Iterator<URL> iterator() {
-            return new proxyIterator(bouncer, parentGenerator.urls(errorLog).iterator(), errorLog);
+        public InspectingIterator<HttpResponse> iterator() {
+            return new ProxyIterator(bouncer, errorLog);
         }
-
     }
 
-    private static class proxyIterator implements Iterator<URL> {
+    private static class ProxyIterator implements InspectingIterator<HttpResponse> {
 
-        private final UrlGeneratorBouncer bouncer;
-        private final Iterator<URL> parentIterator;
+        private final DataGeneratorBouncer bouncer;
+        private final Iterator<HttpResponse> parentIterator;
         private Iterator<String> currentIterator;
         private Pattern filter;
         private String splitter;
-        private URL currentParent;
+        private URL currentParentUrl;
+        private URL currentUrl;
         private ErrorLog errorLog;
 
-        public proxyIterator(UrlGeneratorBouncer bouncer, Iterator<URL> parentIterator, ErrorLog errorLog) {
+        public ProxyIterator(DataGeneratorBouncer bouncer, ErrorLog errorLog) {
             this.bouncer = bouncer;
-            this.parentIterator = parentIterator;
+            this.parentIterator = bouncer.inputData.items(errorLog).iterator();
             this.errorLog = errorLog;
             this.splitter = StringUtils.replaceEach(
                     bouncer.splitter,
@@ -126,12 +166,17 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
         }
 
         @Override
+        public String getCurrentLocation() {
+            return Objects.toString(currentUrl);
+        }
+
+        @Override
         public boolean hasNext() {
             return parentIterator.hasNext() || currentIterator.hasNext();
         }
 
         @Override
-        public URL next() {
+        public HttpResponse next() {
             try {
                 if (currentIterator.hasNext()) {
                     String next = currentIterator.next();
@@ -139,7 +184,9 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
                     if (hasHttp >= 0) {
                         next = next.substring(hasHttp);
                     }
-                    return new URL(currentParent, next);
+                    currentUrl = new URL(currentParentUrl, next);
+                    LOGGER.debug("Next URL: {}", currentUrl);
+                    return UrlUtils.fetchFromUrl(currentUrl.toString());
                 } else {
                     if (!parentIterator.hasNext()) {
                         return null;
@@ -147,19 +194,17 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
                     nextParent();
                     return next();
                 }
-            } catch (MalformedURLException | ImportException ex) {
+            } catch (ImportException | IOException ex) {
                 throw new IllegalStateException(ex);
             }
         }
 
         private void nextParent() throws ImportException {
             if (parentIterator.hasNext()) {
-                URL nextParentUrl = parentIterator.next();
-                String fetchedFromUrl;
+                HttpResponse nextParentData = parentIterator.next();
                 try {
-                    currentParent = new URL(nextParentUrl.toString().trim());
-                    fetchedFromUrl = UrlUtils.fetchFromUrl(currentParent.toString()).getDataString();
-                    String[] split = StringUtils.split(fetchedFromUrl, splitter);
+                    currentParentUrl = new URL(nextParentData.getUrl().trim());
+                    String[] split = StringUtils.split(nextParentData.getDataString(), splitter);
                     List<String> inList = new ArrayList<>(split.length);
                     for (String item : split) {
                         item = item.trim();
@@ -185,10 +230,11 @@ public class UrlGeneratorBouncer implements UrlGenerator, AnnotatedConfigurable<
                     }
                     currentIterator = outList.iterator();
                 } catch (IOException exc) {
-                    LOGGER.error("Failed to handle URL: {}; {}", currentParent, exc.getMessage());
-                    errorLog.addError("Failed to download", Objects.toString(currentParent), 0);
+                    LOGGER.error("Failed to handle URL: {}; {}", currentParentUrl, exc.getMessage());
+                    errorLog.addError("Failed to download", Objects.toString(currentParentUrl), 0);
                 }
             }
         }
     }
+
 }

@@ -17,7 +17,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
-import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
@@ -28,21 +27,16 @@ import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
- * @author scf
+ * Validates Observations by searching in the service by phenomenonTime.
  */
-public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<SensorThingsService, Object> {
+public class ValidatorByPhenTime implements Validator {
 
-    /**
-     * The logger for this class.
-     */
     private static final Logger LOGGER = LoggerFactory.getLogger(ValidatorByPhenTime.class);
 
     @ConfigurableField(editor = EditorBoolean.class,
@@ -65,7 +59,7 @@ public class ValidatorByPhenTime implements Validator, AnnotatedConfigurable<Sen
     private final ThreadLocal<ObsCache> cacheHolder = new ThreadLocal<>();
 
     @Override
-    public void setObservationUploader(ObservationUploader uploader) {
+    public void init(ObservationUploader uploader) {
         this.uploader = uploader;
     }
 

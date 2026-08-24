@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.records;
 
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
@@ -25,7 +25,6 @@ import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
-import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +71,7 @@ public class DsMapperFixed implements DatastreamMapper {
     }
 
     @Override
-    public Datastream getDatastreamFor(CSVRecord record, ErrorLog errorLog) {
+    public Datastream getDatastreamFor(Tuple record, ErrorLog errorLog) {
         if (ds == null) {
             init(false);
         }
@@ -80,7 +79,7 @@ public class DsMapperFixed implements DatastreamMapper {
     }
 
     @Override
-    public MultiDatastream getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) {
+    public MultiDatastream getMultiDatastreamFor(Tuple record, ErrorLog errorLog) {
         if (mds == null) {
             init(true);
         }

@@ -15,32 +15,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.records;
+
+import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
+import de.fraunhofer.iosb.ilt.sta.model.Datastream;
+import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 
 /**
- * The main exception thrown when importing fails.
+ * Interface for classes that generate Datastreams from a Tuple.
  */
-public class ImportException extends RuntimeException {
+public interface DatastreamGenerator extends AnnotatedConfigurable<Object, Object> {
 
-    private static final long serialVersionUID = -1365036034620856087L;
-
-    public ImportException() {
+    public default void init(SensorThingsService service) throws ImportException {
+        // does nothing by default.
     }
 
-    public ImportException(String message) {
-        super(message);
-    }
-
-    public ImportException(Throwable cause) {
-        super(cause);
-    }
-
-    public ImportException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public ImportException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
-    }
-
+    public Datastream createDatastreamFor(Tuple record, ErrorLog errorLog) throws ImportException;
 }

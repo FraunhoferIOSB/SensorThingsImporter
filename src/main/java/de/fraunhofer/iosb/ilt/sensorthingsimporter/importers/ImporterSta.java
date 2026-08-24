@@ -19,14 +19,11 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
 
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils.addOrCreateFilter;
 
-import com.google.gson.JsonElement;
-import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthMethod;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen.TimeGen;
@@ -52,10 +49,9 @@ import org.slf4j.LoggerFactory;
 import org.threeten.extra.Interval;
 
 /**
- *
- * @author hylke
+ * Imports data from another STA service.
  */
-public class ImporterSta implements Importer, AnnotatedConfigurable<SensorThingsService, Object> {
+public class ImporterSta implements Importer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ImporterSta.class.getName());
 
@@ -89,9 +85,8 @@ public class ImporterSta implements Importer, AnnotatedConfigurable<SensorThings
     private FrostUtils frostUtils;
 
     @Override
-    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
-        this.targetService = context;
-        AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
+    public void init(SensorThingsService service) throws ImportException {
+        this.targetService = service;
         frostUtils = new FrostUtils(targetService);
     }
 
@@ -122,7 +117,7 @@ public class ImporterSta implements Importer, AnnotatedConfigurable<SensorThings
         final EntityList<Datastream> dsList = addOrCreateFilter(targetService.datastreams().query(), null, sourceDs.getName())
                 .list();
         if (dsList.size() > 1) {
-            throw new IllegalStateException("More than one thing found with name " + sourceDs.getName());
+            throw new IllegalStateException("More than one datastream found with name " + sourceDs.getName());
         }
         if (dsList.size() == 1) {
             return dsList.iterator().next();

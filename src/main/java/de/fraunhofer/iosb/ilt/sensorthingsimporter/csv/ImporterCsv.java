@@ -17,10 +17,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
-import com.google.gson.JsonElement;
-import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.Utils;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
@@ -52,19 +48,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
- * @author scf
+ * Importer for CSV files.
  */
-public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThingsService, Object> {
+public class ImporterCsv implements Importer {
 
     /**
      * The logger for this class.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(ImporterCsv.class);
-    private SensorThingsService service;
-    private boolean verbose;
 
-    private final List<RecordConverter> recordConverters = new ArrayList<>();
+    private SensorThingsService service;
+    private final List<RecordConverter> rcvActive = new ArrayList<>();
 
     @ConfigurableField(editor = EditorList.class,
             label = "Converters", description = "The classes that convert columns into observations.")
@@ -128,11 +122,6 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
     }
 
     @Override
-    public void setVerbose(boolean verbose) {
-        this.verbose = verbose;
-    }
-
-    @Override
     public void setNoAct(boolean noAct) {
         // Nothing to set.
     }
@@ -148,17 +137,11 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
     }
 
     @Override
-    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
-        service = context;
-        AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
-    }
-
-    private void init() throws ImportException, ConfigurationException {
-
-        recordConverters.clear();
-        recordConverters.addAll(recordConvertors);
-        for (RecordConverter rcCsv : recordConverters) {
-            rcCsv.setVerbose(verbose);
+    public void init(SensorThingsService service) throws ImportException {
+        this.service = service;
+        rcvActive.clear();
+        rcvActive.addAll(recordConvertors);
+        for (RecordConverter rcCsv : rcvActive) {
             rcCsv.init(service);
         }
 
@@ -179,10 +162,9 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
     @Override
     public Iterator<List<Observation>> iterator() {
         try {
-            init();
             ObsListIter obsListIter = new ObsListIter(inputUrl.urls(errorLog).iterator(), rowSkip, rowLimit);
             return obsListIter;
-        } catch (ImportException | ConfigurationException exc) {
+        } catch (ImportException exc) {
             throw new IllegalStateException("Failed to handle csv file.", exc);
         }
     }
@@ -221,7 +203,7 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
                     records = nextUrl().iterator();
                     currentLine = 0;
                     errorLog.setCurrentLine(currentLine);
-                } catch (RuntimeException | ImportException ex) {
+                } catch (RuntimeException ex) {
                     LOGGER.error("Failed to import line {}, URL {}.", currentLine, currentUrl);
                     throw new IllegalStateException(ex);
                 }
@@ -239,7 +221,7 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
                     return Collections.emptyList();
                 }
                 List<Observation> result = new ArrayList<>();
-                for (RecordConverter rcCsv : recordConverters) {
+                for (RecordConverter rcCsv : rcvActive) {
                     List<Observation> obs;
                     try {
                         obs = rcCsv.convert(record, errorLog);
@@ -276,7 +258,7 @@ public class ImporterCsv implements Importer, AnnotatedConfigurable<SensorThings
                                 data = IOUtils.toString(stream, "UTF-8");
                             }
                         } else {
-                            data = UrlUtils.fetchFromUrl(inUrl.toString(), charset).data;
+                            data = UrlUtils.fetchFromUrl(inUrl.toString(), charset).getDataString();
                         }
                         if (stripNull) {
                             data = StringUtils.replaceChars(data, "\u0000", "");

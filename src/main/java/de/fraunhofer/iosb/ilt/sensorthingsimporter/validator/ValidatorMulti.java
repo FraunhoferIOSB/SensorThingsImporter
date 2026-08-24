@@ -17,50 +17,31 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
-import com.google.gson.JsonElement;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.Configurable;
-import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
-import de.fraunhofer.iosb.ilt.configurable.EditorFactory;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.util.List;
-import java.util.Map;
 
 /**
- *
- * @author scf
+ * Combines several validators. All must be valid for the Observation to be
+ * valid.
  */
-public class ValidatorMulti implements Validator, Configurable<SensorThingsService, Object> {
+public class ValidatorMulti implements Validator {
 
-    private EditorMap<Map<String, Object>> editor;
-    private EditorList<Validator, EditorSubclass<SensorThingsService, Object, Validator>> editorValidators;
-
+    @ConfigurableField(editor = EditorList.class,
+            label = "Validatrs", description = "The validators to use.")
+    @EditorList.EdOptsList(editor = EditorSubclass.class)
+    @EditorSubclass.EdOptsSubclass(iface = Validator.class, shortenClassNames = true)
     public List<Validator> validators;
 
     @Override
-    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
-        getConfigEditor(context, edtCtx).setConfig(config);
-        validators = editorValidators.getValue();
-    }
-
-    @Override
-    public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-        if (editor == null) {
-            editor = new EditorMap<>();
-
-            EditorFactory<EditorSubclass<SensorThingsService, Object, Validator>> factory;
-            factory = () -> {
-                return new EditorSubclass<>(context, edtCtx, Validator.class, "Validators", "The validators to use.");
-            };
-            editorValidators = new EditorList<>(factory, "Validators", "The validators to use.");
-            editor.addOption("validators", editorValidators, false);
+    public void init(ObservationUploader uploader) {
+        for (var v : validators) {
+            v.init(uploader);
         }
-        return editor;
     }
 
     @Override

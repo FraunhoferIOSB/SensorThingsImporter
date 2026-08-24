@@ -15,15 +15,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.records;
 
-import static de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.RecordConverterNames.ZONE_Z;
+import static de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.CsvUtils.fillTemplate;
 
-import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.Utils;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
@@ -40,42 +38,41 @@ import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
-import org.apache.commons.csv.CSVRecord;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.threeten.extra.Interval;
 
 /**
- *
- * @author scf
+ * Converts Tuples, using names to access fields.
  */
-public class RecordConverterDefault implements RecordConverter, AnnotatedConfigurable<SensorThingsService, Object> {
+public class RecordConverterNames implements RecordConverter {
 
-    /**
-     * The logger for this class.
-     */
-    private static final Logger LOGGER = LoggerFactory.getLogger(RecordConverterDefault.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(RecordConverterNames.class);
+    public static final ZoneId ZONE_Z = ZoneId.of("Z");
 
-    @ConfigurableField(editor = EditorInt.class,
-            label = "Result Col", description = "The column # that holds the result (first is 0).")
-    @EditorInt.EdOptsInt(dflt = -1, min = -1, max = 99, step = 1)
-    private Integer colResult;
+    @ConfigurableField(editor = EditorString.class,
+            label = "Result Col", description = "The column name that holds the result, can use '{colName|default}' templates.")
+    @EditorString.EdOptsString()
+    private String colResult;
 
     @ConfigurableField(editor = EditorString.class, optional = true,
             label = "Missing Value", description = "The value that is a placeholder for 'no value'.")
     @EditorString.EdOptsString(dflt = "")
     private String resultMissing;
 
-    @ConfigurableField(editor = EditorInt.class, optional = true,
-            label = "Unit Col", description = "The column # that holds the unit of measurement (first is 0).")
-    @EditorInt.EdOptsInt(dflt = -1, min = -1, max = 99, step = 1)
-    private Integer colUnit;
+    @ConfigurableField(editor = EditorString.class, optional = true,
+            label = "Unit Col", description = "The column name that holds the unit of measurement, can use '{colName|default}' templates.")
+    @EditorString.EdOptsString()
+    private String colUnit;
 
     @ConfigurableField(editor = EditorClass.class, optional = true,
             label = "UnitConverter", description = "The converter used to convert units.")
@@ -83,21 +80,21 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
     private UnitConverter converter;
 
     @ConfigurableField(editor = EditorList.class,
-            label = "PhenomenonTime Col", description = "The column(s) # that holds the phenomenonTime (first is 0).")
-    @EditorList.EdOptsList(editor = EditorInt.class, minCount = 1, maxCount = 2)
-    @EditorInt.EdOptsInt(dflt = -1, min = -1, max = 99, step = 1)
-    private List<Integer> colPhenTime;
+            label = "PhenomenonTime Col", description = "The column names that holds the phenomenonTime, can use '{colName|default}' templates.")
+    @EditorList.EdOptsList(editor = EditorString.class, minCount = 1, maxCount = 2)
+    @EditorString.EdOptsString()
+    private List<String> colPhenTime;
 
-    @ConfigurableField(editor = EditorInt.class, optional = true,
-            label = "ResultTime Column", description = "The column # that holds the resultTime (first is 0).")
-    @EditorInt.EdOptsInt(dflt = -1, min = -1, max = 99, step = 1)
-    private int colResultTime;
+    @ConfigurableField(editor = EditorString.class, optional = true,
+            label = "ResultTime Column", description = "The column name that holds the resultTime, can use '{colName|default}' templates.")
+    @EditorString.EdOptsString()
+    private String colResultTime;
 
     @ConfigurableField(editor = EditorList.class, optional = true,
-            label = "ValidTime Column", description = "The column(s) # that holds the validTime (first is 0).")
-    @EditorList.EdOptsList(editor = EditorInt.class, minCount = 0, maxCount = 2)
-    @EditorInt.EdOptsInt(dflt = -1, min = -1, max = 99, step = 1)
-    private List<Integer> colValidTime;
+            label = "ValidTime Column", description = "The column names that holds the validTime, can use '{colName|default}' templates.")
+    @EditorList.EdOptsList(editor = EditorString.class, minCount = 0, maxCount = 2)
+    @EditorString.EdOptsString()
+    private List<String> colValidTime;
 
     @ConfigurableField(editor = EditorSubclass.class,
             label = "Datastream", description = "Maps the record to a datastream.")
@@ -115,45 +112,53 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
     private Parser resultParser;
 
     @ConfigurableField(editor = EditorString.class, optional = true,
-            label = "parameters Template", description = "Template used to generate Observation/parameters, using {nr} placeholders.")
+            label = "parameters Template", description = "Template used to generate Observation/parameters, can use '{colName|default}' templates.")
     @EditorString.EdOptsString(lines = 4)
     private String parametersTemplate;
 
-    public RecordConverterDefault() {
+    private Pattern patternMissingResult;
+
+    public RecordConverterNames() {
     }
 
     @Override
-    public List<Observation> convert(CSVRecord record, ErrorLog errorLog) throws ImportException {
+    public void init(SensorThingsService service) throws ImportException {
+        patternMissingResult = Pattern.compile(resultMissing);
+        if (dsm != null) {
+            dsm.init(service);
+        }
+    }
+
+    @Override
+    public List<Observation> convert(Tuple record, ErrorLog errorLog) throws ImportException {
         Object result;
         Observation obs;
         StringBuilder log;
-        if (colResult >= record.size()) {
-            return Collections.emptyList();
-        }
-        String resultString = record.get(colResult);
-        if (resultString.equals(resultMissing)) {
+        String resultString = fillTemplate(colResult, record);
+        if (patternMissingResult.matcher(resultString).matches()) {
             return Collections.emptyList();
         }
         result = parseResult(resultString);
         if (result == null) {
             LOGGER.debug("No result found in column {}.", colResult);
-            errorLog.addError("No result");
             return Collections.emptyList();
         }
 
         Datastream datastream = dsm.getDatastreamFor(record, errorLog);
         if (datastream == null) {
             LOGGER.debug("No datastream found for column {}", record);
-            errorLog.addError("No Datastream");
             return Collections.emptyList();
         }
-        if (colUnit >= 0) {
-            String unitFrom = record.get(colUnit);
+        if (!colUnit.isEmpty()) {
+            String unitFrom = fillTemplate(colUnit, record);
+            if (unitFrom == null) {
+                errorLog.addError("No Unit");
+                return Collections.emptyList();
+            }
             String unitTo = datastream.getUnitOfMeasurement().getSymbol();
             result = convertResult(unitFrom, unitTo, result);
             if (result == null) {
                 LOGGER.error("Failed to convert from {} to {}.", unitFrom, unitTo);
-                errorLog.addError("Failed unit conversion from " + unitFrom + " to " + unitTo);
                 return Collections.emptyList();
             }
         }
@@ -163,8 +168,8 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
         obs.setPhenomenonTime(listToTimeObject(colPhenTime, record));
         log.append(", phenomenonTime: ").append(obs.getPhenomenonTime());
 
-        if (colResultTime >= 0) {
-            obs.setResultTime(parseZonedDateTime(record.get(colResultTime)));
+        if (!colResultTime.isEmpty()) {
+            obs.setResultTime(parseTime(fillTemplate(colResultTime, record)));
             log.append(", resultTime: ").append(obs.getResultTime());
         }
         if (!colValidTime.isEmpty()) {
@@ -175,12 +180,15 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
             String filledTemplate = Translator.fillTemplate(parametersTemplate, record, StringType.JSON, false);
             obs.setParameters(JsonUtils.jsonToMap(filledTemplate));
         }
-        LOGGER.debug(log.toString());
+        LOGGER.trace("{}", log);
         LOGGER.trace("Record: {}", record);
         return Arrays.asList(obs);
     }
 
     private Object convertResult(String unitFrom, String unitTo, Object result) {
+        if (unitFrom == null || unitTo == null) {
+            return null;
+        }
         if (unitFrom.equals(unitTo)) {
             return result;
         }
@@ -197,16 +205,59 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
         return null;
     }
 
-    private TimeObject listToTimeObject(List<Integer> colList, CSVRecord record) throws ImportException {
+    private TimeObject listToTimeObject(List<String> colList, Tuple record) throws ImportException {
+        final String firstCol = colList.get(0);
         if (colList.size() == 2) {
-            String start = record.get(colList.get(0));
-            String end = record.get(colList.get(1));
-            ZonedDateTime startTime = parseTime(start);
-            ZonedDateTime endTime = parseTime(end);
-            Interval interval = Interval.of(startTime.toInstant(), endTime.toInstant());
+            final String secondCol = colList.get(1);
+            Duration startDuration = null;
+            String start = null;
+            try {
+                start = fillTemplate(firstCol, record);
+            } catch (IllegalArgumentException ex) {
+                try {
+                    startDuration = Duration.parse(firstCol);
+                } catch (DateTimeParseException ex2) {
+                    LOGGER.error("Column {} does not exist and is not a duration.", firstCol);
+                }
+            }
+            Duration endDuration = null;
+            String end = null;
+            try {
+                end = fillTemplate(secondCol, record);
+            } catch (IllegalArgumentException ex) {
+                try {
+                    endDuration = Duration.parse(secondCol);
+                } catch (DateTimeParseException ex2) {
+                    LOGGER.error("Column {} does not exist and is not a duration.", secondCol);
+                }
+            }
+            if (endDuration != null && startDuration != null) {
+                throw new IllegalArgumentException("Can not have start and end be a duration.");
+            }
+            ZonedDateTime startTime = null;
+            if (!Utils.isNullOrEmpty(start)) {
+                startTime = parseTime(start).withZoneSameInstant(ZONE_Z);
+            }
+            ZonedDateTime endTime = null;
+            if (!Utils.isNullOrEmpty(end)) {
+                endTime = parseTime(end).withZoneSameInstant(ZONE_Z);
+            }
+            Interval interval;
+            if (startTime != null && endTime == null) {
+                // Not an interval after all.
+                return new TimeObject(startTime);
+            } else if (startTime != null && endTime != null) {
+                interval = Interval.of(startTime.toInstant(), endTime.toInstant());
+            } else if (startTime != null && endDuration != null) {
+                interval = Interval.of(startTime.toInstant(), endDuration);
+            } else if (startDuration != null && endTime != null) {
+                interval = Interval.of(endTime.toInstant().minus(startDuration), startDuration);
+            } else {
+                throw new IllegalArgumentException("Don't know how to deal with this combination of time and duration.");
+            }
             return new TimeObject(interval);
         } else {
-            return new TimeObject(parseTime(record.get(colList.get(0))).withZoneSameInstant(ZONE_Z));
+            return new TimeObject(parseTime(fillTemplate(firstCol, record)).withZoneSameInstant(ZONE_Z));
         }
     }
 
@@ -234,15 +285,6 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
         }
     }
 
-    private ZonedDateTime parseZonedDateTime(String value) throws ImportException {
-        try {
-            return ZonedDateTime.parse(value);
-        } catch (Exception e) {
-            // Not a ZonedDateTime
-        }
-        return parseTimestamp(value);
-    }
-
     private ZonedDateTime parseTimestamp(String value) throws ImportException {
         try {
             long longValue = Long.parseLong(value);
@@ -260,12 +302,12 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
             return resultParser.parse(resultString);
         }
         try {
-            return Integer.parseInt(resultString);
+            return Integer.valueOf(resultString);
         } catch (NumberFormatException e) {
             LOGGER.trace("Not an Integer.");
         }
         try {
-            return Long.parseLong(resultString);
+            return Long.valueOf(resultString);
         } catch (NumberFormatException e) {
             LOGGER.trace("Not a long.");
         }

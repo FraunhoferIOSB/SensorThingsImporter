@@ -15,34 +15,29 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.records;
 
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
-import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableClass;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterator;
+import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 
 /**
- * Validates Observations and determines if they need to be uploaded or not.
+ * A source that generates Tuples
  */
-public interface Validator extends AnnotatedConfigurable<Void, Void> {
+public interface TupleSource extends Iterable<Tuple>, AnnotatedConfigurable<Object, Object> {
 
-    public default void init(ObservationUploader uploader) {
+    public default void init(SensorThingsService service) throws ImportException {
     }
-
-    public boolean isValid(Observation obs) throws ImportException;
 
     /**
-     * Always returns true.
+     * Create an Iterator that can report its current location in the source,
+     * for debugging purposes.
+     *
+     * @return An iterator that can report on its current location in the
+     * source.
      */
-    @ConfigurableClass
-    public static class ValidatorNull implements Validator {
+    @Override
+    public InspectingIterator<Tuple> iterator();
 
-        @Override
-        public boolean isValid(Observation obs) throws ImportException {
-            return true;
-        }
-
-    }
 }

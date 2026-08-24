@@ -17,10 +17,6 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
-import com.google.gson.JsonElement;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.Configurable;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorNull;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
@@ -28,7 +24,6 @@ import de.fraunhofer.iosb.ilt.sta.model.Id;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,9 +34,8 @@ import java.util.Map;
  *
  * @author scf
  */
-public class ValidatorNewer implements Validator, Configurable<SensorThingsService, Object> {
+public class ValidatorNewer implements Validator {
 
-    private EditorNull editor = new EditorNull("Validator", "Validates the observation against the datastream");
     private final Map<Id, Instant> datastreamCache = new HashMap<>();
     private final Map<Id, Instant> multiDatastreamCache = new HashMap<>();
 
@@ -111,14 +105,4 @@ public class ValidatorNewer implements Validator, Configurable<SensorThingsServi
         }
         return latest;
     }
-
-    @Override
-    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
-    }
-
-    @Override
-    public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-        return editor;
-    }
-
 }

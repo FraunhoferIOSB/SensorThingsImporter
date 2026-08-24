@@ -17,12 +17,15 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
+import static de.fraunhofer.iosb.ilt.configurable.Utils.isNullOrEmpty;
+
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.AbstractConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.Tuple;
 import de.fraunhofer.iosb.ilt.sta.Utils;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -50,7 +53,11 @@ public class Translator extends AbstractConfigurable<Void, Void> {
      * The logger for this class.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(Translator.class);
-    private static final Pattern PLACE_HOLDER_PATTERN = Pattern.compile("\\{([0-9a-zA-Z_]+)(\\|([^}]*))?\\}");
+    /**
+     * {varName[0:5]|default}
+     *
+     */
+    private static final Pattern PLACE_HOLDER_PATTERN = Pattern.compile("\\{([0-9a-zA-Z_]+)(\\[([0-9]*):([0-9]*)\\])?(\\|([^}]*))?\\}");
 
     private static final TypeReference<Map<String, String>> TYPE_REF_MAP_STRING_STRING = new TypeReference<Map<String, String>>() {
         // Empty by design.
@@ -122,19 +129,23 @@ public class Translator extends AbstractConfigurable<Void, Void> {
     }
 
     public static String fillTemplate(String template, CSVRecord record, StringType targetType, boolean removeNewlines) {
+        return fillTemplate(template, CsvTuple.of(record), targetType, removeNewlines);
+    }
+
+    public static String fillTemplate(String template, Tuple record, StringType targetType, boolean removeNewlines) {
         if (removeNewlines) {
             return fillTemplate(StringUtils.remove(template, "\n"), record, targetType);
         }
         return fillTemplate(template, record, targetType);
     }
 
-    public static String fillTemplate(String template, CSVRecord record) {
+    public static String fillTemplate(String template, Tuple record) {
         return fillTemplate(template, record, StringType.PLAIN);
     }
 
-    public static String fillTemplate(String template, CSVRecord record, StringType targetType) {
+    public static String fillTemplate(String template, Tuple record, StringType targetType) {
         if (record.isMapped(template)) {
-            return record.get(template);
+            return record.getString(template);
         }
         Matcher matcher = PLACE_HOLDER_PATTERN.matcher(template);
         matcher.reset();
@@ -146,13 +157,20 @@ public class Translator extends AbstractConfigurable<Void, Void> {
             String value;
             try {
                 int colNr = Integer.parseInt(matcher.group(1));
-                value = record.get(colNr);
+                value = record.getString(colNr);
             } catch (NumberFormatException ex) {
                 String colName = matcher.group(1);
-                value = record.get(colName);
+                value = record.getString(colName);
             }
-            if (Utils.isNullOrEmpty(value) && matcher.group(3) != null) {
-                value = matcher.group(3);
+            if (matcher.group(2) != null) {
+                final String group3 = matcher.group(3);
+                final String group4 = matcher.group(4);
+                int subStart = isNullOrEmpty(group3) ? 0 : Integer.parseInt(group3);
+                int subEnd = isNullOrEmpty(group4) ? value.length() : Integer.parseInt(group4);
+                value = value.substring(subStart, subEnd);
+            }
+            if (Utils.isNullOrEmpty(value) && matcher.group(6) != null) {
+                value = matcher.group(6);
             }
             switch (targetType) {
                 case JSON:
@@ -166,7 +184,7 @@ public class Translator extends AbstractConfigurable<Void, Void> {
 
                 case PLAIN:
                 default:
-                    // Do nothing.
+                    LOGGER.trace("Nothing to do.");
             }
             filter.append(value);
             pos = matcher.end();
@@ -175,4 +193,48 @@ public class Translator extends AbstractConfigurable<Void, Void> {
         return filter.toString();
     }
 
+    public static class CsvTuple implements Tuple {
+
+        private final boolean stripNulls;
+        private final CSVRecord record;
+
+        public CsvTuple(CSVRecord record) {
+            this(record, false);
+        }
+
+        public CsvTuple(CSVRecord record, boolean stripNulls) {
+            this.stripNulls = stripNulls;
+            this.record = record;
+        }
+
+        @Override
+        public String getString(String name) {
+            if (stripNulls) {
+                return StringUtils.replaceChars(record.get(name), "\u0000", "");
+            }
+            return record.get(name);
+        }
+
+        @Override
+        public String getString(int idx) {
+            if (stripNulls) {
+                return StringUtils.replaceChars(record.get(idx), "\u0000", "");
+            }
+            return record.get(idx);
+        }
+
+        @Override
+        public boolean isMapped(String name) {
+            return record.isMapped(name);
+        }
+
+        public static CsvTuple of(CSVRecord record) {
+            return new CsvTuple(record);
+        }
+
+        public static CsvTuple of(CSVRecord record, boolean stripNulls) {
+            return new CsvTuple(record, stripNulls);
+        }
+
+    }
 }

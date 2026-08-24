@@ -25,15 +25,11 @@ import java.util.List;
 import org.apache.commons.csv.CSVRecord;
 
 /**
- *
- * @author hylke
+ * Converts a record to Observations.
  */
 public interface RecordConverter {
 
     public default void init(SensorThingsService service) throws ImportException {
-    }
-
-    public default void setVerbose(boolean verbose) {
     }
 
     public List<Observation> convert(CSVRecord record, ErrorLog errorLog) throws ImportException;

@@ -17,24 +17,18 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
+import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
+import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.util.List;
 
 /**
- *
- * @author scf
+ * The main importer interface.
  */
-public interface Importer extends Iterable<List<Observation>> {
+public interface Importer extends Iterable<List<Observation>>, AnnotatedConfigurable<Object, Object> {
 
-    /**
-     * Tell the importer to give lots of output.
-     *
-     * @param verbose flag indicating that the importer should give lots of
-     * output.
-     */
-    public default void setVerbose(boolean verbose) {
-        // does nothing by default
+    public default void init(SensorThingsService service) throws ImportException {
     }
 
     public default void setNoAct(boolean noAct) {

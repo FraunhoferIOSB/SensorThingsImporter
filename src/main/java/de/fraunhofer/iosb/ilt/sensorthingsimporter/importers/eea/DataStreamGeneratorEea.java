@@ -245,7 +245,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
         LOGGER.info("Loading station MetaData from {}", stationsUrl);
         String data;
         try {
-            data = UrlUtils.fetchFromUrl(stationsUrl).data;
+            data = UrlUtils.fetchFromUrl(stationsUrl).getDataString();
         } catch (IOException ex) {
             LOGGER.error("Failed to handle URL: {}; {}", stationsUrl, ex.getMessage());
             throw new ImportException(ex);

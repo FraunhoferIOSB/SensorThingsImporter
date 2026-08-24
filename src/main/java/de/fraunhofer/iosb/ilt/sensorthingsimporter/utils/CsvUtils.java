@@ -15,9 +15,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.Tuple;
 import de.fraunhofer.iosb.ilt.sta.Utils;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
@@ -44,10 +44,13 @@ public class CsvUtils {
     }
 
     public static String fillTemplate(String template, Object source, boolean forUrl) {
-        if (source instanceof CSVRecord) {
-            CSVRecord csvRecord = (CSVRecord) source;
+        if (source instanceof CSVRecord csvRecord) {
             if (csvRecord.isMapped(template)) {
                 return csvRecord.get(template);
+            }
+        } else if (source instanceof Tuple tuple) {
+            if (tuple.isMapped(template)) {
+                return tuple.getString(template);
             }
         }
         Matcher matcher = PLACE_HOLDER_PATTERN.matcher(template);
@@ -57,10 +60,16 @@ public class CsvUtils {
         while (matcher.find()) {
             int start = matcher.start();
             result.append(template.substring(pos, start));
-            final String replaced = findMatch(matcher.group(1), matcher.group(3), source, forUrl);
+            String replaced = findMatch(matcher.group(1), matcher.group(3), source);
             if (replaced == null) {
                 // no value and no default: bail!
                 return "";
+            }
+            if (forUrl) {
+                replaced = Utils.escapeForStringConstant(replaced);
+            } else {
+                replaced = StringUtils.replace(replaced, "\"", "\\\"");
+                replaced = StringUtils.replace(replaced, "\n", "\\n");
             }
             result.append(replaced);
             pos = matcher.end();
@@ -69,7 +78,7 @@ public class CsvUtils {
         return result.toString();
     }
 
-    private static String findMatch(String path, String deflt, Object source, boolean forUrl) {
+    public static String findMatch(String path, String deflt, Object source) {
         String[] parts = StringUtils.split(path, '/');
         Object value = source;
         for (String part : parts) {
@@ -85,12 +94,7 @@ public class CsvUtils {
         if (Utils.isNullOrEmpty(value.toString())) {
             return deflt;
         }
-        if (forUrl) {
-            return Utils.escapeForStringConstant(value.toString());
-        }
-        String result = StringUtils.replace(value.toString(), "\"", "\\\"");
-        result = StringUtils.replace(result, "\n", "\\n");
-        return result;
+        return value.toString();
     }
 
     private static Object getFrom(String field, Object source) {

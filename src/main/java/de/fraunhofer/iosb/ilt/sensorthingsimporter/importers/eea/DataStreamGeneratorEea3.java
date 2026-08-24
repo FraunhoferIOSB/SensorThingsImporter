@@ -36,6 +36,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DatastreamGenerator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.Tuple;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.CsvUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.EntityCache;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
@@ -47,7 +48,6 @@ import de.fraunhofer.iosb.ilt.sta.Utils;
 import de.fraunhofer.iosb.ilt.sta.jackson.ObjectMapperFactory;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.Location;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.ObservedProperty;
 import de.fraunhofer.iosb.ilt.sta.model.Sensor;
 import de.fraunhofer.iosb.ilt.sta.model.Thing;
@@ -57,10 +57,7 @@ import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.csv.CSVRecord;
@@ -74,9 +71,9 @@ import tools.jackson.databind.JsonNode;
 /**
  * Generates datastreams from an EEA record and EEA metadata.
  */
-public class DataStreamGeneratorEea2 implements DatastreamGenerator, de.fraunhofer.iosb.ilt.sensorthingsimporter.records.DatastreamGenerator {
+public class DataStreamGeneratorEea3 implements DatastreamGenerator, de.fraunhofer.iosb.ilt.sensorthingsimporter.records.DatastreamGenerator {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DataStreamGeneratorEea2.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(DataStreamGeneratorEea3.class.getName());
 
     private static final String OLD_DS_SEARCH_TEMPLATE = "endswith(Thing/properties/localId,\u0027{STATIONCODE}\u0027) and ObservedProperty/name eq \u0027{PROPERTY}\u0027";
 
@@ -151,86 +148,15 @@ public class DataStreamGeneratorEea2 implements DatastreamGenerator, de.fraunhof
     }
 
     private Datastream findAndFixOldData(Tuple record, EeaStationRecord stationRecord) throws ImportException {
-        try {
-            String stationLocalId = getFromRecord(record, "STATIONCODE");
-            String obsProp = getFromRecord(record, "PROPERTY");
-            String pointLocalId = getFromRecord(record, "SAMPLINGPOINT_LOCALID");
-            List<Datastream> oldDsList = getDatastreamFor(OLD_DS_SEARCH_TEMPLATE, record);
-            if (oldDsList.isEmpty()) {
-                return null;
-            }
-            if (oldDsList.size() == 1) {
-                Datastream ds = oldDsList.get(0);
-                Thing thing = ds.getThing();
-                LOGGER.info("Updating localId of Things({}) from {} to {} and name to {}", thing.getId().getUrl(), thing.getProperties().get("localId"), stationLocalId, stationRecord.airQualityStationName);
-                thing.getProperties().put(TAG_LOCAL_ID, stationLocalId);
-                thing.setName(stationRecord.airQualityStationName);
-                frostUtils.update(thing);
-                ds.setName(obsProp + " at " + stationRecord.airQualityStationName);
-                updateDsLocalId(ds, pointLocalId);
-                frostUtils.update(ds);
-                return ds;
-            }
-            if (oldDsList.size() > 1) {
-                Datastream mainDs = oldDsList.get(0);
-                LOGGER.info("Merging {} datastreams for {} into Datastreams({})", oldDsList.size(), pointLocalId, mainDs.getId().getUrl());
-                Thing thing = mainDs.getThing();
-                LOGGER.info("Updating localId of Things({}) from {} to {} and name to {}", thing.getId().getUrl(), thing.getProperties().get("localId"), stationLocalId, stationRecord.airQualityStationName);
-                thing.getProperties().put(TAG_LOCAL_ID, stationLocalId);
-                thing.setName(stationRecord.airQualityStationName);
-                frostUtils.update(thing);
-                mainDs.setName(obsProp + " at " + stationRecord.airQualityStationName);
-                updateDsLocalId(mainDs, pointLocalId);
-                frostUtils.update(mainDs);
-                Datastream mainDsOnlyId = mainDs.withOnlyId();
-                for (int idx = 1; idx < oldDsList.size(); idx++) {
-                    int obsCount = 0;
-                    Datastream badDs = oldDsList.get(idx);
-                    Iterator<Observation> it = badDs.observations().query().orderBy("phenomenonTime asc").list().fullIterator();
-                    while (it.hasNext()) {
-                        Observation badObs = it.next();
-                        badObs.setDatastream(mainDsOnlyId);
-                        frostUtils.update(badObs);
-                        obsCount++;
-                    }
-                    LOGGER.info("Moved {} Observations from Datastreams({})", obsCount, badDs.getId().getUrl());
-                    frostUtils.delete(Arrays.asList(badDs), 1);
-                }
-                return mainDs;
-            }
-        } catch (ServiceFailureException ex) {
-            LOGGER.error("Failed to update old data: {}", ex.getMessage());
-        }
         return null;
     }
 
-    private void updateDsLocalId(Datastream ds, String localId) {
-        Map<String, Object> properties = ds.getProperties();
-        Object localIds = properties.get(TAG_LOCAL_ID);
-        if (localIds instanceof String lids) {
-            List<String> localIdList = new ArrayList<>();
-            localIdList.add(lids);
-            if (!localId.equals(lids)) {
-                localIdList.add(localId);
-            }
-            properties.put(TAG_LOCAL_ID, localIdList);
-            return;
-        }
-        if (localIds instanceof List localIdList) {
-            if (!localIdList.contains(localId)) {
-                localIdList.add(localId);
-            }
-            return;
-        }
-        LOGGER.error("Unknown type of LocalId property of Datastreams({})! {}", ds.getId().getUrl(), localIds);
-    }
-
     private Datastream importEntities(EeaStationRecord sr, Tuple record) throws ImportException {
-        String pointLocalId = getFromRecord(record, "SAMPLINGPOINT_LOCALID");
-        String obsPropName = getFromRecord(record, "PROPERTY");
-        ObservedProperty observedProperty = observedPropertyCache.getByName(obsPropName);
+        String pointLocalId = Translator.fillTemplate(samplingPointTemplate, record);
+        String obsPropLocalId = getFromRecord(record, "Pollutant");
+        ObservedProperty observedProperty = observedPropertyCache.get(obsPropLocalId);
         if (observedProperty == null) {
-            LOGGER.error("Found no ObservedProperty for {}", obsPropName);
+            LOGGER.error("Found no ObservedProperty for {}", obsPropLocalId);
             return null;
         }
 
@@ -303,11 +229,14 @@ public class DataStreamGeneratorEea2 implements DatastreamGenerator, de.fraunhof
                     sensorProps,
                     null);
 
-            String valueUnit = getFromRecord(record, "UNIT", "value_unit", "UnitOfMeasurement");
-            if (valueUnit == null) {
+            String unit = CsvUtils.findMatch("properties/recommendedUnit", null, observedProperty);
+            if (unit == null) {
+                unit = getFromRecord(record, "Unit");
+            }
+            if (unit == null) {
                 throw new ImportException("Could not find unit in record.");
             }
-            UnitOfMeasurement uom = new UnitOfMeasurement(valueUnit, valueUnit, valueUnit);
+            UnitOfMeasurement uom = new UnitOfMeasurement(unit, unit, unit);
             filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(pointLocalId) + " or " + Utils.quoteForUrl(pointLocalId) + " in properties/" + TAG_LOCAL_ID;
             Datastream ds = frostUtils.findOrCreateDatastream(
                     filter,

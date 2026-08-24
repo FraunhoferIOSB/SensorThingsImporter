@@ -17,12 +17,9 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
-import static de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.CsvUtils.fillTemplate;
+import static de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.CsvUtils.fillTemplate;
 
-import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.Utils;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
@@ -67,7 +64,6 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(RecordConverterNames.class);
     public static final ZoneId ZONE_Z = ZoneId.of("Z");
-    private boolean verbose = false;
 
     @ConfigurableField(editor = EditorString.class,
             label = "Result Col", description = "The column name that holds the result, can use '{colName|default}' templates.")
@@ -132,14 +128,11 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
     }
 
     @Override
-    public void setVerbose(boolean verbose) {
-        this.verbose = verbose;
-    }
-
-    @Override
-    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
-        AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
+    public void init(SensorThingsService service) throws ImportException {
         patternMissingResult = Pattern.compile(resultMissing);
+        if (dsm != null) {
+            dsm.init(service);
+        }
     }
 
     @Override
@@ -189,9 +182,7 @@ public class RecordConverterNames implements RecordConverter, AnnotatedConfigura
             String filledTemplate = Translator.fillTemplate(parametersTemplate, record, StringType.JSON, false);
             obs.setParameters(JsonUtils.jsonToMap(filledTemplate));
         }
-        if (verbose) {
-            LOGGER.debug(log.toString());
-        }
+        LOGGER.debug(log.toString());
         LOGGER.trace("Record: {}", record);
         return Arrays.asList(obs);
     }

@@ -22,9 +22,12 @@ import de.fraunhofer.iosb.ilt.sta.jackson.ObjectMapperFactory;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -40,6 +43,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
+import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -48,10 +52,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.core.type.TypeReference;
 
-/**
- *
- * @author scf
- */
 public class UrlUtils {
 
     public static final TypeReference<List<Map<String, Map<String, Object>>>> TYPE_LIST_MAP_MAP = new TypeReference<List<Map<String, Map<String, Object>>>>() {
@@ -80,7 +80,7 @@ public class UrlUtils {
         if (targetUrl.startsWith("file:/")) {
             return readFileUrl(targetUrl, charset);
         }
-        return readNormalUrl(targetUrl, charset);
+        return readNormalUrl(targetUrl, charset, Collections.emptyList(), null, null);
     }
 
     public static HttpResponse readNormalUrl(String targetUrl, Charset charset) throws IOException, ParseException {
@@ -88,7 +88,7 @@ public class UrlUtils {
     }
 
     public static HttpResponse readNormalUrl(String targetUrl, Charset charset, List<Header> headers, String username, String password) throws IOException, ParseException {
-        LOGGER.info("Fetching: {}", targetUrl);
+        LOGGER.debug("Fetching: {}", targetUrl);
         HttpClientBuilder clientBuilder = HttpClientBuilder.create()
                 .useSystemProperties()
                 .setDefaultRequestConfig(
@@ -97,55 +97,46 @@ public class UrlUtils {
                                 .setConnectTimeout(10_000)
                                 .setConnectionRequestTimeout(10_000)
                                 .build());
-        try (CloseableHttpClient client = clientBuilder.build()) {
-            HttpGet get = new HttpGet(targetUrl);
-            if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
-                String auth = username + ":" + password;
-                byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
-                String authHeader = "Basic " + new String(encodedAuth);
-                get.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
-            }
-            boolean hasAccept = false;
-            for (var h : headers) {
-                if ("accept".equalsIgnoreCase(h.getName())) {
-                    hasAccept = true;
-                }
-                get.addHeader(h);
-            }
-            if (!hasAccept) {
-                get.addHeader("Accept", "*/*");
-            }
-            CloseableHttpResponse response = client.execute(get);
-            HttpEntity entity = response.getEntity();
-            final int statusCode = response.getStatusLine().getStatusCode();
-            if (entity == null) {
-                return new HttpResponse(statusCode, "", response.getAllHeaders());
-            }
-
-            String data = entityToString(entity, charset);
-            if (LOGGER.isTraceEnabled()) {
-                LOGGER.trace("Received: {}", Utils.cleanForLogging(data));
-            } else if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Received: {}", Utils.cleanForLogging(data, 100));
-            }
-
-            return new HttpResponse(statusCode, data, response.getAllHeaders());
+        CloseableHttpClient client = clientBuilder.build();
+        HttpGet get = new HttpGet(targetUrl);
+        if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
+            String auth = username + ":" + password;
+            byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
+            String authHeader = "Basic " + new String(encodedAuth);
+            get.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
         }
+        boolean hasAccept = false;
+        for (var h : headers) {
+            if ("accept".equalsIgnoreCase(h.getName())) {
+                hasAccept = true;
+            }
+            get.addHeader(h);
+        }
+        if (!hasAccept) {
+            get.addHeader("Accept", "*/*");
+        }
+        CloseableHttpResponse response = client.execute(get);
+        HttpEntity entity = response.getEntity();
+        final int statusCode = response.getStatusLine().getStatusCode();
+        LOGGER.info("Fetched:  {}: {}", targetUrl, statusCode);
+        return new HttpResponse(client, targetUrl, statusCode, entity, response.getAllHeaders());
     }
 
     private static HttpResponse readFileUrl(String targetUrl, Charset charset) throws IOException {
         LOGGER.info("Loading: {}", targetUrl);
-        try (InputStream input = new URL(targetUrl).openStream()) {
-            if (input.markSupported()) {
-                input.mark(4);
-                byte[] firstBytes = new byte[3];
-                input.read(firstBytes);
-                charset = guessCharset(firstBytes, charset);
-                input.reset();
-            }
-            final String string = IOUtils.toString(input, charset);
-            return new HttpResponse(200, string);
+        InputStream input = new URL(targetUrl).openStream();
+        if (input.markSupported()) {
+            input.mark(4);
+            byte[] firstBytes = new byte[3];
+            input.read(firstBytes);
+            charset = guessCharset(firstBytes, charset);
+            input.reset();
         }
+        return new HttpResponse(
+                null,
+                targetUrl,
+                200,
+                new InputStreamEntity(input, ContentType.DEFAULT_TEXT.withCharset(charset)));
     }
 
     public static HttpResponse postJsonToUrl(String targetUrl, Object body, String username, String password) throws IOException {
@@ -170,52 +161,56 @@ public class UrlUtils {
                         RequestConfig.custom()
                                 .setSocketTimeout(1000 * 60 * 15)
                                 .build());
-        try (CloseableHttpClient client = builder.build()) {
-            final HttpPost post = new HttpPost(targetUrl);
-            if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
-                final String auth = username + ":" + password;
-                final byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
-                final String authHeader = "Basic " + new String(encodedAuth);
-                post.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
-            }
-            boolean hasAccept = false;
-            boolean hasContentType = false;
-            for (var h : headers) {
-                if ("accept".equalsIgnoreCase(h.getName())) {
-                    hasAccept = true;
-                }
-                post.addHeader(h);
-            }
-            if (!hasAccept) {
-                post.addHeader("Accept", "*/*");
-            }
-            if (!hasContentType) {
-                post.addHeader("Content-Type", "application/json");
-            }
-            post.setEntity(new StringEntity(queryBody));
-            LOGGER.debug("Posting to {}", targetUrl);
-            LOGGER.trace("Posting:\n{}", queryBody);
-            final CloseableHttpResponse response = client.execute(post);
-            final HttpEntity entity = response.getEntity();
-            final int statusCode = response.getStatusLine().getStatusCode();
-            if (entity == null) {
-                LOGGER.debug("Response: {}, no data", statusCode);
-                return new HttpResponse(statusCode, "", response.getAllHeaders());
-            }
-            String data = EntityUtils.toString(entity, UTF8);
-            LOGGER.debug("Response: {}, size: {}", statusCode, data.length());
-            LOGGER.trace("Response:\n{}", data);
-            return new HttpResponse(statusCode, data, response.getAllHeaders());
+        CloseableHttpClient client = builder.build();
+        final HttpPost post = new HttpPost(targetUrl);
+        if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
+            final String auth = username + ":" + password;
+            final byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
+            final String authHeader = "Basic " + new String(encodedAuth);
+            post.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
         }
+        boolean hasAccept = false;
+        boolean hasContentType = false;
+        for (var h : headers) {
+            if ("accept".equalsIgnoreCase(h.getName())) {
+                hasAccept = true;
+            }
+            post.addHeader(h);
+        }
+        if (!hasAccept) {
+            post.addHeader("Accept", "*/*");
+        }
+        if (!hasContentType) {
+            post.addHeader("Content-Type", "application/json");
+        }
+        post.setEntity(new StringEntity(queryBody));
+        LOGGER.debug("Posting to {}", targetUrl);
+        LOGGER.trace("Posting:\n{}", queryBody);
+        final CloseableHttpResponse response = client.execute(post);
+        final HttpEntity entity = response.getEntity();
+        final int statusCode = response.getStatusLine().getStatusCode();
+        if (entity == null) {
+            LOGGER.debug("Response: {}, no data", statusCode);
+        }
+        return new HttpResponse(client, targetUrl, statusCode, entity, response.getAllHeaders());
+
     }
 
-    public static class HttpResponse {
+    public static class HttpResponse implements AutoCloseable {
 
-        public HttpResponse(int code, String data) {
-            this(code, data, null);
+        public final String url;
+        public final int code;
+        private final HttpEntity data;
+        private final CloseableHttpClient client;
+        public final Map<String, String> headers;
+
+        public HttpResponse(CloseableHttpClient client, String url, int code, HttpEntity data) {
+            this(client, url, code, data, null);
         }
 
-        public HttpResponse(int code, String data, Header[] headers) {
+        public HttpResponse(CloseableHttpClient client, String url, int code, HttpEntity data, Header[] headers) {
+            this.client = client;
+            this.url = url;
             this.code = code;
             this.data = data;
             this.headers = new LinkedHashMap<>();
@@ -226,9 +221,41 @@ public class UrlUtils {
             }
         }
 
-        public final int code;
-        public final String data;
-        public final Map<String, String> headers;
+        public HttpEntity getData() {
+            return data;
+        }
+
+        public String getDataString() throws IOException {
+            return EntityUtils.toString(data, UTF8);
+        }
+
+        public Reader getDataReader() throws IOException {
+            ContentType contentType = null;
+            Charset charset = null;
+            try {
+                contentType = ContentType.get(data);
+            } catch (final UnsupportedCharsetException ex) {
+            }
+            if (contentType != null) {
+                charset = contentType.getCharset();
+            }
+            if (charset == null) {
+                charset = UTF8;
+            }
+            final InputStream inStream = data.getContent();
+            if (inStream == null) {
+                return null;
+            }
+            return new InputStreamReader(inStream, charset);
+        }
+
+        public InputStream getDataBinary() throws IOException {
+            return data.getContent();
+        }
+
+        public String getUrl() {
+            return url;
+        }
 
         public boolean isOkResponse() {
             return code >= 200 && code < 300;
@@ -241,6 +268,15 @@ public class UrlUtils {
         public boolean isError() {
             return code >= 400;
         }
+
+        @Override
+        public void close() throws IOException {
+            EntityUtils.consumeQuietly(data);
+            if (client != null) {
+                client.close();
+            }
+        }
+
     }
 
     private static final byte[] BOM_UTF16_LE = new byte[]{(byte) 0xFF, (byte) 0xFE};

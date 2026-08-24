@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.records;
 
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
@@ -32,19 +32,16 @@ import de.fraunhofer.iosb.ilt.sta.query.Query;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Finds Datastrams based on a STA filter query.
+ * Maps a record to a Datastream using a filter-query to the STA service.
  */
 public class DsMapperFilter implements DatastreamMapper {
 
-    /**
-     * The logger for this class.
-     */
     private static final Logger LOGGER = LoggerFactory.getLogger(DsMapperFilter.class);
+
     private final Map<String, Datastream> datastreamCache = new HashMap<>();
     private final Map<String, MultiDatastream> multiDatastreamCache = new HashMap<>();
 
@@ -66,10 +63,13 @@ public class DsMapperFilter implements DatastreamMapper {
     @Override
     public void init(SensorThingsService service) throws ImportException {
         this.service = service;
+        if (dsGenerator != null) {
+            dsGenerator.init(service);
+        }
     }
 
     @Override
-    public Datastream getDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
+    public Datastream getDatastreamFor(Tuple record, ErrorLog errorLog) throws ImportException {
         try {
             String filter = Translator.fillTemplate(filterTemplate, record, StringType.URL, true);
             Datastream ds = getDatastreamFor(filter, record, errorLog);
@@ -81,7 +81,7 @@ public class DsMapperFilter implements DatastreamMapper {
     }
 
     @Override
-    public MultiDatastream getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) {
+    public MultiDatastream getMultiDatastreamFor(Tuple record, ErrorLog errorLog) {
         try {
             String filter = Translator.fillTemplate(filterTemplate, record, StringType.URL, true);
             MultiDatastream ds = getMultiDatastreamFor(filter, record, errorLog);
@@ -92,7 +92,7 @@ public class DsMapperFilter implements DatastreamMapper {
         }
     }
 
-    private Datastream getDatastreamFor(String filter, CSVRecord record, ErrorLog errorLog) throws ServiceFailureException, ImportException {
+    private Datastream getDatastreamFor(String filter, Tuple record, ErrorLog errorLog) throws ServiceFailureException, ImportException {
         Datastream ds = datastreamCache.get(filter);
         if (ds != null) {
             return ds;
@@ -132,7 +132,7 @@ public class DsMapperFilter implements DatastreamMapper {
         return ds;
     }
 
-    private MultiDatastream getMultiDatastreamFor(String filter, CSVRecord record, ErrorLog errorLog) throws ServiceFailureException {
+    private MultiDatastream getMultiDatastreamFor(String filter, Tuple record, ErrorLog errorLog) throws ServiceFailureException {
         MultiDatastream mds = multiDatastreamCache.get(filter);
         if (mds != null) {
             return mds;

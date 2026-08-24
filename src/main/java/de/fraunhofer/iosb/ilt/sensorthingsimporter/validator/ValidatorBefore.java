@@ -17,31 +17,31 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
-import com.google.gson.JsonElement;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.Configurable;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
-import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.time.Instant;
-import java.util.Map;
 import org.threeten.extra.Days;
 import org.threeten.extra.Minutes;
 
 /**
  * Checks if the observation has a phenomenonTime that is later than the latest
  * in the configured datastream.
- *
- * @author scf
  */
-public class ValidatorBefore implements Validator, Configurable<SensorThingsService, Object> {
+public class ValidatorBefore implements Validator {
 
-    private EditorMap<Map<String, Object>> editor;
-    private EditorInt editorDays;
-    private EditorInt editorMinutes;
+    @ConfigurableField(editor = EditorInt.class,
+            label = "days", description = "The number of days before now.")
+    @EditorInt.EdOptsInt(min = 0, max = 999999, step = 1, dflt = 1)
+    private int days;
+
+    @ConfigurableField(editor = EditorInt.class,
+            label = "minutes", description = "The number of minutes before now.")
+    @EditorInt.EdOptsInt(min = 0, max = 999999, step = 1, dflt = 0)
+    private int minutes;
 
     private Instant refTime;
 
@@ -58,25 +58,10 @@ public class ValidatorBefore implements Validator, Configurable<SensorThingsServ
     }
 
     @Override
-    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) {
-        getConfigEditor(context, edtCtx).setConfig(config);
+    public void init(ObservationUploader uploader) {
         Instant now = Instant.now();
-        refTime = now.minus(Days.of(editorDays.getValue()));
-        refTime = refTime.minus(Minutes.of(editorMinutes.getValue()));
-    }
-
-    @Override
-    public ConfigEditor<?> getConfigEditor(SensorThingsService context, Object edtCtx) {
-        if (editor == null) {
-            editor = new EditorMap<>();
-
-            editorDays = new EditorInt(0, 999999, 1, 1, "days", "The number of days before now.");
-            editor.addOption("days", editorDays, false);
-
-            editorMinutes = new EditorInt(0, 999999, 1, 0, "minutes", "The number of minutes before now.");
-            editor.addOption("minutes", editorMinutes, false);
-        }
-        return editor;
+        refTime = now.minus(Days.of(days));
+        refTime = refTime.minus(Minutes.of(minutes));
     }
 
 }

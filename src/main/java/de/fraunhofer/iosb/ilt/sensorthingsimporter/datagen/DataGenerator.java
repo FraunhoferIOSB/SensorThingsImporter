@@ -15,32 +15,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.datagen;
+
+import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterable;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils.HttpResponse;
 
 /**
- * The main exception thrown when importing fails.
+ * Generates an iterable of data entries. Before calling next the previous
+ * Reader must be closed.
  */
-public class ImportException extends RuntimeException {
+public interface DataGenerator extends AnnotatedConfigurable<Object, Object> {
 
-    private static final long serialVersionUID = -1365036034620856087L;
-
-    public ImportException() {
-    }
-
-    public ImportException(String message) {
-        super(message);
-    }
-
-    public ImportException(Throwable cause) {
-        super(cause);
-    }
-
-    public ImportException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public ImportException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
-    }
+    public InspectingIterable<HttpResponse> items(ErrorLog errorLog);
 
 }

@@ -21,8 +21,7 @@ import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 
 /**
- *
- * @author scf
+ * The interface for Auth methods.
  */
 public interface AuthMethod extends AnnotatedConfigurable<Void, Void> {
 

@@ -17,29 +17,25 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
-import com.google.gson.JsonElement;
-import de.fraunhofer.iosb.ilt.configurable.AbstractConfigurable;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
 import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
- * @author scf
+ * Validates Observations by checking if one already exists with the same values
+ * for a set of parameters.
  */
-public class ValidatorByParameter extends AbstractConfigurable<SensorThingsService, Object> implements Validator {
+public class ValidatorByParameter implements Validator {
 
     /**
      * The logger for this class.
@@ -70,8 +66,7 @@ public class ValidatorByParameter extends AbstractConfigurable<SensorThingsServi
     private List<String> parameters;
 
     @Override
-    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
-        super.configure(config, context, edtCtx, configEditor);
+    public void init(ObservationUploader uploader) {
         String[] split = parameter.split(",");
         parameters = Arrays.asList(split);
     }

@@ -21,9 +21,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
@@ -60,7 +60,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.io.FileUtils;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,6 +107,16 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
     @EditorInt.EdOptsInt(dflt = 10)
     private int validatorQueueSize;
 
+    @ConfigurableField(editor = EditorInt.class, optional = true,
+            label = "ValidatorBatchSize", description = "The number of Observations to gather before sending to validation.")
+    @EditorInt.EdOptsInt(dflt = 10_000)
+    private int validatorBatchSize;
+
+    @ConfigurableField(editor = EditorBoolean.class, optional = true,
+            label = "ValidatorBatchOnDS", description = "Send Observation batch to validator on datastream change.")
+    @EditorBoolean.EdOptsBool()
+    private boolean validatorBatchOnDs;
+
     @ConfigurableField(editor = EditorString.class, optional = false,
             label = "Name", description = "The name to use in log messages")
     @EditorString.EdOptsString(dflt = NAME_DEFAULT)
@@ -128,20 +137,13 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
     private final List<ValidatorRunner> validators = new ArrayList<>();
 
     // Don't cache too many observations.
-    private final long maxSend = 100000;
-    private long nextSend = maxSend;
+    private long nextSend;
 
-    @Override
-    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
-        AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
-
-        PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
-        cm.setDefaultMaxPerRoute(100);
-        cm.setMaxTotal(200);
-        context.getClientBuilder().setConnectionManager(cm);
-        context.rebuildHttpClient();
-
-        validator.setObservationUploader(uploader);
+    public void init() throws MalformedURLException, ImportException {
+        SensorThingsService service = uploader.getService();
+        nextSend = validatorBatchSize;
+        importer.init(service);
+        validator.init(uploader);
 
         logStatus.setName(name);
 
@@ -166,10 +168,10 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
         startValidatorThreads(start);
         // Map of Obs per Ds/MDs
         Map<Entity, ObservationList> obsPerDs = new HashMap<>();
-
+        Entity lastKey = null;
         try {
             for (List<Observation> observations : importer) {
-                queueObservationsForValidation(observations, obsPerDs, start);
+                lastKey = queueObservationsForValidation(observations, obsPerDs, lastKey);
                 logStatus.setErrors(importer.getErrorCount());
             }
         } catch (RuntimeException exc) {
@@ -177,7 +179,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
             LOGGER.debug("Details:", exc);
         }
 
-        queueObservationsForSending(obsPerDs, start);
+        queueObservationsForSending(obsPerDs);
 
         waitForValidatorThreads();
 
@@ -193,14 +195,18 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
         }
     }
 
-    private void queueObservationsForValidation(List<Observation> observations, Map<Entity, ObservationList> obsPerDs, Calendar start) {
+    private Entity queueObservationsForValidation(List<Observation> observations, Map<Entity, ObservationList> obsPerDs, Entity lastKey) {
         for (Observation observation : observations) {
             try {
                 Entity key = observation.getDatastream();
                 if (key == null) {
                     key = observation.getMultiDatastream();
                 }
-
+                if (validatorBatchOnDs && !key.equals(lastKey)) {
+                    queueObservationsForSending(obsPerDs);
+                    nextSend = validatorBatchSize;
+                    lastKey = key;
+                }
                 ObservationList obsList = obsPerDs.computeIfAbsent(key, t -> new ObservationList(t));
                 obsList.add(observation);
                 logStatus.setGeneratedCount(++generated);
@@ -216,9 +222,10 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
             }
         }
         if (nextSend <= 0) {
-            queueObservationsForSending(obsPerDs, start);
-            nextSend = maxSend;
+            queueObservationsForSending(obsPerDs);
+            nextSend = validatorBatchSize;
         }
+        return lastKey;
     }
 
     private double getSpeed(Calendar since, long inserted) {
@@ -240,7 +247,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
         LOGGER.debug("Sleeping while Queueing Observations Done.");
     }
 
-    private void queueObservationsForSending(Map<Entity, ObservationList> obsPerDs, Calendar start) {
+    private void queueObservationsForSending(Map<Entity, ObservationList> obsPerDs) {
         LOGGER.debug("Queueing Observations for {} Datastreams.", obsPerDs.size());
         while (!obsPerDs.isEmpty()) {
             boolean shouldSleep = false;
@@ -361,13 +368,15 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
     public void doImport(String config, boolean noAct, ProgressTracker tracker) {
         this.noAct = noAct;
         if (tracker == null) {
-            tracker = (p, t) -> {};
+            tracker = (p, t) -> {
+                // does nothing.
+            };
         }
         ImporterScheduler.STATUS_LOGGER.addLogStatus(logStatus);
         try {
             JsonElement json = JsonParser.parseString(config);
-            configure(json, new SensorThingsService(), null, null);
-            importer.setVerbose(noAct);
+            configure(json, null, null, null);
+            init();
             importer.setNoAct(noAct);
             importer.setProgressTracker(tracker);
             uploader.setNoAct(noAct);
@@ -375,6 +384,9 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
         } catch (JsonSyntaxException | ConfigurationException exc) {
             LOGGER.error("Failed to parse {}", config);
             LOGGER.debug("Failed to parse.", exc);
+        } catch (MalformedURLException | ImportException exc) {
+            LOGGER.error("Failed to init {}", config);
+            LOGGER.debug("Failed to init.", exc);
         }
         ImporterScheduler.STATUS_LOGGER.removeLogStatus(logStatus);
 

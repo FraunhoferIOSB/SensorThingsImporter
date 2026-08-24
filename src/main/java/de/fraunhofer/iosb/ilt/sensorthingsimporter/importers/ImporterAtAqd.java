@@ -28,10 +28,6 @@ import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConst
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_NAMESPACE;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_OWNER;
 
-import com.google.gson.JsonElement;
-import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
@@ -99,7 +95,7 @@ import org.xml.sax.SAXException;
  *
  * @author hylke
  */
-public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThingsService, Object> {
+public class ImporterAtAqd implements Importer {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ImporterAtAqd.class.getName());
 
@@ -219,15 +215,9 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
     }
 
     @Override
-    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
-        this.service = context;
-        AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
+    public void init(SensorThingsService service) throws ImportException {
+        this.service = service;
         frostUtils = new FrostUtils(service);
-    }
-
-    @Override
-    public void setVerbose(boolean verbose) {
-        this.verbose = verbose;
     }
 
     @Override
@@ -326,7 +316,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
         LOGGER.debug("Fetching Stations from {}", thingsUrl);
         String stationFeatureXml;
         try {
-            stationFeatureXml = UrlUtils.fetchFromUrl(thingsUrl).data;
+            stationFeatureXml = UrlUtils.fetchFromUrl(thingsUrl).getDataString();
         } catch (IOException ex) {
             throw new ImportException(ex);
         }
@@ -433,7 +423,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
         LOGGER.debug("Fetching Processes from {}", sensorsUrl);
         String processFeatureXml;
         try {
-            processFeatureXml = UrlUtils.fetchFromUrl(sensorsUrl).data;
+            processFeatureXml = UrlUtils.fetchFromUrl(sensorsUrl).getDataString();
         } catch (IOException ex) {
             throw new ImportException(ex);
         }
@@ -551,7 +541,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
         LOGGER.debug("Fetching Samples from {}", samplesUrl);
         String samplesFeatureXml;
         try {
-            samplesFeatureXml = UrlUtils.fetchFromUrl(samplesUrl).data;
+            samplesFeatureXml = UrlUtils.fetchFromUrl(samplesUrl).getDataString();
         } catch (IOException ex) {
             throw new ImportException(ex);
         }
@@ -623,7 +613,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
         LOGGER.debug("Fetching SamplingPoints from {}", samplingPointsUrl);
         String samplingPointsFeatureXml;
         try {
-            samplingPointsFeatureXml = UrlUtils.fetchFromUrl(samplingPointsUrl).data;
+            samplingPointsFeatureXml = UrlUtils.fetchFromUrl(samplingPointsUrl).getDataString();
         } catch (IOException ex) {
             throw new ImportException(ex);
         }
@@ -754,7 +744,7 @@ public class ImporterAtAqd implements Importer, AnnotatedConfigurable<SensorThin
             finalUrl = finalUrl.replace("{phenomenonTimeInterval}", interval.toString());
             String observationsXml;
             try {
-                observationsXml = UrlUtils.fetchFromUrl(finalUrl).data;
+                observationsXml = UrlUtils.fetchFromUrl(finalUrl).getDataString();
             } catch (IOException ex) {
                 throw new ImportException(ex);
             }

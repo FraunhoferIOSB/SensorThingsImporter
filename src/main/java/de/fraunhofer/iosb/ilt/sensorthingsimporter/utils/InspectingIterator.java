@@ -15,32 +15,24 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
+
+import java.util.Iterator;
 
 /**
- * The main exception thrown when importing fails.
+ * An Iterator that can give information about the current position in the
+ * source.
+ *
+ * @param <T> The type items being iterated.
  */
-public class ImportException extends RuntimeException {
+public interface InspectingIterator<T> extends Iterator<T> {
 
-    private static final long serialVersionUID = -1365036034620856087L;
-
-    public ImportException() {
-    }
-
-    public ImportException(String message) {
-        super(message);
-    }
-
-    public ImportException(Throwable cause) {
-        super(cause);
-    }
-
-    public ImportException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public ImportException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
-    }
+    /**
+     * Get a human readable indicator for the current location in the
+     * source.
+     *
+     * @return a human readable indicator for the current location.
+     */
+    public String getCurrentLocation();
 
 }

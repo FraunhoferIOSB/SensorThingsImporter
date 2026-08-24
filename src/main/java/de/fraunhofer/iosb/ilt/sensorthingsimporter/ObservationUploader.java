@@ -17,10 +17,7 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
-import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
-import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
-import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableClass;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
@@ -48,15 +45,15 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
- * @author scf
+ * Uploads Observations to a STA service.
  */
 @ConfigurableClass
-public class ObservationUploader implements AnnotatedConfigurable<SensorThingsService, Object> {
+public class ObservationUploader implements AnnotatedConfigurable<Object, Object> {
 
     /**
      * The logger for this class.
@@ -104,19 +101,19 @@ public class ObservationUploader implements AnnotatedConfigurable<SensorThingsSe
     private final AtomicLong deleted = new AtomicLong();
     private final AtomicLong queued = new AtomicLong();
 
-    @Override
-    public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
-        AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
-        service = context;
-
-        try {
-            service.setEndpoint(new URL(serviceUrl));
+    public SensorThingsService getService() throws MalformedURLException {
+        if (service == null) {
+            service = new SensorThingsService(new URL(serviceUrl));
+            PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
+            cm.setDefaultMaxPerRoute(100);
+            cm.setMaxTotal(200);
+            service.getClientBuilder().setConnectionManager(cm);
+            service.rebuildHttpClient();
             if (authMethod != null) {
                 authMethod.setAuth(service);
             }
-        } catch (MalformedURLException ex) {
-            throw new IllegalArgumentException("Failed to create service.", ex);
         }
+        return service;
     }
 
     public void setNoAct(boolean noAct) {
