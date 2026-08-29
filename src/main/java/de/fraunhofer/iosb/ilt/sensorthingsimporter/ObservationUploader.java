@@ -24,16 +24,15 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.DataArrayDocument;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.DataArrayValue;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthMethod;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.Entity;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.model.ext.DataArrayDocument;
-import de.fraunhofer.iosb.ilt.sta.model.ext.DataArrayValue;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Comparator;
@@ -55,9 +54,6 @@ import org.slf4j.LoggerFactory;
 @ConfigurableClass
 public class ObservationUploader implements AnnotatedConfigurable<Object, Object> {
 
-    /**
-     * The logger for this class.
-     */
     private static final Logger LOGGER = LoggerFactory.getLogger(ObservationUploader.class);
 
     @ConfigurableField(editor = EditorString.class,
@@ -75,8 +71,8 @@ public class ObservationUploader implements AnnotatedConfigurable<Object, Object
     @ConfigurableField(editor = EditorBoolean.class,
             label = "Use DataArrays",
             description = "Use the SensorThingsAPI DataArray extension to post Observations. "
-                    + "This is much more efficient when posting many observations. "
-                    + "The number of items grouped together is determined by the messageInterval setting.")
+            + "This is much more efficient when posting many observations. "
+            + "The number of items grouped together is determined by the messageInterval setting.")
     @EditorBoolean.EdOptsBool()
     private boolean useDataArrays;
 
@@ -86,6 +82,8 @@ public class ObservationUploader implements AnnotatedConfigurable<Object, Object
     private int maxBatch;
 
     private SensorThingsService service;
+    private SensorThingsV11Sensing mdl11;
+    private SensorThingsV11MultiDatastream mdlMds;
     private boolean noAct = false;
 
     private final ThreadLocal<Map<Entity, DataArrayValue>> davMaps = new ThreadLocal<>() {
@@ -103,7 +101,8 @@ public class ObservationUploader implements AnnotatedConfigurable<Object, Object
 
     public SensorThingsService getService() throws MalformedURLException {
         if (service == null) {
-            service = new SensorThingsService(new URL(serviceUrl));
+            service = new SensorThingsService()
+                    .setBaseUrl(new URL(serviceUrl));
             PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
             cm.setDefaultMaxPerRoute(100);
             cm.setMaxTotal(200);
@@ -113,6 +112,9 @@ public class ObservationUploader implements AnnotatedConfigurable<Object, Object
                 authMethod.setAuth(service);
             }
         }
+        service.init();
+        mdl11 = service.getModelRegistry().getModel(SensorThingsV11Sensing.class);
+        mdlMds = service.getModelRegistry().getModel(SensorThingsV11MultiDatastream.class);
         return service;
     }
 
@@ -132,8 +134,8 @@ public class ObservationUploader implements AnnotatedConfigurable<Object, Object
         return deleted.get();
     }
 
-    public void addObservation(Observation obs) throws ServiceFailureException {
-        if (obs.getId() != null && !noAct) {
+    public void addObservation(Entity obs) throws ServiceFailureException {
+        if (obs.getPrimaryKeyValues() != null && !noAct) {
             service.update(obs);
             updated.incrementAndGet();
         } else if (!useDataArrays && !noAct) {
@@ -144,33 +146,28 @@ public class ObservationUploader implements AnnotatedConfigurable<Object, Object
         }
     }
 
-    private void addToDataArray(Observation o) throws ServiceFailureException {
-        Entity ds = o.getDatastream();
-        if (ds == null) {
-            ds = o.getMultiDatastream();
+    private void addToDataArray(Entity observation) throws ServiceFailureException {
+        Entity ds = observation.getProperty(mdl11.npObservationDatastream);
+        if (ds == null && mdlMds != null) {
+            ds = observation.getProperty(mdlMds.npObservationMultidatastream);
         }
         if (ds == null) {
             throw new IllegalArgumentException("Observation must have a (Multi)Datastream.");
         }
-        findDataArrayValue(ds, o)
-                .addObservation(o);
+        findDataArrayValue(ds, observation)
+                .addObservation(observation);
         long newqueue = queued.incrementAndGet();
         if (newqueue >= maxBatch) {
             sendDataArray();
         }
     }
 
-    private DataArrayValue findDataArrayValue(Entity ds, Observation o) {
+    private DataArrayValue findDataArrayValue(Entity ds, Entity o) {
         final Map<Entity, DataArrayValue> davMap = davMaps.get();
         DataArrayValue dav = davMap.get(ds);
         if (dav == null) {
-            if (ds instanceof Datastream) {
-                dav = new DataArrayValue((Datastream) ds, getDefinedProperties(o));
-                activeDatastreams.add(ds);
-            } else {
-                dav = new DataArrayValue((MultiDatastream) ds, getDefinedProperties(o));
-                activeDatastreams.add(ds);
-            }
+            dav = new DataArrayValue(ds, getDefinedProperties(o));
+            activeDatastreams.add(ds);
             davMap.put(ds, dav);
         }
         return dav;
@@ -182,7 +179,7 @@ public class ObservationUploader implements AnnotatedConfigurable<Object, Object
         if (!noAct && !davMap.isEmpty()) {
             DataArrayDocument dad = new DataArrayDocument();
             dad.getValue().addAll(davMap.values());
-            List<String> locations = service.create(dad);
+            List<String> locations = dad.create(service);
             long error = locations.stream().filter(
                     location -> location.startsWith("error")).count();
             if (error > 0) {
@@ -200,7 +197,7 @@ public class ObservationUploader implements AnnotatedConfigurable<Object, Object
         return inserted.get();
     }
 
-    public void delete(List<? extends Entity> entities, int threads) throws ServiceFailureException {
+    public void delete(List<Entity> entities, int threads) throws ServiceFailureException {
         deleted.addAndGet(entities.size());
         new FrostUtils(entities.get(0).getService()).delete(entities, threads);
     }
@@ -217,23 +214,23 @@ public class ObservationUploader implements AnnotatedConfigurable<Object, Object
         return activeDatastreams.contains(entity);
     }
 
-    private Set<DataArrayValue.Property> getDefinedProperties(Observation o) {
-        Set<DataArrayValue.Property> value = new HashSet<>();
-        value.add(DataArrayValue.Property.Result);
-        if (o.getPhenomenonTime() != null) {
-            value.add(DataArrayValue.Property.PhenomenonTime);
+    private Set<DataArrayValue.DaArProperty> getDefinedProperties(Entity o) {
+        Set<DataArrayValue.DaArProperty> value = new HashSet<>();
+        value.add(DataArrayValue.DaArProperty.Result);
+        if (o.isSetProperty(SensorThingsV11Sensing.EP_PHENOMENONTIME)) {
+            value.add(DataArrayValue.DaArProperty.PhenomenonTime);
         }
-        if (o.getResultTime() != null) {
-            value.add(DataArrayValue.Property.ResultTime);
+        if (o.isSetProperty(SensorThingsV11Sensing.EP_RESULTTIME)) {
+            value.add(DataArrayValue.DaArProperty.ResultTime);
         }
-        if (o.getResultQuality() != null) {
-            value.add(DataArrayValue.Property.ResultQuality);
+        if (o.isSetProperty(SensorThingsV11Sensing.EP_RESULTQUALITY)) {
+            value.add(DataArrayValue.DaArProperty.ResultQuality);
         }
-        if (o.getParameters() != null) {
-            value.add(DataArrayValue.Property.Parameters);
+        if (o.isSetProperty(SensorThingsV11Sensing.EP_PARAMETERS)) {
+            value.add(DataArrayValue.DaArProperty.Parameters);
         }
-        if (o.getValidTime() != null) {
-            value.add(DataArrayValue.Property.ValidTime);
+        if (o.isSetProperty(SensorThingsV11Sensing.EP_VALIDTIME)) {
+            value.add(DataArrayValue.DaArProperty.ValidTime);
         }
         return value;
     }
@@ -245,7 +242,7 @@ public class ObservationUploader implements AnnotatedConfigurable<Object, Object
 
         @Override
         public int compare(Entity o1, Entity o2) {
-            int ids = o1.getId().compareTo(o2.getId());
+            int ids = o1.getPrimaryKeyValues().compareTo(o2.getPrimaryKeyValues());
             if (ids != 0) {
                 return ids;
             }

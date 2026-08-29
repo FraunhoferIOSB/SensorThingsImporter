@@ -17,22 +17,24 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.Utils;
-import de.fraunhofer.iosb.ilt.sta.jackson.ObjectMapperFactory;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.Entity;
-import de.fraunhofer.iosb.ilt.sta.model.FeatureOfInterest;
-import de.fraunhofer.iosb.ilt.sta.model.Location;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.model.ObservedProperty;
-import de.fraunhofer.iosb.ilt.sta.model.Sensor;
-import de.fraunhofer.iosb.ilt.sta.model.Thing;
-import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
-import de.fraunhofer.iosb.ilt.sta.model.ext.EntityList;
-import de.fraunhofer.iosb.ilt.sta.model.ext.UnitOfMeasurement;
-import de.fraunhofer.iosb.ilt.sta.query.Query;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.EntitySet;
+import de.fraunhofer.iosb.ilt.frostclient.model.ModelRegistry;
+import de.fraunhofer.iosb.ilt.frostclient.model.property.EntityPropertyMain;
+import de.fraunhofer.iosb.ilt.frostclient.model.property.type.TypeComplex;
+import de.fraunhofer.iosb.ilt.frostclient.models.CommonProperties;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.MapValue;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeInterval;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeObject;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeValue;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.UnitOfMeasurement;
+import de.fraunhofer.iosb.ilt.frostclient.query.Query;
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
+import de.fraunhofer.iosb.ilt.frostclient.utils.Utils;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
@@ -53,6 +55,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
+import net.time4j.Moment;
 import org.apache.commons.lang3.StringUtils;
 import org.geojson.GeoJsonObject;
 import org.geojson.Point;
@@ -65,12 +68,11 @@ import org.geotools.geometry.Position2D;
 import org.geotools.referencing.CRS;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.threeten.extra.Interval;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * @author scf
+ * Utilities for accessing FROST.
  */
 public final class FrostUtils {
 
@@ -99,6 +101,8 @@ public final class FrostUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(FrostUtils.class);
 
     private final SensorThingsService service;
+    private SensorThingsV11Sensing mdl11;
+    private SensorThingsV11MultiDatastream mdlMds;
 
     private boolean dryRun;
 
@@ -107,6 +111,9 @@ public final class FrostUtils {
 
     public FrostUtils(final SensorThingsService service) {
         this.service = service;
+        final ModelRegistry mr = service.getModelRegistry();
+        mdl11 = mr.getModel(SensorThingsV11Sensing.class);
+        mdlMds = mr.getModel(SensorThingsV11MultiDatastream.class);
     }
 
     public void setDryRun(final boolean dryRun) {
@@ -128,7 +135,7 @@ public final class FrostUtils {
         return result.toString();
     }
 
-    public <T extends Entity<T>> void update(final T entity) throws ServiceFailureException {
+    public void update(final Entity entity) throws ServiceFailureException {
         if (dryRun) {
             LOGGER.info("Dry Run: Not updating entity {}", entity);
         } else {
@@ -137,7 +144,7 @@ public final class FrostUtils {
         }
     }
 
-    public <T extends Entity<T>> void create(final T entity) throws ServiceFailureException {
+    public void create(final Entity entity) throws ServiceFailureException {
         if (dryRun) {
             LOGGER.info("Dry Run: Not creating entity {}", entity);
         } else {
@@ -159,7 +166,7 @@ public final class FrostUtils {
         countUpdate = 0;
     }
 
-    public void delete(List<? extends Entity> entities, int threads) throws ServiceFailureException {
+    public void delete(List<Entity> entities, int threads) throws ServiceFailureException {
         if (threads <= 1) {
             for (Entity entity : entities) {
                 service.delete(entity);
@@ -187,21 +194,22 @@ public final class FrostUtils {
         executor.shutdownNow();
     }
 
-    public Thing findOrCreateThing(final String filter, final String name, final String description, final Map<String, Object> properties, final Location location, final Thing cachedThing) throws ServiceFailureException {
-        final Thing thing = new Thing(name, description);
-        thing.setProperties(properties);
+    public Entity findOrCreateThing(final String filter, final String name, final String description, final Map<String, Object> properties, final Entity location, final Entity cachedThing) throws ServiceFailureException {
+        final Entity thing = mdl11.newThing(name, description, properties);
         if (location != null) {
-            thing.getLocations().add(location.withOnlyId());
+            thing.addNavigationEntity(mdl11.npThingLocations, location.withOnlyPk());
         }
         return findOrCreateThing(filter, thing, cachedThing);
     }
 
-    public Thing findOrCreateThing(final String filter, final Thing newThing, final Thing cachedThing) throws ServiceFailureException {
-        Thing thing = null;
+    public Entity findOrCreateThing(final String filter, final Entity newThing, final Entity cachedThing) throws ServiceFailureException {
+        Entity thing = null;
         if (cachedThing != null) {
             thing = cachedThing;
         } else {
-            final EntityList<Thing> thingList = addOrCreateFilter(service.things().query(), filter, newThing.getName()).expand("Locations($select=id)").list();
+            final EntitySet thingList = addOrCreateFilter(service.query(mdl11.etThing), filter, newThing.getProperty(CommonProperties.EP_NAME))
+                    .expand("Locations($select=id)")
+                    .list();
             if (thingList.size() > 1) {
                 throw new IllegalStateException("More than one thing found with filter " + filter);
             }
@@ -210,7 +218,7 @@ public final class FrostUtils {
             }
         }
         if (thing == null) {
-            LOGGER.info("Creating Thing {}.", newThing.getName());
+            LOGGER.info("Creating Thing {}.", newThing);
             thing = newThing;
             create(thing);
         } else {
@@ -219,46 +227,61 @@ public final class FrostUtils {
         return thing;
     }
 
-    public boolean maybeUpdateThing(final Thing newThing, final Thing thingToUpdate) throws ServiceFailureException {
+    /**
+     * Updates property of target if its value is different from the value in
+     * source.
+     *
+     * @param <P> The type of property
+     * @param source the source entity to maybe copy from.
+     * @param target the target entity to maybe copy to.
+     * @param property the property to maybe copy from source to target.
+     * @return true if property was copied from source to target, false if no
+     * copy happened.
+     */
+    public static <P> boolean compareAndUpdate(Entity source, Entity target, EntityPropertyMain<P> property) {
+        P sourceP = source.getProperty(property);
+        P targetP = target.getProperty(property);
+        if (Objects.equals(sourceP, targetP)) {
+            return false;
+        }
+        target.setProperty(property, sourceP);
+        return true;
+    }
+
+    public boolean maybeUpdateThing(final Entity newThing, final Entity thingToUpdate) throws ServiceFailureException {
         boolean updated = false;
         boolean updatedLocation = false;
-        if (!newThing.getName().equals(thingToUpdate.getName())) {
-            updated = true;
-            thingToUpdate.setName(newThing.getName());
-        }
-        if (!newThing.getDescription().equals(thingToUpdate.getDescription())) {
-            updated = true;
-            thingToUpdate.setDescription(newThing.getDescription());
-        }
-        if (addProperties(thingToUpdate.getProperties(), newThing.getProperties(), 5)) {
-            updated = true;
-        }
-        if (!newThing.getLocations().isEmpty()) {
-            final Location newLocation = newThing.getLocations().toList().get(0);
-            final List<Location> locationListToUpdate = thingToUpdate.getLocations().toList();
-            if (newLocation.getId() == null) {
+        updated = compareAndUpdate(newThing, thingToUpdate, CommonProperties.EP_NAME) || updated;
+        updated = compareAndUpdate(newThing, thingToUpdate, CommonProperties.EP_DESCRIPTION) || updated;
+        updated = addProperties(thingToUpdate, newThing, CommonProperties.EP_PROPERTIES, 5) || updated;
+
+        EntitySet newLocations = newThing.getProperty(mdl11.npThingLocations, false);
+        if (newLocations != null && !newLocations.isEmpty()) {
+            final Entity newLocation = newLocations.toList().get(0);
+            final List<Entity> locationListToUpdate = thingToUpdate.getProperty(mdl11.npThingLocations).toList();
+            if (!newLocation.primaryKeyFullySet()) {
                 // "new" Location in newThing.
                 if (locationListToUpdate.isEmpty()) {
-                    final Location created = findOrCreateLocation(null, newLocation, null);
-                    thingToUpdate.getLocations().add(created.withOnlyId());
+                    final Entity created = findOrCreateLocation(null, newLocation, null);
+                    thingToUpdate.addNavigationEntity(mdl11.npThingLocations, created.withOnlyPk());
                     updated = true;
                     updatedLocation = true;
                 } else if (locationListToUpdate.size() == 1) {
-                    final Location oldLocation = service.locations().find(locationListToUpdate.get(0).getId());
+                    final Entity oldLocation = service.dao(mdl11.etLocation).find(locationListToUpdate.get(0).getPrimaryKeyValues());
                     maybeUpdateLocation(newLocation, oldLocation);
                 } else {
                     LOGGER.error("Can't check locations for Things with multiple locations if updated Location has no ID.");
                 }
             } else {
                 if (locationListToUpdate.isEmpty()) {
-                    thingToUpdate.getLocations().add(newLocation.withOnlyId());
+                    thingToUpdate.addNavigationEntity(mdl11.npThingLocations, newLocation.withOnlyPk());
                     updated = true;
                     updatedLocation = true;
                 } else {
-                    final boolean found = locationListToUpdate.stream().anyMatch(loc -> loc.getId().equals(newLocation.getId()));
+                    final boolean found = locationListToUpdate.stream().anyMatch(loc -> loc.getPrimaryKeyValues().equals(newLocation.getPrimaryKeyValues()));
                     if (!found) {
-                        thingToUpdate.getLocations().clear();
-                        thingToUpdate.getLocations().add(newLocation.withOnlyId());
+                        thingToUpdate.unsetProperty(mdl11.npThingLocations);
+                        thingToUpdate.addNavigationEntity(mdl11.npThingLocations, newLocation.withOnlyPk());
                         updated = true;
                         updatedLocation = true;
                     }
@@ -267,11 +290,10 @@ public final class FrostUtils {
         }
         if (updated) {
             if (!updatedLocation) {
-                final List<Location> thingLocations = thingToUpdate.getLocations().toList();
-                final List<Location> oldLocations = new ArrayList<>(thingLocations);
-                thingLocations.clear();
+                final List<Entity> thingLocations = thingToUpdate.getProperty(mdl11.npThingLocations).toList();
+                thingToUpdate.unsetProperty(mdl11.npThingLocations);
                 update(thingToUpdate);
-                thingLocations.addAll(oldLocations);
+                thingToUpdate.addNavigationEntity(mdl11.npThingLocations, thingLocations);
             } else {
                 update(thingToUpdate);
             }
@@ -279,29 +301,28 @@ public final class FrostUtils {
         return updated;
     }
 
-    public Sensor findOrCreateSensor(final String filter, final String name, final String description, final String encodingType, final Object metadata, final Map<String, Object> properties, final Sensor cached) throws ServiceFailureException {
-        final Sensor sensor = new Sensor(name, description, encodingType, metadata);
-        sensor.setProperties(properties);
+    public Entity findOrCreateSensor(final String filter, final String name, final String description, final String encodingType, final Object metadata, final Map<String, Object> properties, final Entity cached) throws ServiceFailureException {
+        final Entity sensor = mdl11.newSensor(name, description, encodingType, metadata)
+                .setProperty(CommonProperties.EP_PROPERTIES, new MapValue(TypeComplex.STA_MAP, properties));
         return findOrCreateSensor(filter, sensor, cached);
     }
 
-    public Sensor findOrCreateSensor(final String filter, final Sensor newSensor, final Sensor cachedSensor) throws ServiceFailureException {
-        Sensor sensor = null;
+    public Entity findOrCreateSensor(final String filter, final Entity newSensor, final Entity cachedSensor) throws ServiceFailureException {
+        Entity sensor = null;
         if (cachedSensor != null) {
             sensor = cachedSensor;
         } else {
-            final Query<Sensor> query = service.sensors().query();
-            final EntityList<Sensor> sensorList = addOrCreateFilter(query, filter, newSensor.getName()).list();
+            final Query query = service.query(mdl11.etSensor);
+            final EntitySet sensorList = addOrCreateFilter(query, filter, newSensor.getProperty(CommonProperties.EP_NAME)).list();
             if (sensorList.size() > 1) {
-                throw new IllegalStateException("More than one sensor with name " + newSensor.getName());
+                throw new IllegalStateException("More than one sensor with name " + newSensor);
             }
-
             if (sensorList.size() == 1) {
                 sensor = sensorList.iterator().next();
             }
         }
         if (sensor == null) {
-            LOGGER.info("Creating Sensor {}.", newSensor.getName());
+            LOGGER.info("Creating Sensor {}.", newSensor);
             sensor = newSensor;
             create(sensor);
         } else {
@@ -310,43 +331,26 @@ public final class FrostUtils {
         return sensor;
     }
 
-    public boolean mayeUpdateSensor(final Sensor newSensor, final Sensor cached) throws ServiceFailureException {
+    public boolean mayeUpdateSensor(final Entity newSensor, final Entity cached) throws ServiceFailureException {
         boolean update = false;
-        if (!newSensor.getName().equals(cached.getName())) {
-            update = true;
-            cached.setName(newSensor.getName());
-        }
-        if (!newSensor.getDescription().equals(cached.getDescription())) {
-            update = true;
-            cached.setDescription(newSensor.getDescription());
-        }
-        if (!newSensor.getEncodingType().equals(cached.getEncodingType())) {
-            update = true;
-            cached.setEncodingType(newSensor.getEncodingType());
-        }
-        if (!Objects.equals(newSensor.getMetadata(), cached.getMetadata())) {
-            update = true;
-            cached.setMetadata(newSensor.getMetadata());
-        }
-        if (cached.getProperties() == null && newSensor.getProperties() != null && !newSensor.getProperties().isEmpty()) {
-            cached.setProperties(newSensor.getProperties());
-            update = true;
-        } else if (addProperties(cached.getProperties(), newSensor.getProperties(), 5)) {
-            update = true;
-        }
+        update = compareAndUpdate(newSensor, cached, CommonProperties.EP_NAME) || update;
+        update = compareAndUpdate(newSensor, cached, CommonProperties.EP_DESCRIPTION) || update;
+        update = compareAndUpdate(newSensor, cached, CommonProperties.EP_ENCODINGTYPE) || update;
+        update = compareAndUpdate(newSensor, cached, SensorThingsV11Sensing.EP_METADATA) || update;
+        update = addProperties(cached, newSensor, CommonProperties.EP_PROPERTIES, 5) || update;
         if (update) {
             update(cached);
         }
         return update;
     }
 
-    public FeatureOfInterest findOrCreateFeature(final String filter, final String name, final String description, final GeoJsonObject geoJson, final Map<String, Object> properties, final FeatureOfInterest cached) throws ServiceFailureException {
+    public Entity findOrCreateFeature(final String filter, final String name, final String description, final GeoJsonObject geoJson, final Map<String, Object> properties, final Entity cached) throws ServiceFailureException {
         final FeatureOfInterest foi = new FeatureOfInterest(name, description, CONTENT_TYPE_GEOJSON, geoJson);
         foi.setProperties(properties);
         return findOrCreateFeature(filter, foi, cached);
     }
 
-    public FeatureOfInterest findOrCreateFeature(final String filter, final FeatureOfInterest newFeature, final FeatureOfInterest cachedFeature) throws ServiceFailureException {
+    public Entity findOrCreateFeature(final String filter, final Entity newFeature, final Entity cachedFeature) throws ServiceFailureException {
         FeatureOfInterest foi = null;
         if (cachedFeature != null) {
             foi = cachedFeature;
@@ -370,7 +374,7 @@ public final class FrostUtils {
         return foi;
     }
 
-    public boolean maybeUpdateFeatureOfInterest(final FeatureOfInterest newFeature, final FeatureOfInterest foiToUpdate) throws ServiceFailureException {
+    public boolean maybeUpdateFeatureOfInterest(final Entity newFeature, final Entity foiToUpdate) throws ServiceFailureException {
         boolean update = false;
         if (!newFeature.getName().equals(foiToUpdate.getName())) {
             update = true;
@@ -404,13 +408,13 @@ public final class FrostUtils {
         return update;
     }
 
-    public ObservedProperty findOrCreateOp(final String filter, final String name, final String def, final String description, final Map<String, Object> properties, final ObservedProperty cached) throws ServiceFailureException {
+    public Entity findOrCreateOp(final String filter, final String name, final String def, final String description, final Map<String, Object> properties, final Entity cached) throws ServiceFailureException {
         final ObservedProperty observedProperty = new ObservedProperty(name, def, description);
         observedProperty.setProperties(properties);
         return findOrCreateOp(filter, observedProperty, cached);
     }
 
-    public ObservedProperty findOrCreateOp(final String filter, final ObservedProperty newObsProp, final ObservedProperty cachedObsProp) throws ServiceFailureException {
+    public Entity findOrCreateOp(final String filter, final Entity newObsProp, final Entity cachedObsProp) throws ServiceFailureException {
         ObservedProperty observedProperty = null;
         if (cachedObsProp != null) {
             observedProperty = cachedObsProp;
@@ -434,7 +438,7 @@ public final class FrostUtils {
         return observedProperty;
     }
 
-    public boolean maybeUpdateOp(final ObservedProperty newObsProp, final ObservedProperty opToUpdate) throws ServiceFailureException {
+    public boolean maybeUpdateOp(final Entity newObsProp, final Entity opToUpdate) throws ServiceFailureException {
         boolean update = false;
         if (!newObsProp.getName().equals(opToUpdate.getName())) {
             update = true;
@@ -457,16 +461,16 @@ public final class FrostUtils {
         return update;
     }
 
-    public Datastream findOrCreateDatastream(
+    public Entity findOrCreateDatastream(
             final String filter,
             final String name,
             final String desc,
             final Map<String, Object> properties,
             final UnitOfMeasurement uom,
-            final Thing t,
-            final ObservedProperty op,
-            final Sensor s,
-            final Datastream cached) throws ServiceFailureException {
+            final Entity t,
+            final Entity op,
+            final Entity s,
+            final Entity cached) throws ServiceFailureException {
         Datastream ds = new Datastream(name, desc, OBS_TYPE_MEASUREMENT, uom);
         ds.setProperties(properties);
         ds.setThing(t);
@@ -475,7 +479,7 @@ public final class FrostUtils {
         return findOrCreateDatastream(filter, ds, cached);
     }
 
-    public Datastream findOrCreateDatastream(final String filter, final Datastream newDatastream, final Datastream cached) throws ServiceFailureException {
+    public Entity findOrCreateDatastream(final String filter, final Entity newDatastream, final Entity cached) throws ServiceFailureException {
         Datastream datastream = null;
         if (cached != null) {
             datastream = cached;
@@ -499,7 +503,7 @@ public final class FrostUtils {
         return datastream;
     }
 
-    public boolean maybeUpdateDatastream(final Datastream newDatastream, final Datastream dsToUpdate) throws ServiceFailureException {
+    public boolean maybeUpdateDatastream(final Entity newDatastream, final Entity dsToUpdate) throws ServiceFailureException {
         boolean update = false;
         if (!newDatastream.getName().equals(dsToUpdate.getName())) {
             dsToUpdate.setName(newDatastream.getName());
@@ -530,7 +534,7 @@ public final class FrostUtils {
         return update;
     }
 
-    public MultiDatastream findOrCreateMultiDatastream(final String filter, final String name, final String desc, final List<UnitOfMeasurement> uoms, final Thing thing, final List<ObservedProperty> observedProperties, final Sensor sensor, final Map<String, Object> props, final MultiDatastream cached) throws ServiceFailureException {
+    public Entity findOrCreateMultiDatastream(final String filter, final String name, final String desc, final List<UnitOfMeasurement> uoms, final Entity thing, final List<ObservedProperty> observedProperties, final Sensor sensor, final Map<String, Object> props, final MultiDatastream cached) throws ServiceFailureException {
         MultiDatastream mds = null;
         if (cached != null) {
             mds = cached;
@@ -560,7 +564,7 @@ public final class FrostUtils {
         return mds;
     }
 
-    public boolean maybeUpdateMultiDatastream(final String name, final String desc, final Map<String, Object> props, final MultiDatastream mdsToUpdate) throws ServiceFailureException {
+    public boolean maybeUpdateMultiDatastream(final String name, final String desc, final Map<String, Object> props, final Entity mdsToUpdate) throws ServiceFailureException {
         boolean update = false;
         if (!name.equals(mdsToUpdate.getName())) {
             update = true;
@@ -583,24 +587,24 @@ public final class FrostUtils {
         return update;
     }
 
-    public Location findOrCreateLocation(final String name, final String description, final Map<String, Object> properties, final GeoJsonObject geoJson) throws ServiceFailureException {
+    public Entity findOrCreateLocation(final String name, final String description, final Map<String, Object> properties, final GeoJsonObject geoJson) throws ServiceFailureException {
         final String filter = "name eq '" + Utils.escapeForStringConstant(name) + "'";
         return findOrCreateLocation(filter, name, description, properties, geoJson, null);
     }
 
-    public Location findOrCreateLocation(final String filter, final String name, final String description, final Map<String, Object> properties, final GeoJsonObject geoJson, final Location cached) throws ServiceFailureException {
-        final Location location = new Location(name, description, ENCODING_GEOJSON, geoJson);
+    public Entity findOrCreateLocation(final String filter, final String name, final String description, final Map<String, Object> properties, final GeoJsonObject geoJson, final Entity cached) throws ServiceFailureException {
+        final Entity location = newLocation(name, description, ENCODING_GEOJSON, geoJson);
         location.setProperties(properties);
         return findOrCreateLocation(filter, location, cached);
     }
 
-    public Location findOrCreateLocation(final String filter, final Location newLocation, final Location cached) throws ServiceFailureException {
-        Location location = null;
+    public Entity findOrCreateLocation(final String filter, final Entity newLocation, final Entity cached) throws ServiceFailureException {
+        Entity location = null;
         if (cached != null) {
             location = cached;
         } else {
-            final Query<Location> query = service.locations().query();
-            final EntityList<Location> lList = addOrCreateFilter(query, filter, newLocation.getName()).list();
+            final Query<Entity> query = service.locations().query();
+            final EntityList<Entity> lList = addOrCreateFilter(query, filter, newLocation.getName()).list();
             if (lList.size() > 1) {
                 throw new IllegalStateException("More than one Location matches filter: " + filter);
             }
@@ -618,7 +622,7 @@ public final class FrostUtils {
         return location;
     }
 
-    public boolean maybeUpdateLocation(final Location newLocation, final Location locationToUpdate) throws ServiceFailureException {
+    public boolean maybeUpdateLocation(final Entity newLocation, final Entity locationToUpdate) throws ServiceFailureException {
         boolean updated = false;
         if (!locationToUpdate.getName().equals(newLocation.getName())) {
             updated = true;
@@ -651,22 +655,45 @@ public final class FrostUtils {
         if (in instanceof Number) {
             return in.toString();
         }
-        return "'" + Utils.escapeForStringConstant(String.valueOf(in)) + "'";
+        return "'" + StringHelper.escapeForStringConstant(String.valueOf(in)) + "'";
     }
 
-    public static <Q extends Entity<Q>> Query<Q> addOrCreateFilter(final Query<Q> query, final String filter, final String name) {
-        if (Utils.isNullOrEmpty(filter)) {
-            return query.filter("name eq '" + Utils.escapeForStringConstant(name) + "'");
+    public static Query addOrCreateFilter(final Query query, final String filter, final String name) {
+        if (StringHelper.isNullOrEmpty(filter)) {
+            return query.filter("name eq '" + StringHelper.escapeForStringConstant(name) + "'");
         }
         return query.filter(filter);
     }
 
-    public static Instant phenTimeToInstant(final TimeObject phenTime) {
+    public static Moment phenTimeToInstant(final TimeValue phenTime) {
         if (phenTime.isInterval()) {
-            final Interval interval = phenTime.getAsInterval();
-            return interval.getStart().plus(interval.toDuration().dividedBy(2));
+            TimeInterval interval = phenTime.getInterval();
+            return interval.getStart().plus(interval.getInterval().getSimpleDuration().dividedBy(2, RoundingMode.HALF_EVEN));
         }
-        return phenTime.getAsDateTime().toInstant();
+        return phenTime.getInstant().getDateTime();
+    }
+
+    /**
+     * Checks if all entries in source exist in target, with the same value.If
+     * not, target is updated and true is returned. Sub-maps are recursed.
+     *
+     * @param target the target map to update
+     * @param source the source map to get values from
+     * @param property the property to merge.
+     * @param maxDepth The maximum depth to recurse.
+     * @return true if target was updated, false if not.
+     */
+    public static boolean addProperties(final Entity target, final Entity source, final EntityPropertyMain<MapValue> property, final int maxDepth) {
+        MapValue sourceP = source.getProperty(property);
+        MapValue targetP = target.getProperty(property);
+        if (sourceP == null || sourceP.isEmpty()) {
+            return false;
+        }
+        if (targetP == null) {
+            target.setProperty(property, sourceP);
+            return true;
+        }
+        return addProperties(targetP.getContent(), sourceP.getContent(), maxDepth);
     }
 
     /**
@@ -752,9 +779,7 @@ public final class FrostUtils {
             if (two instanceof Instant) {
                 return ((Instant) two).equals(Instant.parse(one.toString()));
             }
-            if (one instanceof Collection && two instanceof Collection) {
-                final Collection cOne = (Collection) one;
-                final Collection cTwo = (Collection) two;
+            if (one instanceof Collection cOne && two instanceof Collection cTwo) {
                 final Iterator iTwo = cTwo.iterator();
                 for (final Object itemOne : cOne) {
                     if (!iTwo.hasNext() || !resultCompare(itemOne, iTwo.next())) {
@@ -775,8 +800,8 @@ public final class FrostUtils {
         return false;
     }
 
-    public static Instant instantFrom(TimeObject time) {
-        return time.isInterval() ? time.getAsInterval().getStart() : time.getAsDateTime().toInstant();
+    public static Moment instantFrom(TimeValue time) {
+        return time.isInterval() ? time.getInterval().getStart() : time.getInstant().getDateTime();
     }
 
     /**
@@ -797,19 +822,19 @@ public final class FrostUtils {
 
     }
 
-    public static TimeObject timeObjectFrom(final Timestamp timestamp, final ZoneId timeZone) {
+    public static TimeValue timeObjectFrom(final Timestamp timestamp, final ZoneId timeZone) {
         try {
             final Instant instant = timestamp.toInstant();
-            return new TimeObject(ZonedDateTime.from(instant));
+            return TimeValue.create(instant);
         } catch (final Exception exc) {
             LOGGER.trace("Timestamp without timezone?", exc);
-            return new TimeObject(ZonedDateTime.of(timestamp.toLocalDateTime(), timeZone));
+            return TimeValue.create(ZonedDateTime.of(timestamp.toLocalDateTime(), timeZone));
         }
     }
 
     public static TimeObject timeObjectFrom(final Date date) {
         final Instant instant = date.toInstant();
-        return new TimeObject(ZonedDateTime.from(instant));
+        return TimeValue.create(ZonedDateTime.from(instant));
     }
 
     /**
@@ -821,11 +846,10 @@ public final class FrostUtils {
      * @param timeZone the time zone to cast the times to.
      * @return a timeobject.
      */
-    public static TimeObject timeObjectFrom(final Timestamp start, final Timestamp end, final ZoneId timeZone) {
+    public static TimeValue timeObjectFrom(final Timestamp start, final Timestamp end, final ZoneId timeZone) {
         final Instant instantStart = timestampToInstant(start, timeZone);
         final Instant instantEnd = timestampToInstant(end, timeZone);
-        final Interval interval = Interval.of(instantStart, instantEnd);
-        return new TimeObject(interval);
+        return TimeValue.create(instantStart, instantEnd);
     }
 
     /**
@@ -836,12 +860,10 @@ public final class FrostUtils {
      * @param end the ending timeStamp
      * @return a timeobject.
      */
-    public static TimeObject timeObjectFrom(final Date start, final Date end) {
-
+    public static TimeValue timeObjectFrom(final Date start, final Date end) {
         final Instant instantStart = start.toInstant();
         final Instant instantEnd = end.toInstant();
-        final Interval interval = Interval.of(instantStart, instantEnd);
-        return new TimeObject(interval);
+        return TimeValue.create(instantStart, instantEnd);
     }
 
     /**
@@ -851,15 +873,14 @@ public final class FrostUtils {
      * @param end the ending timeStamp
      * @return a timeobject.
      */
-    public static TimeObject timeObjectFrom(final String start, final String end) {
+    public static TimeValue timeObjectFrom(final String start, final String end) {
         final Instant instantStart = ZonedDateTime.parse(start).toInstant();
         final Instant instantEnd = ZonedDateTime.parse(end).toInstant();
-        final Interval interval = Interval.of(instantStart, instantEnd);
-        return new TimeObject(interval);
+        return TimeValue.create(instantStart, instantEnd);
     }
 
     public static Point convertCoordinates(final double first, final double second, final String crsName, int numberScale) {
-        if (Utils.isNullOrEmpty(crsName)) {
+        if (StringHelper.isNullOrEmpty(crsName)) {
             return new Point(
                     new BigDecimal(second).setScale(numberScale, RoundingMode.HALF_EVEN).doubleValue(),
                     new BigDecimal(first).setScale(numberScale, RoundingMode.HALF_EVEN).doubleValue());

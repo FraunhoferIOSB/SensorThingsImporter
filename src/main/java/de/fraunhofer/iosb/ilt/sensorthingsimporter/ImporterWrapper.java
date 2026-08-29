@@ -28,16 +28,16 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.exception.StatusCodeException;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.utils.Utils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler.ImporterScheduler;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ChangingStatusLogger;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.Validator;
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.StatusCodeException;
-import de.fraunhofer.iosb.ilt.sta.Utils;
-import de.fraunhofer.iosb.ilt.sta.model.Entity;
 import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -170,7 +170,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
         Map<Entity, ObservationList> obsPerDs = new HashMap<>();
         Entity lastKey = null;
         try {
-            for (List<Observation> observations : importer) {
+            for (List<Entity> observations : importer) {
                 lastKey = queueObservationsForValidation(observations, obsPerDs, lastKey);
                 logStatus.setErrors(importer.getErrorCount());
             }
@@ -196,7 +196,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
     }
 
     private Entity queueObservationsForValidation(List<Observation> observations, Map<Entity, ObservationList> obsPerDs, Entity lastKey) {
-        for (Observation observation : observations) {
+        for (Entity observation : observations) {
             try {
                 Entity key = observation.getDatastream();
                 if (key == null) {
