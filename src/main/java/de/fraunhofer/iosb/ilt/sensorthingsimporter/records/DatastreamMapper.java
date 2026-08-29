@@ -18,11 +18,10 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.records;
 
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 
 /**
  * Finds Datastreams based on a Tuple.
@@ -41,7 +40,7 @@ public interface DatastreamMapper extends AnnotatedConfigurable<Object, Object> 
      * @return The Datastream to use for the given record.
      * @throws ImportException if there is a permanent failure.
      */
-    public Datastream getDatastreamFor(Tuple record, ErrorLog errorLog) throws ImportException;
+    public Entity getDatastreamFor(Tuple record, ErrorLog errorLog) throws ImportException;
 
-    public MultiDatastream getMultiDatastreamFor(Tuple record, ErrorLog errorLog) throws ImportException;
+    public Entity getMultiDatastreamFor(Tuple record, ErrorLog errorLog) throws ImportException;
 }

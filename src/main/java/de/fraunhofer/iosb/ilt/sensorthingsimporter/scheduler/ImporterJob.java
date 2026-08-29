@@ -17,9 +17,9 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler;
 
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImporterWrapper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options;
-import de.fraunhofer.iosb.ilt.sta.Utils;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -99,7 +99,7 @@ public class ImporterJob implements Job {
             return config;
         } else {
             String config = Options.getEnv(fileName, "");
-            if (!Utils.isNullOrEmpty(config)) {
+            if (!StringHelper.isNullOrEmpty(config)) {
                 return config;
             }
         }

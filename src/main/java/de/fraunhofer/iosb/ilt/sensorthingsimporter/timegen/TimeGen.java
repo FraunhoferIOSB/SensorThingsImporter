@@ -18,21 +18,27 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen;
 
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import java.time.Instant;
+import net.time4j.Moment;
 
-/**
- *
- * @author scf
- */
-public interface TimeGen extends AnnotatedConfigurable<SensorThingsService, Object> {
+public interface TimeGen extends AnnotatedConfigurable<Object, Object> {
 
     public Instant getInstant();
 
-    public Instant getInstant(Datastream ds);
+    public Instant getInstantFromDs(Entity ds);
 
-    public Instant getInstant(MultiDatastream mds);
+    public Instant getInstantFromMds(Entity mds);
 
+    public default Moment getMoment() {
+        return Moment.from(getInstant());
+    }
+
+    public default Moment getMomentFromDs(Entity ds) {
+        return Moment.from(getInstantFromDs(ds));
+    }
+
+    public default Moment getMomentFromMds(Entity mds) {
+        return Moment.from(getInstantFromMds(mds));
+    }
 }

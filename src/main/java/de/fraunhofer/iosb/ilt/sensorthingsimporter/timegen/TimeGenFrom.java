@@ -19,15 +19,10 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen;
 
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 
-/**
- *
- * @author scf
- */
 public class TimeGenFrom implements TimeGen {
 
     @ConfigurableField(editor = EditorString.class,
@@ -41,12 +36,12 @@ public class TimeGenFrom implements TimeGen {
     }
 
     @Override
-    public Instant getInstant(Datastream ds) {
+    public Instant getInstantFromDs(Entity ds) {
         return ZonedDateTime.parse(startTime).toInstant();
     }
 
     @Override
-    public Instant getInstant(MultiDatastream mds) {
+    public Instant getInstantFromMds(Entity mds) {
         return ZonedDateTime.parse(startTime).toInstant();
     }
 

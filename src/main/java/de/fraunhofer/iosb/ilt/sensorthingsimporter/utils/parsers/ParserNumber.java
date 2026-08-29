@@ -21,14 +21,10 @@ import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.Configurable;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorNull;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
 import java.math.BigDecimal;
 import tools.jackson.databind.JsonNode;
 
-/**
- *
- * @author scf
- */
 public class ParserNumber implements Parser<Number>, Configurable<SensorThingsService, Object> {
 
     private final EditorNull editor = new EditorNull("BigDecimal", "Parses strings into BigDecimals.");

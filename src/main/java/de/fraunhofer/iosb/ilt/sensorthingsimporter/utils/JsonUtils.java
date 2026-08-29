@@ -17,6 +17,8 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
+import de.fraunhofer.iosb.ilt.frostclient.model.property.type.TypeComplex;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.MapValue;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,8 +33,7 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- *
- * @author scf
+ * Helper functions for working with JSON.
  */
 public class JsonUtils {
 
@@ -112,6 +113,10 @@ public class JsonUtils {
             LOGGER.debug("Exception: ", ex);
             return new HashMap<>();
         }
+    }
+
+    public static MapValue jsonToProperties(String json) {
+        return new MapValue(TypeComplex.STA_MAP, jsonToMap(json));
     }
 
     public static String DecodeJsonPointer(String pointer) {

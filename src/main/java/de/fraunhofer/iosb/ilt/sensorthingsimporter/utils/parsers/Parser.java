@@ -20,8 +20,8 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers;
 import tools.jackson.databind.JsonNode;
 
 /**
+ * Interface for parsers.
  *
- * @author scf
  * @param <T> The type of the result.
  */
 public interface Parser<T> {

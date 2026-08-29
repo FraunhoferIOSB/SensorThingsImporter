@@ -20,15 +20,10 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorEnum;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-/**
- *
- * @author scf
- */
 public class TimeGenAgo implements TimeGen {
 
     @ConfigurableField(editor = EditorInt.class,
@@ -46,12 +41,12 @@ public class TimeGenAgo implements TimeGen {
     }
 
     @Override
-    public Instant getInstant(Datastream ds) {
+    public Instant getInstantFromDs(Entity ds) {
         return Instant.now().minus(unit.getDuration().multipliedBy(amount));
     }
 
     @Override
-    public Instant getInstant(MultiDatastream mds) {
+    public Instant getInstantFromMds(Entity mds) {
         return Instant.now().minus(unit.getDuration().multipliedBy(amount));
     }
 

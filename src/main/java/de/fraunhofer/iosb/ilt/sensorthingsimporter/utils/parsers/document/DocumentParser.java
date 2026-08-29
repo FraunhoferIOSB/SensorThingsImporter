@@ -18,21 +18,15 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.document;
 
 import de.fraunhofer.iosb.ilt.configurable.Configurable;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.util.List;
 
-/**
- *
- * @author scf
- */
 public interface DocumentParser extends Configurable<SensorThingsService, Object> {
 
-    public List<Observation> process(Datastream ds, ErrorLog errorLog, String input) throws ImportException;
+    public List<Entity> processDatastream(Entity ds, ErrorLog errorLog, String input) throws ImportException;
 
-    public List<Observation> process(MultiDatastream mds, ErrorLog errorLog, String... inputs) throws ImportException;
+    public List<Entity> processMultiDatastream(Entity mds, ErrorLog errorLog, String... inputs) throws ImportException;
 }

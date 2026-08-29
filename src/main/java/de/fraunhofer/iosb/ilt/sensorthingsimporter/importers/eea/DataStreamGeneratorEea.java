@@ -17,6 +17,7 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea;
 
+import static de.fraunhofer.iosb.ilt.frostclient.models.ext.UnitOfMeasurement.EP_NAME;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_AREA_TYPE;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_BEGIN_TIME;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_COUNTRY_CODE;
@@ -35,21 +36,20 @@ import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.ModelRegistry;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.UnitOfMeasurement;
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DatastreamGenerator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.EntityCache;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.Utils;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.Location;
-import de.fraunhofer.iosb.ilt.sta.model.ObservedProperty;
-import de.fraunhofer.iosb.ilt.sta.model.Sensor;
-import de.fraunhofer.iosb.ilt.sta.model.Thing;
-import de.fraunhofer.iosb.ilt.sta.model.ext.UnitOfMeasurement;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -64,10 +64,6 @@ import org.geojson.Point;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- *
- * @author hylke
- */
 public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedConfigurable<SensorThingsService, Object> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DataStreamGeneratorEea.class.getName());
@@ -78,22 +74,27 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
     private String stationsUrl;
 
     private FrostUtils frostUtils;
+    private SensorThingsV11Sensing mdl11;
+    private SensorThingsV11MultiDatastream mdlMds;
 
     /**
      * StationLocalid/SamplingPointLocalId
      */
     private static final Map<String, Map<String, Map<String, EeaStationRecord>>> STATIONS = new HashMap<>();
     private static final Map<String, EeaStationRecord> SAMPLING_POINTS = new HashMap<>();
-    private final EntityCache<String, ObservedProperty> observedPropertyCache = EeaObservedProperty.createObservedPropertyCache();
+    private final EntityCache<String> observedPropertyCache = EeaObservedProperty.createObservedPropertyCache();
 
     @Override
     public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
         frostUtils = new FrostUtils(context);
+        final ModelRegistry mr = context.getModelRegistry();
+        mdl11 = mr.getModel(SensorThingsV11Sensing.class);
+        mdlMds = mr.getModel(SensorThingsV11MultiDatastream.class);
         AnnotatedConfigurable.super.configure(config, context, edtCtx, configEditor);
     }
 
     @Override
-    public Datastream createDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
+    public Entity createDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
         EeaStationRecord stationRecord = findStation(record);
         if (stationRecord == null) {
             return null;
@@ -101,7 +102,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
         return importEntities(stationRecord, record);
     }
 
-    private Datastream importEntities(EeaStationRecord sr, CSVRecord record) throws ImportException {
+    private Entity importEntities(EeaStationRecord sr, CSVRecord record) throws ImportException {
         String name = sr.airQualityStation;
         Point point = new Point(
                 new BigDecimal(sr.longitude).setScale(6, RoundingMode.HALF_EVEN).doubleValue(),
@@ -142,20 +143,20 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
         dsProps.put(TAG_NAMESPACE, sr.namespace);
         dsProps.put(TAG_METADATA, stationsUrl);
 
-        if (Utils.isNullOrEmpty(sr.samplingProces)) {
+        if (StringHelper.isNullOrEmpty(sr.samplingProces)) {
             LOGGER.error("Station with empty samplingProcess.");
             return null;
         }
         try {
-            String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(sr.airQualityStation);
-            Location location = frostUtils.findOrCreateLocation(
+            String filter = "properties/" + TAG_LOCAL_ID + " eq " + StringHelper.quoteForUrl(sr.airQualityStation);
+            Entity location = frostUtils.findOrCreateLocation(
                     filter,
                     name,
                     "Location of station " + name,
                     locationProps,
                     point,
                     null);
-            Thing thing = frostUtils.findOrCreateThing(
+            Entity thing = frostUtils.findOrCreateThing(
                     filter,
                     name,
                     "Measurement station " + name,
@@ -163,8 +164,8 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
                     location,
                     null);
 
-            filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(sr.samplingProces);
-            Sensor sensor = frostUtils.findOrCreateSensor(
+            filter = "properties/" + TAG_LOCAL_ID + " eq " + StringHelper.quoteForUrl(sr.samplingProces);
+            Entity sensor = frostUtils.findOrCreateSensor(
                     filter,
                     sr.samplingProces,
                     "Sensor " + sr.samplingProces,
@@ -172,18 +173,18 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
                     sr.measurementEquipment,
                     sensorProps,
                     null);
-            ObservedProperty observedProperty = observedPropertyCache.get(FrostUtils.afterLastSlash(sr.airPollutantCode).trim());
+            Entity observedProperty = observedPropertyCache.get(FrostUtils.afterLastSlash(sr.airPollutantCode).trim());
 
             String valueUnit = getFromRecord(record, "UNIT", "value_unit", "UnitOfMeasurement");
             if (valueUnit == null) {
                 throw new ImportException("Could not find unit in record.");
             }
             UnitOfMeasurement uom = new UnitOfMeasurement(valueUnit, valueUnit, valueUnit);
-            filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(sr.samplingPoint);
-            Datastream ds = frostUtils.findOrCreateDatastream(
+            filter = "properties/" + TAG_LOCAL_ID + " eq " + StringHelper.quoteForUrl(sr.samplingPoint);
+            Entity ds = frostUtils.findOrCreateDatastream(
                     filter,
                     sr.samplingPoint,
-                    observedProperty.getName() + " at " + thing.getName(),
+                    observedProperty.getProperty(EP_NAME) + " at " + thing.getProperty(EP_NAME),
                     dsProps,
                     uom, thing, observedProperty, sensor, null);
             return ds;
@@ -226,7 +227,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
         }
         try {
             observedPropertyCache.load(
-                    frostUtils.getService().observedProperties(),
+                    frostUtils.getService().dao(mdl11.etObservedProperty),
                     "",
                     "id,name,description,definition,properties",
                     "");
@@ -327,7 +328,7 @@ public class DataStreamGeneratorEea implements DatastreamGenerator, AnnotatedCon
             buildingDistance = record.get("BuildingDistance");
             kerbDistance = record.get("KerbDistance");
 
-            if (Utils.isNullOrEmpty(samplingProces)) {
+            if (StringHelper.isNullOrEmpty(samplingProces)) {
                 samplingProces = "Unknown";
             }
         }

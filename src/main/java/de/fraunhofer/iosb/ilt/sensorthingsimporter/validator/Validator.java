@@ -19,9 +19,9 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableClass;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
 
 /**
  * Validates Observations and determines if they need to be uploaded or not.
@@ -31,7 +31,7 @@ public interface Validator extends AnnotatedConfigurable<Void, Void> {
     public default void init(ObservationUploader uploader) {
     }
 
-    public boolean isValid(Observation obs) throws ImportException;
+    public boolean isValid(Entity obs) throws ImportException;
 
     /**
      * Always returns true.
@@ -40,7 +40,7 @@ public interface Validator extends AnnotatedConfigurable<Void, Void> {
     public static class ValidatorNull implements Validator {
 
         @Override
-        public boolean isValid(Observation obs) throws ImportException {
+        public boolean isValid(Entity obs) throws ImportException {
             return true;
         }
 

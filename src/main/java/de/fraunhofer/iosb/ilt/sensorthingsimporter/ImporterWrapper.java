@@ -28,16 +28,18 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.exception.StatusCodeException;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.ModelRegistry;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler.ImporterScheduler;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ChangingStatusLogger;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.Validator;
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.StatusCodeException;
-import de.fraunhofer.iosb.ilt.sta.Utils;
-import de.fraunhofer.iosb.ilt.sta.model.Entity;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -64,8 +66,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
- * @author scf
+ * The main configurable class for importers.
  */
 public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsService, Object> {
 
@@ -139,8 +140,15 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
     // Don't cache too many observations.
     private long nextSend;
 
+    private SensorThingsV11Sensing mdl11;
+    private SensorThingsV11MultiDatastream mdlMds;
+
     public void init() throws MalformedURLException, ImportException {
         SensorThingsService service = uploader.getService();
+        final ModelRegistry mr = service.getModelRegistry();
+        mdl11 = mr.getModel(SensorThingsV11Sensing.class);
+        mdlMds = mr.getModel(SensorThingsV11MultiDatastream.class);
+
         nextSend = validatorBatchSize;
         importer.init(service);
         validator.init(uploader);
@@ -156,7 +164,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
     }
 
     public void setName(String name) {
-        if (Utils.isNullOrEmpty(this.name) || !NAME_DEFAULT.equals(name)) {
+        if (StringHelper.isNullOrEmpty(this.name) || !NAME_DEFAULT.equals(name)) {
             this.name = name;
             logStatus.setName("⏸" + name);
         }
@@ -170,7 +178,7 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
         Map<Entity, ObservationList> obsPerDs = new HashMap<>();
         Entity lastKey = null;
         try {
-            for (List<Observation> observations : importer) {
+            for (List<Entity> observations : importer) {
                 lastKey = queueObservationsForValidation(observations, obsPerDs, lastKey);
                 logStatus.setErrors(importer.getErrorCount());
             }
@@ -195,12 +203,16 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
         }
     }
 
-    private Entity queueObservationsForValidation(List<Observation> observations, Map<Entity, ObservationList> obsPerDs, Entity lastKey) {
-        for (Observation observation : observations) {
+    private Entity queueObservationsForValidation(List<Entity> observations, Map<Entity, ObservationList> obsPerDs, Entity lastKey) {
+        for (Entity observation : observations) {
             try {
-                Entity key = observation.getDatastream();
+                Entity key = observation.getProperty(mdl11.npObservationDatastream);
+                if (key == null && mdlMds != null) {
+                    key = observation.getProperty(mdlMds.npObservationMultidatastream);
+                }
                 if (key == null) {
-                    key = observation.getMultiDatastream();
+                    LOGGER.trace("No (Multi)Datastream found");
+                    continue;
                 }
                 if (validatorBatchOnDs && !key.equals(lastKey)) {
                     queueObservationsForSending(obsPerDs);
@@ -316,8 +328,8 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
         }
     }
 
-    private void validateAndSend(List<Observation> observations, Calendar start) {
-        for (Observation observation : observations) {
+    private void validateAndSend(List<Entity> observations, Calendar start) {
+        for (Entity observation : observations) {
             try {
                 if (validator.isValid(observation)) {
                     uploader.addObservation(observation);
@@ -467,14 +479,14 @@ public class ImporterWrapper implements AnnotatedConfigurable<SensorThingsServic
     private class ObservationList {
 
         public final Entity ds;
-        public final List<Observation> observations;
+        public final List<Entity> observations;
 
         public ObservationList(Entity ds) {
             this.ds = ds;
             this.observations = new ArrayList<>();
         }
 
-        public void add(Observation o) {
+        public void add(Entity o) {
             observations.add(o);
         }
 

@@ -20,16 +20,18 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.EntitySet;
+import de.fraunhofer.iosb.ilt.frostclient.model.ModelRegistry;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
+import de.fraunhofer.iosb.ilt.frostclient.query.Query;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator.StringType;
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.model.ext.EntityList;
-import de.fraunhofer.iosb.ilt.sta.query.Query;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.csv.CSVRecord;
@@ -45,8 +47,8 @@ public class DsMapperFilter implements DatastreamMapper {
      * The logger for this class.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(DsMapperFilter.class);
-    private final Map<String, Datastream> datastreamCache = new HashMap<>();
-    private final Map<String, MultiDatastream> multiDatastreamCache = new HashMap<>();
+    private final Map<String, Entity> datastreamCache = new HashMap<>();
+    private final Map<String, Entity> multiDatastreamCache = new HashMap<>();
 
     @ConfigurableField(editor = EditorString.class,
             label = "Filter", description = "A filter that will be added to the query for the datastream.\nUse placeholders {colNr} to add the content of columns to the query.")
@@ -59,6 +61,8 @@ public class DsMapperFilter implements DatastreamMapper {
     private DatastreamGenerator dsGenerator;
 
     private SensorThingsService service;
+    private SensorThingsV11Sensing mdl11;
+    private SensorThingsV11MultiDatastream mdlMds;
 
     public DsMapperFilter() {
     }
@@ -66,13 +70,19 @@ public class DsMapperFilter implements DatastreamMapper {
     @Override
     public void init(SensorThingsService service) throws ImportException {
         this.service = service;
+        final ModelRegistry mr = service.getModelRegistry();
+        mdl11 = mr.getModel(SensorThingsV11Sensing.class);
+        mdlMds = mr.getModel(SensorThingsV11MultiDatastream.class);
+        if (dsGenerator != null) {
+            dsGenerator.init(service);
+        }
     }
 
     @Override
-    public Datastream getDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
+    public Entity getDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
         try {
             String filter = Translator.fillTemplate(filterTemplate, record, StringType.URL, true);
-            Datastream ds = getDatastreamFor(filter, record, errorLog);
+            Entity ds = getDatastreamFor(filter, record, errorLog);
             return ds;
         } catch (ServiceFailureException ex) {
             LOGGER.error("Failed to fetch datastream.", ex);
@@ -81,10 +91,10 @@ public class DsMapperFilter implements DatastreamMapper {
     }
 
     @Override
-    public MultiDatastream getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) {
+    public Entity getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) {
         try {
             String filter = Translator.fillTemplate(filterTemplate, record, StringType.URL, true);
-            MultiDatastream ds = getMultiDatastreamFor(filter, record, errorLog);
+            Entity ds = getMultiDatastreamFor(filter, record, errorLog);
             return ds;
         } catch (ServiceFailureException ex) {
             LOGGER.error("Failed to fetch datastream.", ex);
@@ -92,8 +102,8 @@ public class DsMapperFilter implements DatastreamMapper {
         }
     }
 
-    private Datastream getDatastreamFor(String filter, CSVRecord record, ErrorLog errorLog) throws ServiceFailureException, ImportException {
-        Datastream ds = datastreamCache.get(filter);
+    private Entity getDatastreamFor(String filter, CSVRecord record, ErrorLog errorLog) throws ServiceFailureException, ImportException {
+        Entity ds = datastreamCache.get(filter);
         if (ds != null) {
             return ds;
         }
@@ -101,8 +111,8 @@ public class DsMapperFilter implements DatastreamMapper {
             // We previously had found nothing. Don't search again.
             return null;
         }
-        Query<Datastream> query = service.datastreams().query().filter(filter);
-        EntityList<Datastream> streams = query.list();
+        Query query = service.query(mdl11.etDatastream).filter(filter);
+        EntitySet streams = query.list();
         if (streams.size() > 1) {
             LOGGER.error("Found incorrect number of datastreams: {} for filter: {}", streams.size(), filter);
             if (dsGenerator != null) {
@@ -122,7 +132,7 @@ public class DsMapperFilter implements DatastreamMapper {
             }
         } else {
             ds = streams.iterator().next();
-            LOGGER.debug("Found datastream {} for filter {}.", ds.getId(), filter);
+            LOGGER.debug("Found datastream {} for filter {}.", ds, filter);
         }
         if (ds == null) {
             errorLog.addError("DS not found");
@@ -132,19 +142,19 @@ public class DsMapperFilter implements DatastreamMapper {
         return ds;
     }
 
-    private MultiDatastream getMultiDatastreamFor(String filter, CSVRecord record, ErrorLog errorLog) throws ServiceFailureException {
-        MultiDatastream mds = multiDatastreamCache.get(filter);
+    private Entity getMultiDatastreamFor(String filter, CSVRecord record, ErrorLog errorLog) throws ServiceFailureException {
+        Entity mds = multiDatastreamCache.get(filter);
         if (mds != null) {
             return mds;
         }
-        Query<MultiDatastream> query = service.multiDatastreams().query().filter(filter);
-        EntityList<MultiDatastream> streams = query.list();
+        Query query = service.query(mdlMds.etMultiDatastream).filter(filter);
+        EntitySet streams = query.list();
         if (streams.size() != 1) {
             LOGGER.error("Found incorrect number of multiDatastreams: {}", streams.size());
             throw new IllegalArgumentException("Found incorrect number of multiDatastreams: " + streams.size());
         }
         mds = streams.iterator().next();
-        LOGGER.info("Found multiDatastreams {} for query {}.", mds.getId(), filter);
+        LOGGER.info("Found multiDatastreams {} for query {}.", mds, filter);
         multiDatastreamCache.put(filter, mds);
         return mds;
     }

@@ -17,35 +17,57 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
+import static de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing.EP_PHENOMENONTIME;
+
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.ModelRegistry;
+import de.fraunhofer.iosb.ilt.frostclient.model.PkValue;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeValue;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.Id;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
+import java.net.MalformedURLException;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import net.time4j.Moment;
 
 /**
  * Checks if the observation has a phenomenonTime that is later than the latest
  * in the configured datastream.
- *
- * @author scf
  */
 public class ValidatorNewer implements Validator {
 
-    private final Map<Id, Instant> datastreamCache = new HashMap<>();
-    private final Map<Id, Instant> multiDatastreamCache = new HashMap<>();
+    private static final Moment MOMENT_MIN = Moment.from(Instant.MIN);
+
+    private final Map<PkValue, Moment> datastreamCache = new HashMap<>();
+    private final Map<PkValue, Moment> multiDatastreamCache = new HashMap<>();
+
+    private SensorThingsV11Sensing mdl11;
+    private SensorThingsV11MultiDatastream mdlMds;
 
     @Override
-    public boolean isValid(Observation obs) throws ImportException {
+    public void init(ObservationUploader uploader) {
         try {
-            Instant latest;
-            Datastream ds = obs.getDatastream();
+            final SensorThingsService service = uploader.getService();
+            final ModelRegistry mr = service.getModelRegistry();
+            mdl11 = mr.getModel(SensorThingsV11Sensing.class);
+            mdlMds = mr.getModel(SensorThingsV11MultiDatastream.class);
+        } catch (MalformedURLException ex) {
+            throw new ImportException(ex);
+        }
+    }
+
+    @Override
+    public boolean isValid(Entity obs) throws ImportException {
+        try {
+            Moment latest;
+            Entity ds = obs.getProperty(mdl11.npObservationDatastream);
             if (ds == null) {
-                MultiDatastream mds = obs.getMultiDatastream();
+                Entity mds = obs.getProperty(mdlMds.npObservationMultidatastream);
                 if (mds == null) {
                     throw new ImportException("Observation has no Datastream of Multidatastream set!");
                 }
@@ -53,12 +75,12 @@ public class ValidatorNewer implements Validator {
             } else {
                 latest = getTimeForDatastream(ds);
             }
-            TimeObject phenomenonTime = obs.getPhenomenonTime();
-            Instant obsInstant;
+            TimeValue phenomenonTime = obs.getProperty(EP_PHENOMENONTIME);
+            Moment obsInstant;
             if (phenomenonTime.isInterval()) {
-                obsInstant = phenomenonTime.getAsInterval().getStart();
+                obsInstant = phenomenonTime.getInterval().getStart();
             } else {
-                obsInstant = phenomenonTime.getAsDateTime().toInstant();
+                obsInstant = phenomenonTime.getInstant().getDateTime();
             }
             return latest.isBefore(obsInstant);
         } catch (ServiceFailureException ex) {
@@ -66,19 +88,22 @@ public class ValidatorNewer implements Validator {
         }
     }
 
-    private Instant getTimeForDatastream(Datastream ds) throws ServiceFailureException {
-        Id dsId = ds.getId();
-        Instant latest = datastreamCache.get(dsId);
+    private Moment getTimeForDatastream(Entity ds) throws ServiceFailureException {
+        PkValue dsId = ds.getPrimaryKeyValues();
+        Moment latest = datastreamCache.get(dsId);
         if (latest == null) {
-            Observation firstObs = ds.observations().query().select("@iot.id", "phenomenonTime").orderBy("phenomenonTime desc").first();
+            Entity firstObs = ds.query(mdl11.npDatastreamObservations)
+                    .select("@iot.id", "phenomenonTime")
+                    .orderBy("phenomenonTime desc")
+                    .first();
             if (firstObs == null) {
-                latest = Instant.MIN;
+                latest = MOMENT_MIN;
             } else {
-                TimeObject phenomenonTime = firstObs.getPhenomenonTime();
+                TimeValue phenomenonTime = firstObs.getProperty(EP_PHENOMENONTIME);
                 if (phenomenonTime.isInterval()) {
-                    latest = phenomenonTime.getAsInterval().getStart();
+                    latest = phenomenonTime.getInterval().getStart();
                 } else {
-                    latest = phenomenonTime.getAsDateTime().toInstant();
+                    latest = phenomenonTime.getInstant().getDateTime();
                 }
             }
             datastreamCache.put(dsId, latest);
@@ -86,19 +111,22 @@ public class ValidatorNewer implements Validator {
         return latest;
     }
 
-    private Instant getTimeForMultiDatastream(MultiDatastream mds) throws ServiceFailureException {
-        Id dsId = mds.getId();
-        Instant latest = multiDatastreamCache.get(dsId);
+    private Moment getTimeForMultiDatastream(Entity mds) throws ServiceFailureException {
+        PkValue dsId = mds.getPrimaryKeyValues();
+        Moment latest = multiDatastreamCache.get(dsId);
         if (latest == null) {
-            Observation firstObs = mds.observations().query().select("@iot.id", "phenomenonTime").orderBy("phenomenonTime desc").first();
+            Entity firstObs = mds.query(mdlMds.npMultidatastreamObservations)
+                    .select("@iot.id", "phenomenonTime")
+                    .orderBy("phenomenonTime desc")
+                    .first();
             if (firstObs == null) {
-                latest = Instant.MIN;
+                latest = MOMENT_MIN;
             } else {
-                TimeObject phenomenonTime = firstObs.getPhenomenonTime();
+                TimeValue phenomenonTime = firstObs.getProperty(EP_PHENOMENONTIME);
                 if (phenomenonTime.isInterval()) {
-                    latest = phenomenonTime.getAsInterval().getStart();
+                    latest = phenomenonTime.getInterval().getStart();
                 } else {
-                    latest = phenomenonTime.getAsDateTime().toInstant();
+                    latest = phenomenonTime.getInstant().getDateTime();
                 }
             }
             multiDatastreamCache.put(dsId, latest);

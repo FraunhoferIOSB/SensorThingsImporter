@@ -18,8 +18,7 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea;
 
 /**
- *
- * @author hylke
+ * Constants used by the EEA.
  */
 public class EeaConstants {
 

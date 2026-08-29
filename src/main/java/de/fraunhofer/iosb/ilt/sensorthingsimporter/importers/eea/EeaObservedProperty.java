@@ -22,20 +22,16 @@ import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConst
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_RECOMMENDED_UNIT;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.VALUE_OWNER_EEA;
 
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.models.CommonProperties;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.EntityCache;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.Utils;
-import de.fraunhofer.iosb.ilt.sta.model.ObservedProperty;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-/**
- *
- * @author hylke
- */
 public class EeaObservedProperty {
 
     private static class EeaOp {
@@ -68,14 +64,14 @@ public class EeaObservedProperty {
         }
     }
 
-    public static EntityCache<String, ObservedProperty> createObservedPropertyCache() {
-        EntityCache<String, ObservedProperty> observedPropertyCache = new EntityCache<>(
-                entity -> Objects.toString(entity.getProperties().get(TAG_LOCAL_ID)),
-                ObservedProperty::getName);
+    public static EntityCache<String> createObservedPropertyCache() {
+        EntityCache<String> observedPropertyCache = new EntityCache<>(
+                e -> Objects.toString(e.getProperty(CommonProperties.EP_PROPERTIES).get(TAG_LOCAL_ID)),
+                e -> e.getProperty(CommonProperties.EP_NAME));
         return observedPropertyCache;
     }
 
-    public static void importObservedProperties(FrostUtils frostUtils, EntityCache<String, ObservedProperty> observedPropertyCache) throws ServiceFailureException {
+    public static void importObservedProperties(FrostUtils frostUtils, EntityCache<String> observedPropertyCache) throws ServiceFailureException {
         EeaOpRegistry opRegistry = new EeaOpRegistry();
         opRegistry.register(new EeaOp(1, "SO2", "SO2", "µg/m3", "http://dd.eionet.europa.eu/vocabulary/aq/pollutant/1"));
         opRegistry.register(new EeaOp(5, "PM10", "PM10", "µg/m3", "http://dd.eionet.europa.eu/vocabulary/aq/pollutant/5"));
@@ -93,9 +89,9 @@ public class EeaObservedProperty {
             properties.put(TAG_OWNER, VALUE_OWNER_EEA);
             properties.put(TAG_RECOMMENDED_UNIT, atop.recommendedUnit);
 
-            String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(atop.localId);
-            ObservedProperty cachedObservedProperty = observedPropertyCache.get(Integer.toString(atop.localId));
-            ObservedProperty op = frostUtils.findOrCreateOp(filter, atop.name, atop.definition, atop.description, properties, cachedObservedProperty);
+            String filter = "properties/" + TAG_LOCAL_ID + " eq " + FrostUtils.quoteForUrl(atop.localId);
+            Entity cachedObservedProperty = observedPropertyCache.get(Integer.toString(atop.localId));
+            Entity op = frostUtils.findOrCreateOp(filter, atop.name, atop.definition, atop.description, properties, cachedObservedProperty);
             observedPropertyCache.add(op);
         }
     }

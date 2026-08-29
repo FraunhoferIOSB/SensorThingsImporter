@@ -17,6 +17,7 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea;
 
+import static de.fraunhofer.iosb.ilt.frostclient.models.CommonProperties.EP_NAME;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_AREA_TYPE;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_BEGIN_TIME;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_COUNTRY_CODE;
@@ -33,6 +34,15 @@ import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConst
 
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.json.SimpleJsonMapper;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.ModelRegistry;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.UnitOfMeasurement;
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DatastreamGenerator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.Tuple;
@@ -43,17 +53,6 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator.CsvTuple;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.Utils;
-import de.fraunhofer.iosb.ilt.sta.jackson.ObjectMapperFactory;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.Location;
-import de.fraunhofer.iosb.ilt.sta.model.ObservedProperty;
-import de.fraunhofer.iosb.ilt.sta.model.Sensor;
-import de.fraunhofer.iosb.ilt.sta.model.Thing;
-import de.fraunhofer.iosb.ilt.sta.model.ext.UnitOfMeasurement;
-import de.fraunhofer.iosb.ilt.sta.query.Query;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -108,33 +107,41 @@ public class DataStreamGeneratorEea3 implements DatastreamGenerator, de.fraunhof
     private String samplingPointTemplate;
 
     private FrostUtils frostUtils;
+    private SensorThingsV11Sensing mdl11;
+    private SensorThingsV11MultiDatastream mdlMds;
 
     /**
      * StationLocalid/SamplingPointLocalId
      */
     private static final Map<String, EeaStationRecord> SAMPLING_POINTS = new HashMap<>();
-    private final EntityCache<String, ObservedProperty> observedPropertyCache = EeaObservedProperty.createObservedPropertyCache();
+    private final EntityCache<String> observedPropertyCache = EeaObservedProperty.createObservedPropertyCache();
 
     @Override
     public void init(SensorThingsService service) throws ImportException {
         frostUtils = new FrostUtils(service);
+        final ModelRegistry mr = service.getModelRegistry();
+        mdl11 = mr.getModel(SensorThingsV11Sensing.class);
+        mdlMds = mr.getModel(SensorThingsV11MultiDatastream.class);
     }
 
-    private List<Datastream> getDatastreamFor(String filterTemplate, Tuple record) throws ServiceFailureException, ImportException {
+    private List<Entity> getDatastreamFor(String filterTemplate, Tuple record) throws ServiceFailureException, ImportException {
         String filter = Translator.fillTemplate(filterTemplate, record, Translator.StringType.URL, true);
         SensorThingsService service = frostUtils.getService();
-        Query<Datastream> query = service.datastreams().query().orderBy("id asc").filter(filter);
-        return query.list().toList();
+        return service.query(mdl11.etDatastream)
+                .orderBy("id asc")
+                .filter(filter)
+                .list()
+                .toList();
     }
 
     @Override
-    public Datastream createDatastreamFor(Tuple record, ErrorLog errorLog) throws ImportException {
+    public Entity createDatastreamFor(Tuple record, ErrorLog errorLog) throws ImportException {
         EeaStationRecord stationRecord = findStation(record);
         if (stationRecord == null) {
             return null;
         }
 
-        Datastream ds = findAndFixOldData(record, stationRecord);
+        Entity ds = findAndFixOldData(record, stationRecord);
         if (ds != null) {
             return ds;
         }
@@ -143,18 +150,18 @@ public class DataStreamGeneratorEea3 implements DatastreamGenerator, de.fraunhof
     }
 
     @Override
-    public Datastream createDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
+    public Entity createDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException {
         return createDatastreamFor(CsvTuple.of(record, true), errorLog);
     }
 
-    private Datastream findAndFixOldData(Tuple record, EeaStationRecord stationRecord) throws ImportException {
+    private Entity findAndFixOldData(Tuple record, EeaStationRecord stationRecord) throws ImportException {
         return null;
     }
 
-    private Datastream importEntities(EeaStationRecord sr, Tuple record) throws ImportException {
+    private Entity importEntities(EeaStationRecord sr, Tuple record) throws ImportException {
         String pointLocalId = Translator.fillTemplate(samplingPointTemplate, record);
         String obsPropLocalId = getFromRecord(record, "Pollutant");
-        ObservedProperty observedProperty = observedPropertyCache.get(obsPropLocalId);
+        Entity observedProperty = observedPropertyCache.get(obsPropLocalId);
         if (observedProperty == null) {
             LOGGER.error("Found no ObservedProperty for {}", obsPropLocalId);
             return null;
@@ -203,15 +210,15 @@ public class DataStreamGeneratorEea3 implements DatastreamGenerator, de.fraunhof
         dsProps.put(TAG_METADATA, stationsUrl);
 
         try {
-            String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(sr.airQualityStationEoICode);
-            Location location = frostUtils.findOrCreateLocation(
+            String filter = "properties/" + TAG_LOCAL_ID + " eq " + StringHelper.quoteForUrl(sr.airQualityStationEoICode);
+            Entity location = frostUtils.findOrCreateLocation(
                     filter,
                     sr.airQualityStationName,
                     "Location of station " + sr.airQualityStationEoICode,
                     locationProps,
                     point,
                     null);
-            Thing thing = frostUtils.findOrCreateThing(
+            Entity thing = frostUtils.findOrCreateThing(
                     filter,
                     sr.airQualityStationName,
                     "Measurement station " + sr.airQualityStationName,
@@ -219,8 +226,8 @@ public class DataStreamGeneratorEea3 implements DatastreamGenerator, de.fraunhof
                     location,
                     null);
 
-            filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(sr.assessmentMethodId);
-            Sensor sensor = frostUtils.findOrCreateSensor(
+            filter = "properties/" + TAG_LOCAL_ID + " eq " + StringHelper.quoteForUrl(sr.assessmentMethodId);
+            Entity sensor = frostUtils.findOrCreateSensor(
                     filter,
                     sr.processId,
                     "Sensor " + sr.processId,
@@ -237,11 +244,11 @@ public class DataStreamGeneratorEea3 implements DatastreamGenerator, de.fraunhof
                 throw new ImportException("Could not find unit in record.");
             }
             UnitOfMeasurement uom = new UnitOfMeasurement(unit, unit, unit);
-            filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(pointLocalId) + " or " + Utils.quoteForUrl(pointLocalId) + " in properties/" + TAG_LOCAL_ID;
-            Datastream ds = frostUtils.findOrCreateDatastream(
+            filter = "properties/" + TAG_LOCAL_ID + " eq " + StringHelper.quoteForUrl(pointLocalId) + " or " + StringHelper.quoteForUrl(pointLocalId) + " in properties/" + TAG_LOCAL_ID;
+            Entity ds = frostUtils.findOrCreateDatastream(
                     filter,
-                    observedProperty.getName() + " at " + thing.getName(),
-                    observedProperty.getName() + " at " + thing.getName(),
+                    observedProperty.getProperty(EP_NAME) + " at " + thing.getProperty(EP_NAME),
+                    observedProperty.getProperty(EP_NAME) + " at " + thing.getProperty(EP_NAME),
                     dsProps,
                     uom, thing, observedProperty, sensor, null);
             return ds;
@@ -269,7 +276,7 @@ public class DataStreamGeneratorEea3 implements DatastreamGenerator, de.fraunhof
         loadObservedProperties();
         String pointLocalId = Translator.fillTemplate(samplingPointTemplate, record);
         //getFromRecord(record, "SAMPLINGPOINT_LOCALID", "samplingpoint_localid", "SamplingPoint", "Samplingpoint");
-        if (Utils.isNullOrEmpty(pointLocalId)) {
+        if (StringHelper.isNullOrEmpty(pointLocalId)) {
             return null;
         }
         EeaStationRecord station = SAMPLING_POINTS.get(pointLocalId);
@@ -281,7 +288,7 @@ public class DataStreamGeneratorEea3 implements DatastreamGenerator, de.fraunhof
         JsonNode tree;
         try {
             String data = UrlUtils.postToUrl(stationsUrl, postData, null, null).getDataString();
-            tree = ObjectMapperFactory.get().readTree(data);
+            tree = SimpleJsonMapper.getSimpleObjectMapper().readTree(data);
             JsonNode rows = tree.get("Rows");
             if (rows == null || !rows.isArray() || rows.size() == 0) {
                 LOGGER.warn("No data received for sampling point {}", pointLocalId);
@@ -306,7 +313,7 @@ public class DataStreamGeneratorEea3 implements DatastreamGenerator, de.fraunhof
         }
         try {
             observedPropertyCache.load(
-                    frostUtils.getService().observedProperties(),
+                    frostUtils.getService().dao(mdl11.etObservedProperty),
                     "",
                     "id,name,description,definition,properties",
                     "");
@@ -416,7 +423,7 @@ public class DataStreamGeneratorEea3 implements DatastreamGenerator, de.fraunhof
         }
 
         private String deQuote(String input) {
-            if (Utils.isNullOrEmpty(input)) {
+            if (StringHelper.isNullOrEmpty(input)) {
                 return input;
             }
             return StringUtils.remove(input, '"');

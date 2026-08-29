@@ -27,14 +27,15 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.ModelRegistry;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.DatastreamMapper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.Parser;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,10 +46,6 @@ import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- *
- * @author scf
- */
 public class CsvColumnExtractor implements DocumentParser {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CsvColumnExtractor.class.getName());
@@ -64,11 +61,17 @@ public class CsvColumnExtractor implements DocumentParser {
     private List<Parser> parsers;
     private List<DatastreamMapper> dsms;
 
+    private SensorThingsV11Sensing mdl11;
+    private SensorThingsV11MultiDatastream mdlMds;
+
     @Override
     public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
         getConfigEditor(context, edtCtx).setConfig(config);
         parsers = editorParsers.getValue();
         dsms = editorDsMappers.getValue();
+        final ModelRegistry mr = context.getModelRegistry();
+        mdl11 = mr.getModel(SensorThingsV11Sensing.class);
+        mdlMds = mr.getModel(SensorThingsV11MultiDatastream.class);
     }
 
     @Override
@@ -105,7 +108,7 @@ public class CsvColumnExtractor implements DocumentParser {
         return editor;
     }
 
-    private List<Observation> process(String data, ErrorLog errorLog) throws IOException, ImportException {
+    private List<Entity> process(String data, ErrorLog errorLog) throws IOException, ImportException {
         CSVFormat format = CSVFormat.DEFAULT;
         if (editorTabDelim.getValue()) {
             format = format.withDelimiter('\t');
@@ -144,7 +147,7 @@ public class CsvColumnExtractor implements DocumentParser {
                 column++;
             }
         }
-        List<Observation> observations = new ArrayList<>();
+        List<Entity> observations = new ArrayList<>();
         int dataCount = 0;
         for (Boolean colHasData : hasData) {
             if (colHasData) {
@@ -152,13 +155,14 @@ public class CsvColumnExtractor implements DocumentParser {
             }
         }
 
-        MultiDatastream mds;
+        Entity mds;
         List<List<Object>> mdsResult = null;
         if (dsms.size() == 1 && dataCount > 1) {
             mds = dsms.get(0).getMultiDatastreamFor(null, errorLog);
             if (mds != null) {
                 mdsResult = new ArrayList<>();
-                Observation obs = new Observation(mdsResult, mds);
+                Entity obs = mdl11.newObservation(mdsResult);
+                obs.setProperty(mdlMds.npObservationMultidatastream, mds);
                 observations.add(obs);
             }
         }
@@ -167,11 +171,10 @@ public class CsvColumnExtractor implements DocumentParser {
         for (int column = 0; column < results.size(); column++) {
             if (hasData.get(column)) {
                 if (mdsResult == null) {
-                    Observation obs = new Observation();
-                    obs.setResult(results.get(column));
-                    Datastream ds = dsms.get(dataColumn).getDatastreamFor(null, errorLog);
+                    Entity obs = mdl11.newObservation(results.get(column));
+                    Entity ds = dsms.get(dataColumn).getDatastreamFor(null, errorLog);
                     if (ds != null) {
-                        obs.setDatastream(ds);
+                        obs.setProperty(mdl11.npObservationDatastream, ds);
                         dataColumn++;
                         observations.add(obs);
                     }
@@ -184,7 +187,7 @@ public class CsvColumnExtractor implements DocumentParser {
     }
 
     @Override
-    public List<Observation> process(Datastream ds, ErrorLog errorLog, String input) throws ImportException {
+    public List<Entity> processDatastream(Entity ds, ErrorLog errorLog, String input) throws ImportException {
         try {
             return process(input, errorLog);
         } catch (IOException exc) {
@@ -194,7 +197,7 @@ public class CsvColumnExtractor implements DocumentParser {
     }
 
     @Override
-    public List<Observation> process(MultiDatastream mds, ErrorLog errorLog, String... inputs) throws ImportException {
+    public List<Entity> processMultiDatastream(Entity mds, ErrorLog errorLog, String... inputs) throws ImportException {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

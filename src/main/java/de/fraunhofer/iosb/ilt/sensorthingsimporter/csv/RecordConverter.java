@@ -17,10 +17,10 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.util.List;
 import org.apache.commons.csv.CSVRecord;
 
@@ -32,5 +32,5 @@ public interface RecordConverter {
     public default void init(SensorThingsService service) throws ImportException {
     }
 
-    public List<Observation> convert(CSVRecord record, ErrorLog errorLog) throws ImportException;
+    public List<Entity> convert(CSVRecord record, ErrorLog errorLog) throws ImportException;
 }

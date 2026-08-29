@@ -23,14 +23,14 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.datagen.DataGenerator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils.HttpResponse;
-import de.fraunhofer.iosb.ilt.sta.Utils;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.Iterator;
@@ -107,7 +107,7 @@ public class TupleSourceCsv implements TupleSource {
         CSVFormat.Builder formatBuilder = CSVFormat.DEFAULT
                 .builder()
                 .setDelimiter(tabIsDelimeter ? '\t' : delimiter.charAt(0));
-        if (!Utils.isNullOrEmpty(commentMarker)) {
+        if (!StringHelper.isNullOrEmpty(commentMarker)) {
             formatBuilder.setCommentMarker(commentMarker.charAt(0));
         }
         if (hasHeader) {
@@ -190,12 +190,13 @@ public class TupleSourceCsv implements TupleSource {
         }
 
         private CSVParser nextData(CSVParser oldParser) throws ImportException {
-            if (oldParser != null)
+            if (oldParser != null) {
                 try {
                     oldParser.close();
                 } catch (IOException ex) {
                     LOGGER.error("Failed to close open parser: {}", ex.getMessage());
                 }
+            }
             rowSkip = rowSkipBase;
             while (dataIterator.hasNext()) {
                 HttpResponse dataResponse = dataIterator.next();

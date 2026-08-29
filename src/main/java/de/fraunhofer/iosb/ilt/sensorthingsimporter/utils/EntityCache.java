@@ -17,12 +17,12 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.Utils;
-import de.fraunhofer.iosb.ilt.sta.dao.BaseDao;
-import de.fraunhofer.iosb.ilt.sta.model.Entity;
-import de.fraunhofer.iosb.ilt.sta.model.ext.EntityList;
-import de.fraunhofer.iosb.ilt.sta.query.Query;
+import de.fraunhofer.iosb.ilt.frostclient.dao.Dao;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.EntitySet;
+import de.fraunhofer.iosb.ilt.frostclient.query.Query;
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -30,27 +30,26 @@ import java.util.Map;
 
 /**
  *
- * @param <T> The entity type this cache caches.
  * @param <U> The type of the localId.
  */
-public class EntityCache<U, T extends Entity<T>> {
+public class EntityCache<U> {
 
-    private final Map<U, T> entitiesByLocalId = new LinkedHashMap<>();
-    private final Map<String, T> entitiesByName = new LinkedHashMap<>();
+    private final Map<U, Entity> entitiesByLocalId = new LinkedHashMap<>();
+    private final Map<String, Entity> entitiesByName = new LinkedHashMap<>();
 
-    private final PropertyExtractor<U, T> localIdExtractor;
-    private final PropertyExtractor<String, T> nameExtractor;
+    private final PropertyExtractor<U> localIdExtractor;
+    private final PropertyExtractor<String> nameExtractor;
 
-    public EntityCache(PropertyExtractor<U, T> localIdExtractor, PropertyExtractor<String, T> nameExtractor) {
+    public EntityCache(PropertyExtractor<U> localIdExtractor, PropertyExtractor<String> nameExtractor) {
         this.localIdExtractor = localIdExtractor;
         this.nameExtractor = nameExtractor;
     }
 
-    public T get(U localId) {
+    public Entity get(U localId) {
         return entitiesByLocalId.get(localId);
     }
 
-    public T getByName(String name) {
+    public Entity getByName(String name) {
         return entitiesByName.get(name);
     }
 
@@ -62,26 +61,26 @@ public class EntityCache<U, T extends Entity<T>> {
         return entitiesByLocalId.isEmpty();
     }
 
-    public int load(BaseDao<T> dao, String filter) throws ServiceFailureException {
+    public int load(Dao dao, String filter) throws ServiceFailureException {
         return load(dao, filter, "", "");
     }
 
-    public int load(BaseDao<T> dao, String filter, String select, String expand) throws ServiceFailureException {
-        Query<T> query = dao.query();
+    public int load(Dao dao, String filter, String select, String expand) throws ServiceFailureException {
+        Query query = dao.query();
         if (!select.isEmpty()) {
             query.select(select);
         }
         if (!expand.isEmpty()) {
             query.expand(expand);
         }
-        if (!Utils.isNullOrEmpty(filter)) {
+        if (!StringHelper.isNullOrEmpty(filter)) {
             query.filter(filter);
         }
-        EntityList<T> entities = query.top(10000).orderBy("id asc").list();
-        Iterator<T> it = entities.fullIterator();
+        EntitySet entities = query.top(10000).orderBy("id asc").list();
+        Iterator<Entity> it = entities.iterator();
         int count = 0;
         while (it.hasNext()) {
-            T entitiy = it.next();
+            Entity entitiy = it.next();
             if (add(entitiy)) {
                 count++;
             }
@@ -89,11 +88,11 @@ public class EntityCache<U, T extends Entity<T>> {
         return count;
     }
 
-    public void add(Collection<T> entities) {
+    public void add(Collection<Entity> entities) {
         entities.stream().forEach(e -> add(e));
     }
 
-    public boolean add(T entity) {
+    public boolean add(Entity entity) {
         boolean hasLocalId = false;
         try {
             U localId = localIdExtractor.extractFrom(entity);
@@ -119,21 +118,21 @@ public class EntityCache<U, T extends Entity<T>> {
      * @return the old value for the given localId, or null if there was no old
      * value registered.
      */
-    public T registerNull(U localId) {
+    public Entity registerNull(U localId) {
         return entitiesByLocalId.put(localId, null);
     }
 
-    public Collection<T> valuesWithLocalId() {
+    public Collection<Entity> valuesWithLocalId() {
         return entitiesByLocalId.values();
     }
 
-    public Collection<T> valuesWithName() {
+    public Collection<Entity> valuesWithName() {
         return entitiesByName.values();
     }
 
-    public static interface PropertyExtractor<U, T extends Entity<T>> {
+    public static interface PropertyExtractor<U> {
 
-        public U extractFrom(T entity);
+        public U extractFrom(Entity entity);
     }
 
 }

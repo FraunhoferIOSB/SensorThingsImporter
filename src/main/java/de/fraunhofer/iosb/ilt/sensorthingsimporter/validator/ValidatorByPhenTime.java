@@ -17,17 +17,23 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
+import static de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing.EP_PHENOMENONTIME;
+import static de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing.EP_RESULT;
+
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.dao.Dao;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.ModelRegistry;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeValue;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.dao.BaseDao;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
 import java.math.BigDecimal;
+import java.net.MalformedURLException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,10 +63,20 @@ public class ValidatorByPhenTime implements Validator {
     private ObservationUploader uploader;
 
     private final ThreadLocal<ObsCache> cacheHolder = new ThreadLocal<>();
+    private SensorThingsV11Sensing mdl11;
+    private SensorThingsV11MultiDatastream mdlMds;
 
     @Override
     public void init(ObservationUploader uploader) {
         this.uploader = uploader;
+        try {
+            final SensorThingsService service = uploader.getService();
+            final ModelRegistry mr = service.getModelRegistry();
+            mdl11 = mr.getModel(SensorThingsV11Sensing.class);
+            mdlMds = mr.getModel(SensorThingsV11MultiDatastream.class);
+        } catch (MalformedURLException ex) {
+            throw new ImportException(ex);
+        }
     }
 
     private ObsCache getCache() {
@@ -123,54 +139,56 @@ public class ValidatorByPhenTime implements Validator {
         return false;
     }
 
-    private BaseDao<Observation> validateCache(Datastream d, MultiDatastream m) {
+    private Dao validateCache(Entity ds, Entity mds) {
         if (cacheObservations) {
-            if (d != null) {
-                getCache().clearIfDifferent(d.getId());
+            if (ds != null) {
+                getCache().clearIfDifferent(ds.getPrimaryKeyValues());
             }
-            if (m != null) {
-                getCache().clearIfDifferent(m.getId());
+            if (mds != null) {
+                getCache().clearIfDifferent(mds.getPrimaryKeyValues());
             }
         }
-        if (d != null) {
-            return d.observations();
+        if (ds != null) {
+            return ds.dao(mdl11.npDatastreamObservations);
         }
-        if (m != null) {
-            return m.observations();
+        if (mds != null) {
+            return mds.dao(mdlMds.npMultidatastreamObservations);
         }
         throw new IllegalArgumentException("Must pass either a Datastream or multiDatastream.");
     }
 
-    private Observation getObservation(TimeObject phenTime, BaseDao<Observation> observations) throws ServiceFailureException {
+    private Entity getObservation(TimeValue phenTime, Dao observations) throws ServiceFailureException {
         if (cacheObservations) {
             return getCache().getFromCache(phenTime, observations);
         }
         return observations.query().select("@iot.id", "result").filter("phenomenonTime eq " + phenTime.toString()).first();
     }
 
-    private void addToCache(Observation obs) {
+    private void addToCache(Entity obs) {
         if (cacheObservations) {
-            getCache().put(obs.getPhenomenonTime(), obs);
+            getCache().put(obs.getProperty(EP_PHENOMENONTIME), obs);
         }
     }
 
     @Override
-    public boolean isValid(Observation obs) throws ImportException {
+    public boolean isValid(Entity obs) throws ImportException {
         try {
-            Datastream d = obs.getDatastream();
-            MultiDatastream m = obs.getMultiDatastream();
-            BaseDao<Observation> observations = validateCache(d, m);
+            Entity ds = obs.getProperty(mdl11.npObservationDatastream);
+            Entity mds = obs.getProperty(mdlMds.npObservationMultidatastream);
+            Dao observations = validateCache(ds, mds);
 
-            TimeObject phenomenonTime = obs.getPhenomenonTime();
-            Observation first = getObservation(phenomenonTime, observations);
+            TimeValue phenomenonTime = obs.getProperty(EP_PHENOMENONTIME);
+            Entity first = getObservation(phenomenonTime, observations);
             if (first == null) {
                 addToCache(obs);
                 return true;
             } else {
-                if (!resultCompare(obs.getResult(), first.getResult())) {
-                    LOGGER.debug("Observation {} with given phenomenonTime {} exists, but result not the same. {} != {} .", first.getId(), phenomenonTime, obs.getResult(), first.getResult());
+                final Object newResult = obs.getProperty(EP_RESULT);
+                final Object existingResult = first.getProperty(EP_RESULT);
+                if (!resultCompare(newResult, existingResult)) {
+                    LOGGER.debug("Observation {} with given phenomenonTime {} exists, but result not the same. {} != {} .", first, phenomenonTime, newResult, existingResult);
                     if (update) {
-                        obs.setId(first.getId());
+                        obs.setPrimaryKeyValues(first.getPrimaryKeyValues());
                         addToCache(obs);
                         return true;
                     }

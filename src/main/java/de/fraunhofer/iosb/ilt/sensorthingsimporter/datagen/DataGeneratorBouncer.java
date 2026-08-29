@@ -21,13 +21,13 @@ import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterable;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils.HttpResponse;
-import de.fraunhofer.iosb.ilt.sta.Utils;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -155,7 +155,7 @@ public class DataGeneratorBouncer implements DataGenerator {
                     bouncer.splitter,
                     new String[]{"\\n", "\\r", "\\t"},
                     new String[]{"\n", "\r", "\t"});
-            if (!Utils.isNullOrEmpty(bouncer.filterRegex)) {
+            if (!StringHelper.isNullOrEmpty(bouncer.filterRegex)) {
                 filter = Pattern.compile(bouncer.filterRegex);
             }
             try {

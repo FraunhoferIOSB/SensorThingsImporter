@@ -21,15 +21,11 @@ import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorEnum;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
 import java.math.BigDecimal;
 import org.apache.commons.lang3.StringUtils;
 import tools.jackson.databind.JsonNode;
 
-/**
- *
- * @author scf
- */
 public class ParserBigdecimal implements Parser<BigDecimal>, AnnotatedConfigurable<SensorThingsService, Object> {
 
     public enum DecimalSeparator {

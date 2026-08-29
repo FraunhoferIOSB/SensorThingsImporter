@@ -18,10 +18,10 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.records;
 
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 
 /**
  * Interface for classes that generate Datastreams from a Tuple.
@@ -32,5 +32,5 @@ public interface DatastreamGenerator extends AnnotatedConfigurable<Object, Objec
         // does nothing by default.
     }
 
-    public Datastream createDatastreamFor(Tuple record, ErrorLog errorLog) throws ImportException;
+    public Entity createDatastreamFor(Tuple record, ErrorLog errorLog) throws ImportException;
 }

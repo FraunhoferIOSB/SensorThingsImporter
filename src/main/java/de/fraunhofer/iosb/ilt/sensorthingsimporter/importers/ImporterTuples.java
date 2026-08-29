@@ -21,6 +21,8 @@ import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.RecordConverter;
@@ -28,8 +30,6 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.Tuple;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.TupleSource;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterator;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -85,7 +85,7 @@ public class ImporterTuples implements Importer {
     }
 
     @Override
-    public Iterator<List<Observation>> iterator() {
+    public Iterator<List<Entity>> iterator() {
         return new ObsListIter(this);
     }
 
@@ -93,7 +93,7 @@ public class ImporterTuples implements Importer {
         return recordConvertors;
     }
 
-    private static class ObsListIter implements Iterator<List<Observation>> {
+    private static class ObsListIter implements Iterator<List<Entity>> {
 
         private final ImporterTuples parent;
         private final InspectingIterator<Tuple> tupleIter;
@@ -111,15 +111,15 @@ public class ImporterTuples implements Importer {
         }
 
         @Override
-        public List<Observation> next() {
+        public List<Entity> next() {
             if (!tupleIter.hasNext()) {
                 return Collections.emptyList();
             }
             Tuple nextTuple = tupleIter.next();
-            List<Observation> result = new ArrayList<>();
+            List<Entity> result = new ArrayList<>();
 
             for (RecordConverter rc : rcvs) {
-                List<Observation> obs;
+                List<Entity> obs;
                 try {
                     obs = rc.convert(nextTuple, parent.getErrors());
                     result.addAll(obs);

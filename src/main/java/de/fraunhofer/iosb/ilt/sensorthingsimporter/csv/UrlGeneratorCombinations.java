@@ -23,8 +23,8 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
-import de.fraunhofer.iosb.ilt.swe.common.Utils;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -32,10 +32,6 @@ import java.util.Iterator;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 
-/**
- *
- * @author hylke
- */
 public class UrlGeneratorCombinations implements UrlGenerator, AnnotatedConfigurable<Object, Object> {
 
     public static class ReplaceSet implements AnnotatedConfigurable<Object, Object> {
@@ -79,7 +75,7 @@ public class UrlGeneratorCombinations implements UrlGenerator, AnnotatedConfigur
         }
 
         public List<String> getReplacements() {
-            if (Utils.isNullOrEmpty(replacements)) {
+            if (StringHelper.isNullOrEmpty(replacements)) {
                 if (replacementGen != null) {
                     replacements = replacementGen.get();
                 } else {

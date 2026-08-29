@@ -17,23 +17,24 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen;
 
+import static de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing.EP_PHENOMENONTIME;
+import static de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing.EP_PHENOMENONTIMEDS;
+
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeInterval;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeValue;
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.List;
+import java.util.concurrent.TimeUnit;
+import net.time4j.Moment;
 import org.slf4j.LoggerFactory;
-import org.threeten.extra.Interval;
 
-/**
- *
- * @author scf
- */
 public class TimeGenNewer implements TimeGen {
 
     /**
@@ -46,50 +47,71 @@ public class TimeGenNewer implements TimeGen {
     @EditorString.EdOptsString(dflt = "2017-01-01T00:00:00Z")
     private String startTime;
 
+    private SensorThingsV11Sensing mdl11;
+    private SensorThingsV11MultiDatastream mdlMds;
+
     @Override
     public Instant getInstant() {
         return ZonedDateTime.parse(startTime).toInstant();
     }
 
     @Override
-    public Instant getInstant(Datastream ds) {
-        if (ds.getPhenomenonTime() != null) {
-            Interval phenomenonTime = ds.getPhenomenonTime();
-            return phenomenonTime.getEnd().plusSeconds(1);
+    public Instant getInstantFromDs(Entity ds) {
+        return getMomentFromDs(ds).toTemporalAccessor();
+    }
+
+    @Override
+    public Moment getMomentFromDs(Entity ds) {
+
+        TimeInterval phenomenonTimeDs = ds.getProperty(EP_PHENOMENONTIMEDS);
+        if (phenomenonTimeDs != null) {
+            return phenomenonTimeDs.getEnd().plus(1, TimeUnit.SECONDS);
         }
-        if (!ds.getObservations().toList().isEmpty()) {
-            TimeObject phenomenonTime = ds.getObservations().toList().get(0).getPhenomenonTime();
+
+        if (mdl11 == null) {
+            SensorThingsService service = ds.getService();
+            mdl11 = service.getModelRegistry().getModel(SensorThingsV11Sensing.class);
+        }
+        if (!ds.getProperty(mdl11.npDatastreamObservations, false).isEmpty()) {
+            TimeValue phenomenonTime = ds.getProperty(mdl11.npDatastreamObservations, false).toList().get(0).getProperty(EP_PHENOMENONTIME);
             if (phenomenonTime.isInterval()) {
-                return phenomenonTime.getAsInterval().getEnd();
+                return phenomenonTime.getInterval().getEnd();
             }
-            return phenomenonTime.getAsDateTime().plusSeconds(1).toInstant();
+            return phenomenonTime.getInstant().getDateTime().plus(1, TimeUnit.SECONDS);
         }
         try {
-            List<Observation> obsList = ds.observations().query().top(1).orderBy("phenomenonTime desc").list().toList();
-            if (!obsList.isEmpty()) {
-                TimeObject phenomenonTime = obsList.get(0).getPhenomenonTime();
+            Entity firstObs = ds.dao(mdl11.npDatastreamObservations).query().top(1).orderBy("phenomenonTime desc").first();
+            if (firstObs != null) {
+                TimeValue phenomenonTime = firstObs.getProperty(EP_PHENOMENONTIME);
                 if (phenomenonTime.isInterval()) {
-                    return phenomenonTime.getAsInterval().getEnd();
+                    return phenomenonTime.getInterval().getEnd();
                 }
-                return phenomenonTime.getAsDateTime().plusSeconds(1).toInstant();
+                return phenomenonTime.getInstant().getDateTime().plus(1, TimeUnit.SECONDS);
             }
         } catch (ServiceFailureException ex) {
             LOGGER.error("Failed to fetch last Observation.", ex);
         }
-        return ZonedDateTime.parse(startTime).toInstant();
+        return Moment.from(ZonedDateTime.parse(startTime).toInstant());
     }
 
     @Override
-    public Instant getInstant(MultiDatastream mds) {
-        if (mds.getPhenomenonTime() != null) {
-            Interval phenomenonTime = mds.getPhenomenonTime();
-            return phenomenonTime.getEnd();
+    public Instant getInstantFromMds(Entity mds) {
+        return getMomentFromMds(mds).toTemporalAccessor();
+    }
+
+    @Override
+    public Moment getMomentFromMds(Entity mds) {
+        TimeInterval phenomenonTimeMds = mds.getProperty(EP_PHENOMENONTIMEDS);
+        if (phenomenonTimeMds != null) {
+            return phenomenonTimeMds.getEnd();
         }
-        if (mds.getObservations().toList().isEmpty()) {
-            return ZonedDateTime.parse(startTime).toInstant();
-        } else {
-            return mds.getObservations().toList().get(0).getPhenomenonTime().getAsDateTime().plusSeconds(1).toInstant();
+
+        if (mdlMds == null) {
+            SensorThingsService service = mds.getService();
+            mdlMds = service.getModelRegistry().getModel(SensorThingsV11MultiDatastream.class);
         }
+
+        return Moment.from(ZonedDateTime.parse(startTime).toInstant());
     }
 
 }

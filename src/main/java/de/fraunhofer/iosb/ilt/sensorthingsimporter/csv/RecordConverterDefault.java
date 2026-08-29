@@ -27,6 +27,16 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.ModelRegistry;
+import de.fraunhofer.iosb.ilt.frostclient.model.property.type.TypeComplex;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.MapValue;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeInstant;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeInterval;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeValue;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
@@ -35,10 +45,6 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator.StringType;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UnitConverter;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.Parser;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.ParserTime;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -49,7 +55,6 @@ import java.util.List;
 import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.threeten.extra.Interval;
 
 /**
  *
@@ -119,13 +124,26 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
     @EditorString.EdOptsString(lines = 4)
     private String parametersTemplate;
 
+    private SensorThingsV11Sensing mdl11;
+    private SensorThingsV11MultiDatastream mdlMds;
+
     public RecordConverterDefault() {
     }
 
     @Override
-    public List<Observation> convert(CSVRecord record, ErrorLog errorLog) throws ImportException {
+    public void init(SensorThingsService service) throws ImportException {
+        final ModelRegistry mr = service.getModelRegistry();
+        mdl11 = mr.getModel(SensorThingsV11Sensing.class);
+        mdlMds = mr.getModel(SensorThingsV11MultiDatastream.class);
+        if (dsm != null) {
+            dsm.init(service);
+        }
+    }
+
+    @Override
+    public List<Entity> convert(CSVRecord record, ErrorLog errorLog) throws ImportException {
         Object result;
-        Observation obs;
+        Entity obs;
         StringBuilder log;
         if (colResult >= record.size()) {
             return Collections.emptyList();
@@ -141,7 +159,7 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
             return Collections.emptyList();
         }
 
-        Datastream datastream = dsm.getDatastreamFor(record, errorLog);
+        Entity datastream = dsm.getDatastreamFor(record, errorLog);
         if (datastream == null) {
             LOGGER.debug("No datastream found for column {}", record);
             errorLog.addError("No Datastream");
@@ -149,7 +167,7 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
         }
         if (colUnit >= 0) {
             String unitFrom = record.get(colUnit);
-            String unitTo = datastream.getUnitOfMeasurement().getSymbol();
+            String unitTo = datastream.getProperty(SensorThingsV11Sensing.EP_UNITOFMEASUREMENT).getSymbol();
             result = convertResult(unitFrom, unitTo, result);
             if (result == null) {
                 LOGGER.error("Failed to convert from {} to {}.", unitFrom, unitTo);
@@ -157,23 +175,26 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
                 return Collections.emptyList();
             }
         }
-        obs = new Observation(result, datastream);
+        obs = mdl11.newObservation(result, datastream);
         log = new StringBuilder("Result: _").append(result).append("_");
 
-        obs.setPhenomenonTime(listToTimeObject(colPhenTime, record));
-        log.append(", phenomenonTime: ").append(obs.getPhenomenonTime());
+        final TimeValue phenomenonTime = listToTimeObject(colPhenTime, record);
+        obs.setProperty(SensorThingsV11Sensing.EP_PHENOMENONTIME, phenomenonTime);
+        log.append(", phenomenonTime: ").append(phenomenonTime);
 
         if (colResultTime >= 0) {
-            obs.setResultTime(parseZonedDateTime(record.get(colResultTime)));
-            log.append(", resultTime: ").append(obs.getResultTime());
+            final TimeInstant resultTime = parseTimeInstant(record.get(colResultTime));
+            obs.setProperty(SensorThingsV11Sensing.EP_RESULTTIME, resultTime);
+            log.append(", resultTime: ").append(resultTime);
         }
         if (!colValidTime.isEmpty()) {
-            obs.setValidTime(listToTimeObject(colValidTime, record).getAsInterval());
-            log.append(", validTime: ").append(obs.getValidTime());
+            final TimeInterval validTime = listToTimeObject(colValidTime, record).getInterval();
+            obs.setProperty(SensorThingsV11Sensing.EP_VALIDTIME, validTime);
+            log.append(", validTime: ").append(validTime);
         }
         if (!Utils.isNullOrEmpty(parametersTemplate)) {
             String filledTemplate = Translator.fillTemplate(parametersTemplate, record, StringType.JSON, false);
-            obs.setParameters(JsonUtils.jsonToMap(filledTemplate));
+            obs.setProperty(SensorThingsV11Sensing.EP_PARAMETERS, new MapValue(TypeComplex.STA_MAP, JsonUtils.jsonToMap(filledTemplate)));
         }
         LOGGER.debug(log.toString());
         LOGGER.trace("Record: {}", record);
@@ -197,17 +218,21 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
         return null;
     }
 
-    private TimeObject listToTimeObject(List<Integer> colList, CSVRecord record) throws ImportException {
+    private TimeValue listToTimeObject(List<Integer> colList, CSVRecord record) throws ImportException {
         if (colList.size() == 2) {
             String start = record.get(colList.get(0));
             String end = record.get(colList.get(1));
             ZonedDateTime startTime = parseTime(start);
             ZonedDateTime endTime = parseTime(end);
-            Interval interval = Interval.of(startTime.toInstant(), endTime.toInstant());
-            return new TimeObject(interval);
+            return TimeValue.create(startTime, endTime);
         } else {
-            return new TimeObject(parseTime(record.get(colList.get(0))).withZoneSameInstant(ZONE_Z));
+            return TimeValue.create(parseTime(record.get(colList.get(0))).withZoneSameInstant(ZONE_Z));
         }
+    }
+
+    private TimeInstant parseTimeInstant(String value) {
+        ZonedDateTime zdt = parseZonedDateTime(value);
+        return TimeInstant.create(zdt);
     }
 
     private ZonedDateTime parseTime(String value) throws ImportException {
@@ -260,12 +285,12 @@ public class RecordConverterDefault implements RecordConverter, AnnotatedConfigu
             return resultParser.parse(resultString);
         }
         try {
-            return Integer.parseInt(resultString);
+            return Integer.valueOf(resultString);
         } catch (NumberFormatException e) {
             LOGGER.trace("Not an Integer.");
         }
         try {
-            return Long.parseLong(resultString);
+            return Long.valueOf(resultString);
         } catch (NumberFormatException e) {
             LOGGER.trace("Not a long.");
         }

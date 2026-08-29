@@ -17,32 +17,29 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
+import de.fraunhofer.iosb.ilt.frostclient.dao.Dao;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.EntitySet;
+import de.fraunhofer.iosb.ilt.frostclient.model.PkValue;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeValue;
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.dao.BaseDao;
-import de.fraunhofer.iosb.ilt.sta.model.Id;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
-import de.fraunhofer.iosb.ilt.sta.model.ext.EntityList;
-import de.fraunhofer.iosb.ilt.swe.common.Utils;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import net.time4j.Moment;
 
-/**
- *
- * @author hylke
- */
 class ObsCache {
 
-    private Id latestId;
-    private Instant cacheStart;
-    private final Map<TimeObject, Observation> cache = new LinkedHashMap<>();
+    private PkValue latestId;
+    private Moment cacheStart;
+    private final Map<TimeValue, Entity> cache = new LinkedHashMap<>();
     private final ObservationUploader uploader;
     private final boolean deleteDuplicates;
 
@@ -61,19 +58,19 @@ class ObsCache {
         cache.clear();
     }
 
-    public Instant getCacheStart() {
+    public Moment getCacheStart() {
         return cacheStart;
     }
 
-    public void setCacheStart(Instant cacheStart) {
+    public void setCacheStart(Moment cacheStart) {
         this.cacheStart = cacheStart;
     }
 
-    public boolean isBeforeStart(Instant instant) {
+    public boolean isBeforeStart(Moment instant) {
         return instant.isBefore(cacheStart);
     }
 
-    public boolean clearIfDifferent(Id id) {
+    public boolean clearIfDifferent(PkValue id) {
         if (!id.equals(latestId)) {
             clear();
             latestId = id;
@@ -82,18 +79,18 @@ class ObsCache {
         return false;
     }
 
-    public Observation put(TimeObject time, Observation obs) {
+    public Entity put(TimeValue time, Entity obs) {
         if (cacheStart == null) {
-            cacheStart = FrostUtils.instantFrom(obs.getPhenomenonTime());
+            cacheStart = FrostUtils.instantFrom(obs.getProperty(SensorThingsV11Sensing.EP_PHENOMENONTIME));
         }
         return cache.put(time, obs);
     }
 
-    public Observation getFromCache(TimeObject checkTime, BaseDao<Observation> observations) throws ServiceFailureException {
-        Instant checkInstant = FrostUtils.instantFrom(checkTime);
-        List<Observation> toDelete = null;
+    public Entity getFromCache(TimeValue checkTime, Dao observations) throws ServiceFailureException {
+        Moment checkInstant = FrostUtils.instantFrom(checkTime);
+        List<Entity> toDelete = null;
         if (cache.isEmpty()) {
-            EntityList<Observation> list = observations.query()
+            EntitySet list = observations.query()
                     .select("@iot.id", "result", "phenomenonTime")
                     .filter("phenomenonTime ge " + checkInstant.toString())
                     .orderBy("phenomenonTime asc")
@@ -102,7 +99,7 @@ class ObsCache {
             toDelete = addToCache(list);
         } else {
             if (checkInstant.isBefore(cacheStart)) {
-                EntityList<Observation> list = observations.query()
+                EntitySet list = observations.query()
                         .select("@iot.id", "result", "phenomenonTime")
                         .filter("phenomenonTime ge " + checkInstant.toString() + " and phenomenonTime le " + cacheStart)
                         .orderBy("phenomenonTime asc")
@@ -111,24 +108,24 @@ class ObsCache {
                 toDelete = addToCache(list);
             }
         }
-        if (!Utils.isNullOrEmpty(toDelete)) {
+        if (!StringHelper.isNullOrEmpty(toDelete)) {
             uploader.delete(toDelete, 10);
         }
         return cache.get(checkTime);
     }
 
-    public List<Observation> addToCache(EntityList<Observation> list) {
-        List<Observation> toDelete = null;
-        Iterator<Observation> fullIterator = list.fullIterator();
+    public List<Entity> addToCache(EntitySet list) {
+        List<Entity> toDelete = null;
+        Iterator<Entity> fullIterator = list.iterator();
         while (fullIterator.hasNext()) {
-            Observation obs = fullIterator.next();
-            TimeObject phenomenonTime = obs.getPhenomenonTime();
-            Observation old = cache.put(phenomenonTime, obs);
-            Instant instant = FrostUtils.instantFrom(phenomenonTime);
+            Entity obs = fullIterator.next();
+            TimeValue phenomenonTime = obs.getProperty(SensorThingsV11Sensing.EP_PHENOMENONTIME);
+            Entity old = cache.put(phenomenonTime, obs);
+            Moment instant = FrostUtils.instantFrom(phenomenonTime);
             if (cacheStart == null || instant.isBefore(cacheStart)) {
                 cacheStart = instant;
             }
-            if (deleteDuplicates && old != null && !old.getId().equals(obs.getId())) {
+            if (deleteDuplicates && old != null && !old.getPrimaryKeyValues().equals(obs.getPrimaryKeyValues())) {
                 if (toDelete == null) {
                     toDelete = new ArrayList<>();
                 }

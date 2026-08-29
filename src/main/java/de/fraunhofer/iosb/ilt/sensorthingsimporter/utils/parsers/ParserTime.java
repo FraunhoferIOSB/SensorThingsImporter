@@ -23,7 +23,7 @@ import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
-import de.fraunhofer.iosb.ilt.sta.Utils;
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -55,7 +55,7 @@ public class ParserTime implements ParserZonedDateTime, AnnotatedConfigurable<Ob
 
     private void init() {
         formatter = DateTimeFormatter.ofPattern(format);
-        if (!Utils.isNullOrEmpty(zone)) {
+        if (!StringHelper.isNullOrEmpty(zone)) {
             formatter = formatter.withZone(ZoneId.of(zone));
         }
     }

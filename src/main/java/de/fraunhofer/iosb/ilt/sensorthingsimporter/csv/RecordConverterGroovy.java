@@ -20,31 +20,28 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyCodeSource;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import org.apache.commons.csv.CSVRecord;
 
-/**
- *
- * @author hylke
- */
 public class RecordConverterGroovy implements RecordConverter, AnnotatedConfigurable<SensorThingsService, Object> {
 
+    private static final String DEFLT_SCRIPT = """
+            Class Script implements RecordConverter {
+              public List<Observation> convert(CSVRecord record) throws ImportException {
+                // Your code here
+              }
+            }""";
     @ConfigurableField(editor = EditorString.class,
             label = "Script", description = "The script that implements RecordConverter")
     @EditorString.EdOptsString(lines = 20,
-            dflt = ""
-                    + "Class Script implements RecordConverter {\n"
-                    + "  public List<Observation> convert(CSVRecord record) throws ImportException {\n"
-                    + "    // Your code here\n"
-                    + "  }\n"
-                    + "}")
+            dflt = DEFLT_SCRIPT)
     private String script;
 
     private final GroovyClassLoader gcl;
@@ -68,7 +65,7 @@ public class RecordConverterGroovy implements RecordConverter, AnnotatedConfigur
     }
 
     @Override
-    public List<Observation> convert(CSVRecord record, ErrorLog errorLog) throws ImportException {
+    public List<Entity> convert(CSVRecord record, ErrorLog errorLog) throws ImportException {
         return scriptInstance.convert(record, errorLog);
     }
 

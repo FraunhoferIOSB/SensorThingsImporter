@@ -17,15 +17,21 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
+import static de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing.EP_PARAMETERS;
+import static de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing.EP_PHENOMENONTIME;
+
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.ModelRegistry;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
+import java.net.MalformedURLException;
 import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
@@ -64,19 +70,29 @@ public class ValidatorByParameter implements Validator {
     private boolean update;
 
     private List<String> parameters;
+    private SensorThingsV11Sensing mdl11;
+    private SensorThingsV11MultiDatastream mdlMds;
 
     @Override
     public void init(ObservationUploader uploader) {
         String[] split = parameter.split(",");
         parameters = Arrays.asList(split);
+        try {
+            final SensorThingsService service = uploader.getService();
+            final ModelRegistry mr = service.getModelRegistry();
+            mdl11 = mr.getModel(SensorThingsV11Sensing.class);
+            mdlMds = mr.getModel(SensorThingsV11MultiDatastream.class);
+        } catch (MalformedURLException ex) {
+            throw new ImportException(ex);
+        }
     }
 
-    private String buildFilter(Observation obs) {
+    private String buildFilter(Entity obs) {
         StringBuilder filter = new StringBuilder();
         boolean first = true;
         if (checkPhenomenonTime) {
             filter.append("phenomenonTime eq ");
-            filter.append(obs.getPhenomenonTime().toString());
+            filter.append(obs.getProperty(EP_PHENOMENONTIME).toString());
             first = false;
         }
         for (String param : parameters) {
@@ -85,12 +101,12 @@ public class ValidatorByParameter implements Validator {
             } else {
                 filter.append(" and ");
             }
-            Object paramValueRaw = obs.getParameters().get(param);
+            Object paramValueRaw = obs.getProperty(EP_PARAMETERS).get(param);
             String paramUrlValue;
             if (paramValueRaw instanceof Number) {
                 paramUrlValue = paramValueRaw.toString();
             } else {
-                paramUrlValue = "'" + paramValueRaw.toString() + "'";
+                paramUrlValue = "'" + paramValueRaw + "'";
             }
             filter.append("Parameters/").append(param).append(" eq ").append(paramUrlValue);
         }
@@ -98,40 +114,38 @@ public class ValidatorByParameter implements Validator {
     }
 
     @Override
-    public boolean isValid(Observation obs) throws ImportException {
+    public boolean isValid(Entity obs) throws ImportException {
         String filter = buildFilter(obs);
         try {
-            Datastream ds = obs.getDatastream();
+            Entity ds = obs.getProperty(mdl11.npObservationDatastream);
             if (ds != null) {
-                Observation first = ds.observations()
-                        .query()
+                Entity first = ds.query(mdl11.npDatastreamObservations)
                         .select("@iot.id", "Parameters")
                         .filter(filter)
                         .first();
                 if (first == null) {
                     return true;
                 } else {
-                    LOGGER.trace("Observation {} with given Parameters {} = {} exists.", first.getId(), parameters, obs.getParameters());
+                    LOGGER.trace("Observation {} with given Parameters {} = {} exists.", first, parameters, obs.getProperty(EP_PARAMETERS));
                     if (update) {
-                        obs.setId(first.getId());
+                        obs.setPrimaryKeyValues(first.getPrimaryKeyValues());
                         return true;
                     }
                     return false;
                 }
             }
-            MultiDatastream mds = obs.getMultiDatastream();
+            Entity mds = obs.getProperty(mdlMds.npObservationMultidatastream);
             if (mds != null) {
-                Observation first = mds.observations()
-                        .query()
+                Entity first = mds.query(mdlMds.npMultidatastreamObservations)
                         .select("@iot.id", "Parameters")
                         .filter(filter)
                         .first();
                 if (first == null) {
                     return true;
                 } else {
-                    LOGGER.trace("Observation {} with given Parameter {} = {} exists.", first.getId(), parameters, obs.getParameters());
+                    LOGGER.trace("Observation {} with given Parameter {} = {} exists.", first, parameters, obs.getProperty(EP_PARAMETERS));
                     if (update) {
-                        obs.setId(first.getId());
+                        obs.setPrimaryKeyValues(first.getPrimaryKeyValues());
                         return true;
                     }
                     return false;

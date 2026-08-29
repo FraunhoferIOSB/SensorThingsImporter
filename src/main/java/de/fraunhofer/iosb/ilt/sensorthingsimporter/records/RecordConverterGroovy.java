@@ -19,10 +19,10 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.records;
 
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyCodeSource;
 import java.lang.reflect.InvocationTargetException;
@@ -65,7 +65,7 @@ public class RecordConverterGroovy implements RecordConverter {
     }
 
     @Override
-    public List<Observation> convert(Tuple record, ErrorLog errorLog) throws ImportException {
+    public List<Entity> convert(Tuple record, ErrorLog errorLog) throws ImportException {
         return scriptInstance.convert(record, errorLog);
     }
 

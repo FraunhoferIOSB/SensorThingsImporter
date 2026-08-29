@@ -52,7 +52,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Dependency versions -->
-        <version.FROST-Client>0.46</version.FROST-Client>
+        <version.FROST-Client>2.39</version.FROST-Client>
         <version.commons.collections>4.5.0</version.commons.collections>
         <version.commons.csv>1.14.1</version.commons.csv>
         <version.commons.io>2.22.0</version.commons.io>
@@ -91,7 +91,7 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>FROST-Client</artifactId>
+            <artifactId>FROST-Client-Dynamic</artifactId>
             <version>${version.FROST-Client}</version>
         </dependency>
         <dependency>

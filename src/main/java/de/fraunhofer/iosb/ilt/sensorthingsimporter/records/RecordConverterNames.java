@@ -25,6 +25,13 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.ModelRegistry;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeInstant;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeInterval;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeValue;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
@@ -33,10 +40,6 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator.StringType;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UnitConverter;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.Parser;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.ParserTime;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.ZoneId;
@@ -49,7 +52,6 @@ import java.util.List;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.threeten.extra.Interval;
 
 /**
  * Converts Tuples, using names to access fields.
@@ -117,6 +119,7 @@ public class RecordConverterNames implements RecordConverter {
     private String parametersTemplate;
 
     private Pattern patternMissingResult;
+    private SensorThingsV11Sensing mdl11;
 
     public RecordConverterNames() {
     }
@@ -124,15 +127,17 @@ public class RecordConverterNames implements RecordConverter {
     @Override
     public void init(SensorThingsService service) throws ImportException {
         patternMissingResult = Pattern.compile(resultMissing);
+        final ModelRegistry mr = service.getModelRegistry();
+        mdl11 = mr.getModel(SensorThingsV11Sensing.class);
         if (dsm != null) {
             dsm.init(service);
         }
     }
 
     @Override
-    public List<Observation> convert(Tuple record, ErrorLog errorLog) throws ImportException {
+    public List<Entity> convert(Tuple record, ErrorLog errorLog) throws ImportException {
         Object result;
-        Observation obs;
+        Entity obs;
         StringBuilder log;
         String resultString = fillTemplate(colResult, record);
         if (patternMissingResult.matcher(resultString).matches()) {
@@ -144,7 +149,7 @@ public class RecordConverterNames implements RecordConverter {
             return Collections.emptyList();
         }
 
-        Datastream datastream = dsm.getDatastreamFor(record, errorLog);
+        Entity datastream = dsm.getDatastreamFor(record, errorLog);
         if (datastream == null) {
             LOGGER.debug("No datastream found for column {}", record);
             return Collections.emptyList();
@@ -155,30 +160,33 @@ public class RecordConverterNames implements RecordConverter {
                 errorLog.addError("No Unit");
                 return Collections.emptyList();
             }
-            String unitTo = datastream.getUnitOfMeasurement().getSymbol();
+            String unitTo = datastream.getProperty(SensorThingsV11Sensing.EP_UNITOFMEASUREMENT).getSymbol();
             result = convertResult(unitFrom, unitTo, result);
             if (result == null) {
                 LOGGER.error("Failed to convert from {} to {}.", unitFrom, unitTo);
                 return Collections.emptyList();
             }
         }
-        obs = new Observation(result, datastream);
+        obs = mdl11.newObservation(result, datastream);
         log = new StringBuilder("Result: _").append(result).append("_");
 
-        obs.setPhenomenonTime(listToTimeObject(colPhenTime, record));
-        log.append(", phenomenonTime: ").append(obs.getPhenomenonTime());
+        final TimeValue phenomenonTime = listToTimeObject(colPhenTime, record);
+        obs.setProperty(SensorThingsV11Sensing.EP_PHENOMENONTIME, phenomenonTime);
+        log.append(", phenomenonTime: ").append(phenomenonTime);
 
         if (!colResultTime.isEmpty()) {
-            obs.setResultTime(parseTime(fillTemplate(colResultTime, record)));
-            log.append(", resultTime: ").append(obs.getResultTime());
+            final TimeInstant resultTime = parseTimeInstant(fillTemplate(colResultTime, record));
+            obs.setProperty(SensorThingsV11Sensing.EP_RESULTTIME, resultTime);
+            log.append(", resultTime: ").append(resultTime);
         }
         if (!colValidTime.isEmpty()) {
-            obs.setValidTime(listToTimeObject(colValidTime, record).getAsInterval());
-            log.append(", validTime: ").append(obs.getValidTime());
+            final TimeInterval validTime = listToTimeObject(colValidTime, record).getInterval();
+            obs.setProperty(SensorThingsV11Sensing.EP_VALIDTIME, validTime);
+            log.append(", validTime: ").append(validTime);
         }
         if (!Utils.isNullOrEmpty(parametersTemplate)) {
             String filledTemplate = Translator.fillTemplate(parametersTemplate, record, StringType.JSON, false);
-            obs.setParameters(JsonUtils.jsonToMap(filledTemplate));
+            obs.setProperty(SensorThingsV11Sensing.EP_PARAMETERS, JsonUtils.jsonToProperties(filledTemplate));
         }
         LOGGER.trace("{}", log);
         LOGGER.trace("Record: {}", record);
@@ -205,7 +213,7 @@ public class RecordConverterNames implements RecordConverter {
         return null;
     }
 
-    private TimeObject listToTimeObject(List<String> colList, Tuple record) throws ImportException {
+    private TimeValue listToTimeObject(List<String> colList, Tuple record) throws ImportException {
         final String firstCol = colList.get(0);
         if (colList.size() == 2) {
             final String secondCol = colList.get(1);
@@ -242,23 +250,26 @@ public class RecordConverterNames implements RecordConverter {
             if (!Utils.isNullOrEmpty(end)) {
                 endTime = parseTime(end).withZoneSameInstant(ZONE_Z);
             }
-            Interval interval;
             if (startTime != null && endTime == null) {
                 // Not an interval after all.
-                return new TimeObject(startTime);
+                return TimeValue.create(startTime);
             } else if (startTime != null && endTime != null) {
-                interval = Interval.of(startTime.toInstant(), endTime.toInstant());
+                return TimeValue.create(startTime, endTime);
             } else if (startTime != null && endDuration != null) {
-                interval = Interval.of(startTime.toInstant(), endDuration);
+                return TimeValue.create(startTime, startTime.plus(endDuration));
             } else if (startDuration != null && endTime != null) {
-                interval = Interval.of(endTime.toInstant().minus(startDuration), startDuration);
+                return TimeValue.create(endTime.minus(startDuration), endTime);
             } else {
                 throw new IllegalArgumentException("Don't know how to deal with this combination of time and duration.");
             }
-            return new TimeObject(interval);
         } else {
-            return new TimeObject(parseTime(fillTemplate(firstCol, record)).withZoneSameInstant(ZONE_Z));
+            return TimeValue.create(parseTime(fillTemplate(firstCol, record)).withZoneSameInstant(ZONE_Z));
         }
+    }
+
+    private TimeInstant parseTimeInstant(String value) {
+        ZonedDateTime zdt = parseTime(value);
+        return TimeInstant.create(zdt);
     }
 
     private ZonedDateTime parseTime(String value) throws ImportException {

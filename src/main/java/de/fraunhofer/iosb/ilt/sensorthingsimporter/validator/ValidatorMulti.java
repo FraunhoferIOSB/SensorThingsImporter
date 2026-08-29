@@ -20,9 +20,9 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
 import java.util.List;
 
 /**
@@ -45,7 +45,7 @@ public class ValidatorMulti implements Validator {
     }
 
     @Override
-    public boolean isValid(Observation obs) throws ImportException {
+    public boolean isValid(Entity obs) throws ImportException {
         for (Validator validator : validators) {
             if (!validator.isValid(obs)) {
                 return false;

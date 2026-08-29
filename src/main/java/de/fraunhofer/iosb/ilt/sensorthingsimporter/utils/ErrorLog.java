@@ -20,7 +20,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
-import de.fraunhofer.iosb.ilt.sta.Utils;
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -108,7 +108,7 @@ public class ErrorLog implements AnnotatedConfigurable<Object, Object> {
                     .append('\n');
             for (var errorFile : errorType.getFiles().values()) {
                 sb.append("  ")
-                        .append(Utils.cleanForLogging(errorFile.getFileName(), 200))
+                        .append(StringHelper.cleanForLogging(errorFile.getFileName(), 200))
                         .append(": ")
                         .append(errorFile.getLines().toString())
                         .append('\n');

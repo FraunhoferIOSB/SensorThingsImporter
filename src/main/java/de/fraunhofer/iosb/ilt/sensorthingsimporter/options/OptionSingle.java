@@ -17,8 +17,8 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.options;
 
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Options;
-import de.fraunhofer.iosb.ilt.sta.Utils;
 import java.util.Arrays;
 import java.util.List;
 
@@ -70,7 +70,7 @@ public class OptionSingle<T> extends OptionBase<OptionSingle<T>> {
     @Override
     public OptionSingle<T> readFromEnvironment(String name) {
         String envValue = Options.getEnv(name, "");
-        if (!Utils.isNullOrEmpty(envValue)) {
+        if (!StringHelper.isNullOrEmpty(envValue)) {
             parameter.parse(envValue);
         }
         return this;

@@ -17,8 +17,8 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.Tuple;
-import de.fraunhofer.iosb.ilt.sta.Utils;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +66,7 @@ public class CsvUtils {
                 return "";
             }
             if (forUrl) {
-                replaced = Utils.escapeForStringConstant(replaced);
+                replaced = StringHelper.escapeForStringConstant(replaced);
             } else {
                 replaced = StringUtils.replace(replaced, "\"", "\\\"");
                 replaced = StringUtils.replace(replaced, "\n", "\\n");
@@ -91,7 +91,7 @@ public class CsvUtils {
         if (value instanceof Map || value instanceof List || value == null) {
             return deflt;
         }
-        if (Utils.isNullOrEmpty(value.toString())) {
+        if (StringHelper.isNullOrEmpty(value.toString())) {
             return deflt;
         }
         return value.toString();

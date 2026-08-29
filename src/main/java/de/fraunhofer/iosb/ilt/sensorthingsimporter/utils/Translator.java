@@ -25,8 +25,8 @@ import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.Tuple;
-import de.fraunhofer.iosb.ilt.sta.Utils;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -169,7 +169,7 @@ public class Translator extends AbstractConfigurable<Void, Void> {
                 int subEnd = isNullOrEmpty(group4) ? value.length() : Integer.parseInt(group4);
                 value = value.substring(subStart, subEnd);
             }
-            if (Utils.isNullOrEmpty(value) && matcher.group(6) != null) {
+            if (StringHelper.isNullOrEmpty(value) && matcher.group(6) != null) {
                 value = matcher.group(6);
             }
             switch (targetType) {
@@ -179,7 +179,7 @@ public class Translator extends AbstractConfigurable<Void, Void> {
                     break;
 
                 case URL:
-                    value = Utils.escapeForStringConstant(value);
+                    value = StringHelper.escapeForStringConstant(value);
                     break;
 
                 case PLAIN:

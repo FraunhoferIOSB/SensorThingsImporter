@@ -18,10 +18,10 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.records;
 
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.util.List;
 
 /**
@@ -33,5 +33,5 @@ public interface RecordConverter extends AnnotatedConfigurable<Object, Object> {
         // does nothing by default.
     }
 
-    public List<Observation> convert(Tuple record, ErrorLog errorLog) throws ImportException;
+    public List<Entity> convert(Tuple record, ErrorLog errorLog) throws ImportException;
 }

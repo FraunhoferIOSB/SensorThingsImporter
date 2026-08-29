@@ -24,13 +24,13 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.StringListGenerator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterable;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils.HttpResponse;
-import de.fraunhofer.iosb.ilt.swe.common.Utils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -76,7 +76,7 @@ public class DataGeneratorTemplate implements DataGenerator {
         }
 
         public List<String> getReplacements() {
-            if (Utils.isNullOrEmpty(replacements)) {
+            if (StringHelper.isNullOrEmpty(replacements)) {
                 if (replacementGen != null) {
                     replacements = replacementGen.get();
                 } else {

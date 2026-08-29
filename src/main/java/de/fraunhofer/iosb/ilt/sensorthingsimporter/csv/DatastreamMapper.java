@@ -18,11 +18,10 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import org.apache.commons.csv.CSVRecord;
 
 /**
@@ -42,7 +41,7 @@ public interface DatastreamMapper extends AnnotatedConfigurable<Object, Object> 
      * @return The Datastream to use for the given record.
      * @throws ImportException if there is a permanent failure.
      */
-    public Datastream getDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException;
+    public Entity getDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException;
 
-    public MultiDatastream getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException;
+    public Entity getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException;
 }

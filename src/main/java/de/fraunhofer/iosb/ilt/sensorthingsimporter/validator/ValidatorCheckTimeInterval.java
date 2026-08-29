@@ -17,12 +17,15 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
+import static de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing.EP_PHENOMENONTIME;
+
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeInterval;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeValue;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
 import java.text.ParseException;
 import net.time4j.Duration;
 import net.time4j.IsoUnit;
@@ -30,7 +33,6 @@ import net.time4j.Moment;
 import net.time4j.tz.ZonalOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.threeten.extra.Interval;
 
 public class ValidatorCheckTimeInterval implements Validator {
 
@@ -55,18 +57,18 @@ public class ValidatorCheckTimeInterval implements Validator {
     }
 
     @Override
-    public boolean isValid(Observation obs) throws ImportException {
+    public boolean isValid(Entity obs) throws ImportException {
         if (parsedDuration == null) {
             throw new ImportException("No duration configured.");
         }
-        TimeObject phenomenonTime = obs.getPhenomenonTime();
+        TimeValue phenomenonTime = obs.getProperty(EP_PHENOMENONTIME);
         if (!phenomenonTime.isInterval()) {
             return false;
         }
-        Interval interval = phenomenonTime.getAsInterval();
-        Moment start = Moment.from(interval.getStart());
+        TimeInterval interval = phenomenonTime.getInterval();
+        Moment start = interval.getStart();
         Moment wantedEnd = parsedDuration.addTo(start.toZonalTimestamp(ZonalOffset.UTC)).atUTC();
-        if (Moment.from(interval.getEnd()).isSimultaneous(wantedEnd)) {
+        if (interval.getEnd().isSimultaneous(wantedEnd)) {
             return true;
         }
         LOGGER.error("Incorrect interval {}", phenomenonTime);

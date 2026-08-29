@@ -17,8 +17,8 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
-import de.fraunhofer.iosb.ilt.sta.Utils;
-import de.fraunhofer.iosb.ilt.sta.jackson.ObjectMapperFactory;
+import de.fraunhofer.iosb.ilt.frostclient.json.SimpleJsonMapper;
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -99,7 +99,7 @@ public class UrlUtils {
                                 .build());
         CloseableHttpClient client = clientBuilder.build();
         HttpGet get = new HttpGet(targetUrl);
-        if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
+        if (!StringHelper.isNullOrEmpty(username) && !StringHelper.isNullOrEmpty(password)) {
             String auth = username + ":" + password;
             byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
             String authHeader = "Basic " + new String(encodedAuth);
@@ -145,7 +145,7 @@ public class UrlUtils {
 
     public static HttpResponse postJsonToUrl(String targetUrl, Object body, List<Header> headers, String username, String password) throws IOException {
         LOGGER.info("Posting: {}", targetUrl);
-        final String queryBody = ObjectMapperFactory.get().writeValueAsString(body);
+        final String queryBody = SimpleJsonMapper.getSimpleObjectMapper().writeValueAsString(body);
         return postToUrl(targetUrl, headers, queryBody, username, password);
     }
 
@@ -163,7 +163,7 @@ public class UrlUtils {
                                 .build());
         CloseableHttpClient client = builder.build();
         final HttpPost post = new HttpPost(targetUrl);
-        if (!Utils.isNullOrEmpty(username) && !Utils.isNullOrEmpty(password)) {
+        if (!StringHelper.isNullOrEmpty(username) && !StringHelper.isNullOrEmpty(password)) {
             final String auth = username + ":" + password;
             final byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
             final String authHeader = "Basic " + new String(encodedAuth);

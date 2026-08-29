@@ -17,6 +17,9 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.document;
 
+import static de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing.EP_PHENOMENONTIME;
+import static de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing.EP_RESULT;
+
 import com.google.gson.JsonElement;
 import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
@@ -24,16 +27,17 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorMap;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.ModelRegistry;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeValue;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.JsonUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.Parser;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.parsers.ParserTime;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -69,8 +73,15 @@ public class JsonConverter implements DocumentParser {
     private Parser resultParser;
     private ParserTime timeParser;
 
+    private SensorThingsV11Sensing mdl11;
+    private SensorThingsV11MultiDatastream mdlMds;
+
     @Override
     public void configure(JsonElement config, SensorThingsService context, Object edtCtx, ConfigEditor<?> configEditor) throws ConfigurationException {
+        final ModelRegistry mr = context.getModelRegistry();
+        mdl11 = mr.getModel(SensorThingsV11Sensing.class);
+        mdlMds = mr.getModel(SensorThingsV11MultiDatastream.class);
+
         getConfigEditor(context, edtCtx).setConfig(config);
         String listPath = editorPathList.getValue();
         listPathParts = listPath.split("/");
@@ -108,7 +119,7 @@ public class JsonConverter implements DocumentParser {
     }
 
     @Override
-    public List<Observation> process(Datastream ds, ErrorLog errorLog, String input) throws ImportException {
+    public List<Entity> processDatastream(Entity ds, ErrorLog errorLog, String input) throws ImportException {
         try {
             ObjectMapper mapper = JsonMapper.builder()
                     .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
@@ -120,12 +131,12 @@ public class JsonConverter implements DocumentParser {
                 throw new ImportException("List path did not lead to an array.");
             }
 
-            List<Observation> observationList = new ArrayList<>();
+            List<Entity> observationList = new ArrayList<>();
             for (JsonNode element : listJson) {
                 ZonedDateTime phenTime = timeParser.parse(JsonUtils.walk(element, phenTimePathParts).asText());
                 Object result = resultParser.parse(JsonUtils.walk(element, resultPathParts));
-                Observation obs = new Observation(result, ds);
-                obs.setPhenomenonTime(new TimeObject(phenTime));
+                Entity obs = mdl11.newObservation(result, ds)
+                        .setProperty(EP_PHENOMENONTIME, TimeValue.create(phenTime));
                 observationList.add(obs);
             }
 
@@ -137,8 +148,8 @@ public class JsonConverter implements DocumentParser {
     }
 
     @Override
-    public List<Observation> process(MultiDatastream mds, ErrorLog errorLog, String... inputs) throws ImportException {
-        Map<ZonedDateTime, Observation> observationsMap = new HashMap<>();
+    public List<Entity> processMultiDatastream(Entity mds, ErrorLog errorLog, String... inputs) throws ImportException {
+        Map<ZonedDateTime, Entity> observationsMap = new HashMap<>();
         ObjectMapper mapper = new ObjectMapper();
         int resultIndex = 0;
         try {
@@ -150,20 +161,21 @@ public class JsonConverter implements DocumentParser {
                     throw new ImportException("List path did not lead to an array.");
                 }
 
-                Map<ZonedDateTime, Observation> updatedMap = new HashMap<>();
+                Map<ZonedDateTime, Entity> updatedMap = new HashMap<>();
                 for (JsonNode element : listJson) {
                     ZonedDateTime phenTime = timeParser.parse(JsonUtils.walk(element, phenTimePathParts).asString());
                     Object result = resultParser.parse(JsonUtils.walk(element, resultPathParts).asString());
                     if (resultIndex == 0) {
                         Object[] resultArr = new Object[inputs.length];
                         resultArr[resultIndex] = result;
-                        Observation obs = new Observation(resultArr, mds);
-                        obs.setPhenomenonTime(new TimeObject(phenTime));
+                        Entity obs = mdl11.newObservation(resultArr)
+                                .setProperty(mdlMds.npObservationMultidatastream, mds)
+                                .setProperty(EP_PHENOMENONTIME, TimeValue.create(phenTime));
                         updatedMap.put(phenTime, obs);
                     } else {
-                        Observation obs = observationsMap.get(phenTime);
+                        Entity obs = observationsMap.get(phenTime);
                         if (obs != null) {
-                            ((Object[]) obs.getResult())[resultIndex] = result;
+                            ((Object[]) obs.getProperty(EP_RESULT))[resultIndex] = result;
                             updatedMap.put(phenTime, obs);
                         }
                     }

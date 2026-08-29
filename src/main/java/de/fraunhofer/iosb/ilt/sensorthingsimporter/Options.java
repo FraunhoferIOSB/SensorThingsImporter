@@ -17,12 +17,12 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.Option;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.OptionSingle;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.OptionToggle;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.ParameterLong;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.ParameterString;
-import de.fraunhofer.iosb.ilt.sta.Utils;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -143,7 +143,7 @@ public class Options {
 
     public static boolean getEnv(String name, boolean dflt) {
         String value = System.getenv(name);
-        if (Utils.isNullOrEmpty(value)) {
+        if (StringHelper.isNullOrEmpty(value)) {
             LOGGER.info("Parameter {} not set, using default value: {}", name, dflt);
             return dflt;
         }
@@ -153,7 +153,7 @@ public class Options {
 
     public static String getEnv(String name, String dflt) {
         String value = System.getenv(name);
-        if (Utils.isNullOrEmpty(value)) {
+        if (StringHelper.isNullOrEmpty(value)) {
             LOGGER.info("Parameter {} not set, using default value: {}", name, dflt);
             return dflt;
         }

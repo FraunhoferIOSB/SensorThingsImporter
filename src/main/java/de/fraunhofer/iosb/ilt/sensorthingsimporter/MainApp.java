@@ -18,11 +18,11 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.Option;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.options.Parameter;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.scheduler.ImporterScheduler;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.GitVersionInfo;
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;

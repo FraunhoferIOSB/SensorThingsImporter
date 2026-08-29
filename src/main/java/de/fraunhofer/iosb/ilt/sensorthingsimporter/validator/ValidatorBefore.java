@@ -19,13 +19,13 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.validator;
 
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeValue;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.model.TimeObject;
-import java.time.Instant;
-import org.threeten.extra.Days;
-import org.threeten.extra.Minutes;
+import java.util.concurrent.TimeUnit;
+import net.time4j.Moment;
 
 /**
  * Checks if the observation has a phenomenonTime that is later than the latest
@@ -43,25 +43,25 @@ public class ValidatorBefore implements Validator {
     @EditorInt.EdOptsInt(min = 0, max = 999999, step = 1, dflt = 0)
     private int minutes;
 
-    private Instant refTime;
+    private Moment refTime;
 
     @Override
-    public boolean isValid(Observation obs) throws ImportException {
-        TimeObject phenomenonTime = obs.getPhenomenonTime();
-        Instant obsInstant;
+    public boolean isValid(Entity obs) throws ImportException {
+        TimeValue phenomenonTime = obs.getProperty(SensorThingsV11Sensing.EP_PHENOMENONTIME);
+        Moment obsInstant;
         if (phenomenonTime.isInterval()) {
-            obsInstant = phenomenonTime.getAsInterval().getStart();
+            obsInstant = phenomenonTime.getInterval().getStart();
         } else {
-            obsInstant = phenomenonTime.getAsDateTime().toInstant();
+            obsInstant = phenomenonTime.getInstant().getDateTime();
         }
         return refTime.isAfter(obsInstant);
     }
 
     @Override
     public void init(ObservationUploader uploader) {
-        Instant now = Instant.now();
-        refTime = now.minus(Days.of(days));
-        refTime = refTime.minus(Minutes.of(minutes));
+        Moment now = Moment.nowInSystemTime();
+        refTime = now.minus(days, TimeUnit.DAYS);
+        refTime = refTime.minus(minutes, TimeUnit.MINUTES);
     }
 
 }

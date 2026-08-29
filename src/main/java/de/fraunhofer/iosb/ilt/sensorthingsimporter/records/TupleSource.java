@@ -18,9 +18,9 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.records;
 
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterator;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 
 /**
  * A source that generates Tuples

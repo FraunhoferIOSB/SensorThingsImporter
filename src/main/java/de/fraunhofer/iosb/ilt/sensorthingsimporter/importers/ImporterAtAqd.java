@@ -17,6 +17,10 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.importers;
 
+import static de.fraunhofer.iosb.ilt.frostclient.models.CommonProperties.EP_PROPERTIES;
+import static de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing.EP_PHENOMENONTIME;
+import static de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing.EP_RESULT;
+import static de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing.EP_UNITOFMEASUREMENT;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_BEGIN_TIME;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_COUNTRY_CODE;
 import static de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaConstants.TAG_END_TIME;
@@ -32,6 +36,17 @@ import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.exception.StatusCodeException;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.ModelRegistry;
+import de.fraunhofer.iosb.ilt.frostclient.models.CommonProperties;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeValue;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.UnitOfMeasurement;
+import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.EeaObservedProperty;
@@ -40,18 +55,6 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.EntityCache;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.StatusCodeException;
-import de.fraunhofer.iosb.ilt.sta.Utils;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.FeatureOfInterest;
-import de.fraunhofer.iosb.ilt.sta.model.Location;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.model.ObservedProperty;
-import de.fraunhofer.iosb.ilt.sta.model.Sensor;
-import de.fraunhofer.iosb.ilt.sta.model.Thing;
-import de.fraunhofer.iosb.ilt.sta.model.ext.UnitOfMeasurement;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.Charset;
@@ -85,16 +88,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.geojson.Point;
 import org.geotools.api.geometry.MismatchedDimensionException;
 import org.slf4j.LoggerFactory;
-import org.threeten.extra.Interval;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-/**
- *
- * @author hylke
- */
 public class ImporterAtAqd implements Importer {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ImporterAtAqd.class.getName());
@@ -171,25 +169,27 @@ public class ImporterAtAqd implements Importer {
 
     private SensorThingsService service;
     private FrostUtils frostUtils;
+    private SensorThingsV11Sensing mdl11;
+    private SensorThingsV11MultiDatastream mdlMds;
 
     private final NameSpaceContextMap nameSpaceContext = new NameSpaceContextMap();
 
-    private final EntityCache<String, Location> locationsCache = new EntityCache<>(
-            (entity) -> Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null),
-            Location::getName);
-    private final EntityCache<String, Thing> thingsCache = new EntityCache<>(
-            (entity) -> Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null),
-            Thing::getName);
-    private final EntityCache<String, ObservedProperty> observedPropertyCache = EeaObservedProperty.createObservedPropertyCache();
-    private final EntityCache<String, Sensor> sensorCache = new EntityCache<>(
-            (entity) -> Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null),
-            Sensor::getName);
-    private final EntityCache<String, FeatureOfInterest> foiCache = new EntityCache<>(
-            (entity) -> Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null),
-            FeatureOfInterest::getName);
-    private final EntityCache<String, Datastream> datastreamCache = new EntityCache<>(
-            (entity) -> Objects.toString(entity.getProperties().get(TAG_LOCAL_ID).toString(), null),
-            Datastream::getName);
+    private final EntityCache<String> locationsCache = new EntityCache<>(
+            e -> Objects.toString(e.getProperty(CommonProperties.EP_PROPERTIES).get(TAG_LOCAL_ID).toString(), null),
+            e -> e.getProperty(CommonProperties.EP_NAME));
+    private final EntityCache<String> thingsCache = new EntityCache<>(
+            e -> Objects.toString(e.getProperty(CommonProperties.EP_PROPERTIES).get(TAG_LOCAL_ID).toString(), null),
+            e -> e.getProperty(CommonProperties.EP_NAME));
+    private final EntityCache<String> observedPropertyCache = EeaObservedProperty.createObservedPropertyCache();
+    private final EntityCache<String> sensorCache = new EntityCache<>(
+            e -> Objects.toString(e.getProperty(CommonProperties.EP_PROPERTIES).get(TAG_LOCAL_ID).toString(), null),
+            e -> e.getProperty(CommonProperties.EP_NAME));
+    private final EntityCache<String> foiCache = new EntityCache<>(
+            e -> Objects.toString(e.getProperty(CommonProperties.EP_PROPERTIES).get(TAG_LOCAL_ID).toString(), null),
+            e -> e.getProperty(CommonProperties.EP_NAME));
+    private final EntityCache<String> datastreamCache = new EntityCache<>(
+            e -> Objects.toString(e.getProperty(CommonProperties.EP_PROPERTIES).get(TAG_LOCAL_ID).toString(), null),
+            e -> e.getProperty(CommonProperties.EP_NAME));
 
     public ImporterAtAqd() {
         nameSpaceContext.register("ad", "urn:x-inspire:specification:gmlas:Addresses:3.0");
@@ -217,6 +217,9 @@ public class ImporterAtAqd implements Importer {
     @Override
     public void init(SensorThingsService service) throws ImportException {
         this.service = service;
+        final ModelRegistry mr = service.getModelRegistry();
+        mdl11 = mr.getModel(SensorThingsV11Sensing.class);
+        mdlMds = mr.getModel(SensorThingsV11MultiDatastream.class);
         frostUtils = new FrostUtils(service);
     }
 
@@ -231,7 +234,7 @@ public class ImporterAtAqd implements Importer {
     }
 
     @Override
-    public Iterator<List<Observation>> iterator() {
+    public Iterator<List<Entity>> iterator() {
         try {
             int total = 6;
             int progress = 0;
@@ -263,42 +266,42 @@ public class ImporterAtAqd implements Importer {
 
         String filter = "properties/" + TAG_OWNER + " eq " + FrostUtils.quoteForUrl(entityOwner);
         final int observedPropertyCount = observedPropertyCache.load(
-                service.observedProperties(),
+                service.dao(mdl11.etObservedProperty),
                 filter,
                 "id,name,description,definition,properties",
                 "");
         LOGGER.debug("Loaded {} ObservedProperties", observedPropertyCount);
 
         final int locationCount = locationsCache.load(
-                service.locations(),
+                service.dao(mdl11.etLocation),
                 filter,
                 "id,name,description,properties,encodingType,location",
                 "");
         LOGGER.debug("Loaded {} Locations", locationCount);
 
         final int thingCount = thingsCache.load(
-                service.things(),
+                service.dao(mdl11.etThing),
                 filter,
                 "id,name,description,properties",
                 "Locations($select=id)");
         LOGGER.debug("Loaded {} Things", thingCount);
 
         final int sensorCount = sensorCache.load(
-                service.sensors(),
+                service.dao(mdl11.etSensor),
                 filter,
                 "id,name,description,encodingType,metadata,properties",
                 "");
         LOGGER.debug("Loaded {} Sensors", sensorCount);
 
         final int foiCount = foiCache.load(
-                service.featuresOfInterest(),
+                service.dao(mdl11.etFeatureOfInterest),
                 filter,
                 "id,name,description,encodingType,feature,properties",
                 "");
         LOGGER.debug("Loaded {} FeaturesOfInterest", foiCount);
 
         final int datastreamCount = datastreamCache.load(
-                service.datastreams(),
+                service.dao(mdl11.etDatastream),
                 filter,
                 "id,name,description,unitOfMeasurement,observationType,properties,phenomenonTime",
                 "");
@@ -391,11 +394,11 @@ public class ImporterAtAqd implements Importer {
                 locationProps.put(TAG_NAMESPACE, stationNamesSpace);
                 locationProps.put(TAG_METADATA, stationMetaData);
 
-                String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(stationId);
-                Location cachedLocation = locationsCache.get(stationId);
-                Location location = frostUtils.findOrCreateLocation(filter, stationName, locationDescription, locationProps, targetPoint, cachedLocation);
-                Thing cachedThing = thingsCache.get(stationId);
-                Thing thing = frostUtils.findOrCreateThing(filter, stationName, stationDescription, stationProps, location, cachedThing);
+                String filter = "properties/" + TAG_LOCAL_ID + " eq " + FrostUtils.quoteForUrl(stationId);
+                Entity cachedLocation = locationsCache.get(stationId);
+                Entity location = frostUtils.findOrCreateLocation(filter, stationName, locationDescription, locationProps, targetPoint, cachedLocation);
+                Entity cachedThing = thingsCache.get(stationId);
+                Entity thing = frostUtils.findOrCreateThing(filter, stationName, stationDescription, stationProps, location, cachedThing);
                 locationsCache.add(location);
                 thingsCache.add(thing);
 
@@ -518,9 +521,9 @@ public class ImporterAtAqd implements Importer {
                 FrostUtils.putIntoSubMap(properties, "responsibleParty", "telephoneVoice", exprRpTelephoneVoice.evaluate(processNode));
                 FrostUtils.putIntoSubMap(properties, "responsibleParty", "website", exprRpWebsite.evaluate(processNode));
 
-                String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(processId);
-                Sensor cachedSensor = sensorCache.get(processId);
-                Sensor sensor = frostUtils.findOrCreateSensor(filter, processName, processDescription, "application/pdf", processMeta, properties, cachedSensor);
+                String filter = "properties/" + TAG_LOCAL_ID + " eq " + FrostUtils.quoteForUrl(processId);
+                Entity cachedSensor = sensorCache.get(processId);
+                Entity sensor = frostUtils.findOrCreateSensor(filter, processName, processDescription, "application/pdf", processMeta, properties, cachedSensor);
                 sensorCache.add(sensor);
                 LOGGER.debug("Process: {}.", processId);
                 imported++;
@@ -587,9 +590,9 @@ public class ImporterAtAqd implements Importer {
                 // http://luft.umweltbundesamt.at has wrong axis order
                 Point geoJson = FrostUtils.convertCoordinates(locationPos, locationSrsName, 6, true);
 
-                String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(sampleId);
-                FeatureOfInterest cachedFoi = foiCache.get(sampleId);
-                FeatureOfInterest foi = frostUtils.findOrCreateFeature(filter, sampleName, sampleDescription, geoJson, properties, cachedFoi);
+                String filter = "properties/" + TAG_LOCAL_ID + " eq " + FrostUtils.quoteForUrl(sampleId);
+                Entity cachedFoi = foiCache.get(sampleId);
+                Entity foi = frostUtils.findOrCreateFeature(filter, sampleName, sampleDescription, geoJson, properties, cachedFoi);
                 foiCache.add(foi);
                 LOGGER.debug("Sample: {}.", sampleId);
                 imported++;
@@ -663,26 +666,26 @@ public class ImporterAtAqd implements Importer {
                 if (!foiCache.containsId(foiLocalId)) {
                     LOGGER.error("Specified FoI ({}) not found for feature {}.", foiLocalId, dsId);
                 }
-                ObservedProperty observedProperty = observedPropertyCache.get(obsPropLocalId);
+                Entity observedProperty = observedPropertyCache.get(obsPropLocalId);
                 if (observedProperty == null) {
                     LOGGER.debug("Skipping {}, no ObservedProperty.", dsId);
                     continue;
                 }
-                Sensor sensor = sensorCache.get(sensorLocalId);
+                Entity sensor = sensorCache.get(sensorLocalId);
                 if (sensor == null) {
                     LOGGER.debug("Skipping {}, no Sensor.", dsId);
                     continue;
                 }
-                Thing thing = thingsCache.get(thingLocalId);
+                Entity thing = thingsCache.get(thingLocalId);
                 if (thing == null) {
                     LOGGER.debug("Skipping {}, no Thing.", dsId);
                     continue;
                 }
-                String dsDescription = observedProperty.getName() + " as " + thing.getName();
+                String dsDescription = observedProperty.getProperty(CommonProperties.EP_NAME) + " at " + thing.getProperty(CommonProperties.EP_NAME);
 
-                sensor = sensor.withOnlyId();
-                thing = thing.withOnlyId();
-                observedProperty = observedProperty.withOnlyId();
+                sensor = sensor.withOnlyPk();
+                thing = thing.withOnlyPk();
+                observedProperty = observedProperty.withOnlyPk();
 
                 Map<String, Object> properties = new HashMap<>();
                 properties.put(TAG_OWNER, entityOwner);
@@ -693,13 +696,13 @@ public class ImporterAtAqd implements Importer {
                 properties.put("resultNature", resultNature);
                 properties.put("featureOfInterestLocalId", foiLocalId);
 
-                String filter = "properties/" + TAG_LOCAL_ID + " eq " + Utils.quoteForUrl(dsId);
-                Datastream cachedDs = datastreamCache.get(dsId);
+                String filter = "properties/" + TAG_LOCAL_ID + " eq " + FrostUtils.quoteForUrl(dsId);
+                Entity cachedDs = datastreamCache.get(dsId);
                 UnitOfMeasurement uom = FrostUtils.NULL_UNIT;
-                if (cachedDs != null && !uom.equals(cachedDs.getUnitOfMeasurement())) {
-                    uom = cachedDs.getUnitOfMeasurement();
+                if (cachedDs != null && !uom.equals(cachedDs.getProperty(SensorThingsV11Sensing.EP_UNITOFMEASUREMENT))) {
+                    uom = cachedDs.getProperty(SensorThingsV11Sensing.EP_UNITOFMEASUREMENT);
                 }
-                Datastream ds = frostUtils.findOrCreateDatastream(filter, dsName, dsDescription, properties, uom, thing, observedProperty, sensor, cachedDs);
+                Entity ds = frostUtils.findOrCreateDatastream(filter, dsName, dsDescription, properties, uom, thing, observedProperty, sensor, cachedDs);
                 datastreamCache.add(ds);
                 LOGGER.debug("SamplingPoints: {}.", dsId);
                 imported++;
@@ -714,17 +717,17 @@ public class ImporterAtAqd implements Importer {
         LOGGER.info("Done with SamplingPoints, imported {} of {}.", imported, total);
     }
 
-    private class ObservationListIter implements Iterator<List<Observation>> {
+    private class ObservationListIter implements Iterator<List<Entity>> {
 
-        private final EntityCache<String, FeatureOfInterest> foiCache;
-        private final EntityCache<String, Datastream> datastreamCache;
+        private final EntityCache<String> foiCache;
+        private final EntityCache<String> datastreamCache;
         private final String observationsUrl;
-        private final Iterator<Datastream> datastreamIterator;
+        private final Iterator<Entity> datastreamIterator;
         private final TimeGen startTime;
         private final long count;
         private long progress = 0;
 
-        public ObservationListIter(EntityCache<String, FeatureOfInterest> foiCache, EntityCache<String, Datastream> datastreamCache, String observationsUrl, TimeGen startTime) {
+        public ObservationListIter(EntityCache<String> foiCache, EntityCache<String> datastreamCache, String observationsUrl, TimeGen startTime) {
             this.foiCache = foiCache;
             this.datastreamCache = datastreamCache;
             this.observationsUrl = observationsUrl;
@@ -733,15 +736,16 @@ public class ImporterAtAqd implements Importer {
             count = datastreamCache.valuesWithLocalId().size();
         }
 
-        private List<Observation> importDatastream(Datastream ds) throws ImportException, ServiceFailureException {
-            List<Observation> result = new ArrayList<>();
+        private List<Entity> importDatastream(Entity ds) throws ImportException, ServiceFailureException {
+            List<Entity> result = new ArrayList<>();
 
-            Instant start = startTime.getInstant(ds);
+            Instant start = startTime.getInstantFromDs(ds);
             Instant end = Instant.now();
-            Interval interval = Interval.of(start.truncatedTo(ChronoUnit.MINUTES), end.truncatedTo(ChronoUnit.MINUTES));
-            String dsLocalId = ds.getProperties().get(TAG_LOCAL_ID).toString();
+            Instant tStart = start.truncatedTo(ChronoUnit.MINUTES);
+            Instant tEnd = end.truncatedTo(ChronoUnit.MINUTES);
+            String dsLocalId = ds.getProperty(EP_PROPERTIES).get(TAG_LOCAL_ID).toString();
             String finalUrl = observationsUrl.replace("{datastreamLocalId}", dsLocalId);
-            finalUrl = finalUrl.replace("{phenomenonTimeInterval}", interval.toString());
+            finalUrl = finalUrl.replace("{phenomenonTimeInterval}", tStart.toString() + '/' + tEnd.toString());
             String observationsXml;
             try {
                 observationsXml = UrlUtils.fetchFromUrl(finalUrl).getDataString();
@@ -768,10 +772,10 @@ public class ImporterAtAqd implements Importer {
                 if (!samplingPointId.endsWith(dsLocalId)) {
                     LOGGER.debug("Returned data has sampling point {}, but expected data for {}", samplingPointId, dsLocalId);
                 }
-                if (Utils.isNullOrEmpty(featureId)) {
+                if (StringHelper.isNullOrEmpty(featureId)) {
                     return result;
                 }
-                FeatureOfInterest foi = foiCache.get(FrostUtils.afterLastSlash(featureId));
+                Entity foi = foiCache.get(FrostUtils.afterLastSlash(featureId));
                 if (foi == null) {
                     LOGGER.error("Could not find foi for {}", featureId);
                     return result;
@@ -788,10 +792,10 @@ public class ImporterAtAqd implements Importer {
                 sweValueExtractor.parse();
                 LOGGER.debug("Parsing {} Observations", sweValueExtractor.getElementCount());
 
-                if (FrostUtils.NULL_UNIT.equals(ds.getUnitOfMeasurement()) && sweValueExtractor.hasNext()) {
+                if (FrostUtils.NULL_UNIT.equals(ds.getProperty(EP_UNITOFMEASUREMENT)) && sweValueExtractor.hasNext()) {
                     sweValueExtractor.next();
                     String name = FrostUtils.afterLastSlash(value.uom);
-                    ds.setUnitOfMeasurement(new UnitOfMeasurement(name, name, value.uom));
+                    ds.setProperty(EP_UNITOFMEASUREMENT, new UnitOfMeasurement(name, name, value.uom));
                     frostUtils.update(ds);
                     sweValueExtractor.reset();
                 }
@@ -799,13 +803,13 @@ public class ImporterAtAqd implements Importer {
                 while (sweValueExtractor.hasNext()) {
                     sweValueExtractor.next();
                     try {
-                        Observation o = new Observation();
-                        o.setResult(new BigDecimal(value.lastValue.trim()));
+                        Entity o = mdl11.newObservation();
+                        o.setProperty(EP_RESULT, new BigDecimal(value.lastValue.trim()));
                         ZonedDateTime zdtStart = ZonedDateTime.parse(timeStart.lastValue.trim());
                         ZonedDateTime zdtEnd = ZonedDateTime.parse(timeEnd.lastValue.trim());
-                        o.setPhenomenonTimeFrom(Interval.of(zdtStart.toInstant(), zdtEnd.toInstant()));
-                        o.setDatastream(ds);
-                        o.setFeatureOfInterest(foi);
+                        o.setProperty(EP_PHENOMENONTIME, TimeValue.create(zdtStart, zdtEnd));
+                        o.setProperty(mdl11.npObservationDatastream, ds);
+                        o.setProperty(mdl11.npObservationFeatureofinterest, foi);
                         result.add(o);
                     } catch (NumberFormatException ex) {
                         LOGGER.error("Failed to parse number {}", value.lastValue);
@@ -829,14 +833,14 @@ public class ImporterAtAqd implements Importer {
         }
 
         @Override
-        public List<Observation> next() {
+        public List<Entity> next() {
             if (datastreamIterator.hasNext()) {
-                Datastream ds = datastreamIterator.next();
+                Entity ds = datastreamIterator.next();
                 try {
                     tracker.updateProgress(++progress, count);
                     return importDatastream(ds);
                 } catch (ImportException | ServiceFailureException ex) {
-                    LOGGER.error("Failed to import data for datastream " + ds.getName(), ex);
+                    LOGGER.error("Failed to import data for datastream " + ds, ex);
                 }
             }
             return Collections.emptyList();

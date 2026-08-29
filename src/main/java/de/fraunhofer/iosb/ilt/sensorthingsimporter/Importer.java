@@ -18,15 +18,15 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter;
 
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ProgressTracker;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.util.List;
 
 /**
  * The main importer interface.
  */
-public interface Importer extends Iterable<List<Observation>>, AnnotatedConfigurable<Object, Object> {
+public interface Importer extends Iterable<List<Entity>>, AnnotatedConfigurable<Object, Object> {
 
     public default void init(SensorThingsService service) throws ImportException {
     }

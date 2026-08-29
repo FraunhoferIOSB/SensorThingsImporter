@@ -17,16 +17,17 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
 import org.apache.commons.csv.CSVRecord;
 
-/**
- *
- * @author hylke
- */
 public interface DatastreamGenerator {
 
-    public Datastream createDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException;
+    public default void init(SensorThingsService service) throws ImportException {
+        // does nothing by default.
+    }
+
+    public Entity createDatastreamFor(CSVRecord record, ErrorLog errorLog) throws ImportException;
 }

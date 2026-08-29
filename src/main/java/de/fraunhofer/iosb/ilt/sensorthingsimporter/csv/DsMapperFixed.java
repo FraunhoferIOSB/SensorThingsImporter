@@ -19,12 +19,15 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
 
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.ModelRegistry;
+import de.fraunhofer.iosb.ilt.frostclient.model.PkValue;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
+import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
-import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
-import de.fraunhofer.iosb.ilt.sta.model.Datastream;
-import de.fraunhofer.iosb.ilt.sta.model.MultiDatastream;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,9 +43,11 @@ public class DsMapperFixed implements DatastreamMapper {
     private static final Logger LOGGER = LoggerFactory.getLogger(DsMapperFixed.class);
 
     private SensorThingsService service;
+    private SensorThingsV11Sensing mdl11;
+    private SensorThingsV11MultiDatastream mdlMds;
 
-    private Datastream ds;
-    private MultiDatastream mds;
+    private Entity ds;
+    private Entity mds;
 
     @ConfigurableField(editor = EditorInt.class, label = "Datastream ID", description = "The datastream id to add the observations to.")
     @EditorInt.EdOptsInt()
@@ -55,16 +60,19 @@ public class DsMapperFixed implements DatastreamMapper {
     @Override
     public void init(SensorThingsService service) throws ImportException {
         this.service = service;
+        final ModelRegistry mr = service.getModelRegistry();
+        mdl11 = mr.getModel(SensorThingsV11Sensing.class);
+        mdlMds = mr.getModel(SensorThingsV11MultiDatastream.class);
     }
 
     private void init(boolean multi) {
         try {
             if (multi) {
-                mds = service.multiDatastreams().find(dsId);
-                LOGGER.info("Using fixed multiDatastream: {}", mds.getName());
+                mds = service.dao(mdlMds.etMultiDatastream).find(PkValue.of(dsId));
+                LOGGER.info("Using fixed multiDatastream: {}", mds);
             } else {
-                ds = service.datastreams().find(dsId);
-                LOGGER.info("Using fixed datatsream: {}", ds.getName());
+                ds = service.dao(mdl11.etDatastream).find(PkValue.of(dsId));
+                LOGGER.info("Using fixed datatsream: {}", ds);
             }
         } catch (ServiceFailureException exc) {
             throw new IllegalArgumentException("Could not fetch (multi)datastream for id " + dsId, exc);
@@ -72,7 +80,7 @@ public class DsMapperFixed implements DatastreamMapper {
     }
 
     @Override
-    public Datastream getDatastreamFor(CSVRecord record, ErrorLog errorLog) {
+    public Entity getDatastreamFor(CSVRecord record, ErrorLog errorLog) {
         if (ds == null) {
             init(false);
         }
@@ -80,7 +88,7 @@ public class DsMapperFixed implements DatastreamMapper {
     }
 
     @Override
-    public MultiDatastream getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) {
+    public Entity getMultiDatastreamFor(CSVRecord record, ErrorLog errorLog) {
         if (mds == null) {
             init(true);
         }

@@ -25,12 +25,12 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils;
-import de.fraunhofer.iosb.ilt.sta.model.Observation;
-import de.fraunhofer.iosb.ilt.sta.service.SensorThingsService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -160,7 +160,7 @@ public class ImporterCsv implements Importer {
     }
 
     @Override
-    public Iterator<List<Observation>> iterator() {
+    public Iterator<List<Entity>> iterator() {
         try {
             ObsListIter obsListIter = new ObsListIter(inputUrl.urls(errorLog).iterator(), rowSkip, rowLimit);
             return obsListIter;
@@ -169,7 +169,7 @@ public class ImporterCsv implements Importer {
         }
     }
 
-    private class ObsListIter implements Iterator<List<Observation>> {
+    private class ObsListIter implements Iterator<List<Entity>> {
 
         private final Iterator<URL> urlIterator;
         private Iterator<CSVRecord> records;
@@ -197,7 +197,7 @@ public class ImporterCsv implements Importer {
         }
 
         @Override
-        public List<Observation> next() {
+        public List<Entity> next() {
             if (!records.hasNext()) {
                 try {
                     records = nextUrl().iterator();
@@ -220,9 +220,9 @@ public class ImporterCsv implements Importer {
                 if (limitRows && rowCount > rowLimit) {
                     return Collections.emptyList();
                 }
-                List<Observation> result = new ArrayList<>();
+                List<Entity> result = new ArrayList<>();
                 for (RecordConverter rcCsv : rcvActive) {
-                    List<Observation> obs;
+                    List<Entity> obs;
                     try {
                         obs = rcCsv.convert(record, errorLog);
                         result.addAll(obs);
