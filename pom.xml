@@ -277,44 +277,6 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>${version.maven.plugin.shade}</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <phase>package</phase>
-                        <configuration>
-                            <createDependencyReducedPom>false</createDependencyReducedPom>
-                            <shadedArtifactAttached>true</shadedArtifactAttached>
-                            <transformers>
-                                <!-- This bit sets the main class for the executable jar as you otherwise -->
-                                <!-- would with the assembly plugin                                       -->
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <manifestEntries>
-                                        <Main-Class>${mainClass}</Main-Class>
-                                    </manifestEntries>
-                                </transformer>
-                                <!-- This bit merges the various GeoTools META-INF/services files         -->
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                            </transformers>
-                            <filters>
-                                <filter>
-                                    <artifact>*:*</artifact>
-                                    <excludes>
-                                        <exclude>META-INF/*.SF</exclude>
-                                        <exclude>META-INF/*.DSA</exclude>
-                                        <exclude>META-INF/*.RSA</exclude>
-                                    </excludes>
-                                </filter>
-                            </filters>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <groupId>io.github.git-commit-id</groupId>
                 <artifactId>git-commit-id-maven-plugin</artifactId>
                 <version>${version.maven.plugin.git-commit-id}</version>
@@ -344,6 +306,51 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>shade</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-shade-plugin</artifactId>
+                        <version>${version.maven.plugin.shade}</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>shade</goal>
+                                </goals>
+                                <phase>package</phase>
+                                <configuration>
+                                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                                    <shadedArtifactAttached>true</shadedArtifactAttached>
+                                    <transformers>
+                                        <!-- This bit sets the main class for the executable jar as you otherwise -->
+                                        <!-- would with the assembly plugin                                       -->
+                                        <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                            <manifestEntries>
+                                                <Main-Class>${mainClass}</Main-Class>
+                                            </manifestEntries>
+                                        </transformer>
+                                        <!-- This bit merges the various GeoTools META-INF/services files         -->
+                                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                    </transformers>
+                                    <filters>
+                                        <filter>
+                                            <artifact>*:*</artifact>
+                                            <excludes>
+                                                <exclude>META-INF/*.SF</exclude>
+                                                <exclude>META-INF/*.DSA</exclude>
+                                                <exclude>META-INF/*.RSA</exclude>
+                                            </excludes>
+                                        </filter>
+                                    </filters>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
         <profile>
             <id>release</id>
             <build>
@@ -390,64 +397,6 @@
                                     <goal>sign</goal>
                                 </goals>
                                 <phase>verify</phase>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>com.spotify</groupId>
-                        <artifactId>dockerfile-maven-plugin</artifactId>
-                        <version>${version.maven.plugin.dockerfile}</version>
-                        <configuration>
-                            <repository>${docker-image-name}</repository>
-                            <buildArgs>
-                                <JAR_FILE>${project.build.finalName}-shaded.jar</JAR_FILE>
-                            </buildArgs>
-                        </configuration>
-                        <dependencies>
-                            <!-- Java 9 support -->
-                            <dependency>
-                                <groupId>javax.activation</groupId>
-                                <artifactId>activation</artifactId>
-                                <version>${version.javax-activation}</version>
-                            </dependency>
-                        </dependencies>
-                        <executions>
-                            <execution>
-                                <id>build-and-tag-latest</id>
-                                <goals>
-                                    <goal>build</goal>
-                                </goals>
-                                <phase>none</phase>
-                            </execution>
-                            <execution>
-                                <id>tag-version</id>
-                                <goals>
-                                    <goal>tag</goal>
-                                </goals>
-                                <phase>none</phase>
-                                <configuration>
-                                    <tag>${project.version}</tag>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>push-latest</id>
-                                <goals>
-                                    <goal>push</goal>
-                                </goals>
-                                <phase>none</phase>
-                                <configuration>
-                                    <tag>latest</tag>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>push-version</id>
-                                <goals>
-                                    <goal>push</goal>
-                                </goals>
-                                <phase>none</phase>
-                                <configuration>
-                                    <tag>${project.version}</tag>
-                                </configuration>
                             </execution>
                         </executions>
                     </plugin>

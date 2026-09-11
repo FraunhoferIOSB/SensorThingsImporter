@@ -49,13 +49,44 @@ jobs:
         SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
       run: mvn -B deploy -P release --settings scripts/maven-ci-settings.xml
 
-    - name: Build and Push Docker
-      env:
-        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Shade with Maven
       run: |
-        mvn -B dockerfile:build -P release
-        mvn -B dockerfile:tag@tag-version -P release
-        mvn -B dockerfile:push@push-latest -P release -Ddockerfile.useMavenSettingsForAuth=true --settings scripts/maven-ci-settings.xml
-        mvn -B dockerfile:push@push-version -P release -Ddockerfile.useMavenSettingsForAuth=true --settings scripts/maven-ci-settings.xml
+        mvn -B package -P shade
+        echo "Exporting Variables"
+        export PROJECT_NAME=$(mvn -Dexec.executable='echo' -Dexec.args='${project.build.finalName}' exec:exec -q)
+        echo "JAR_FILE=${PROJECT_NAME}-shaded.jar" >> $GITHUB_ENV
+        export version=$(mvn -Dexec.executable='echo' -Dexec.args='${project.version}' --non-recursive exec:exec -q)
+        echo "DOCKER_TAG_FULL=${version}"          >> $GITHUB_ENV
+
+
+    - name: Upload Shaded Jar
+      uses: actions/upload-artifact@v7
+      with:
+        path: target/${{ env.JAR_FILE }}
+        archive: false
+
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v4
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+    - name: Login to DockerHub
+      uses: docker/login-action@v4 
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+
+    - name: Build & Push Docker
+      uses: docker/build-push-action@v7
+      with:
+        platforms: linux/amd64
+        context: "."
+        push: true
+        build-args: |
+          JAR_FILE=${{ env.JAR_FILE }}
+        tags: |
+          fraunhoferiosb/frost-importer:${{ env.DOCKER_TAG_FULL }}
+          fraunhoferiosb/frost-importer:latest
 
