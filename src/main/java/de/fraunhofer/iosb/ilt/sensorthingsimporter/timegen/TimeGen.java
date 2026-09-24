@@ -18,10 +18,12 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen;
 
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
+import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableClass;
 import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import java.time.Instant;
 import net.time4j.Moment;
 
+@ConfigurableClass
 public interface TimeGen extends AnnotatedConfigurable<Object, Object> {
 
     public Instant getInstant();

@@ -26,6 +26,7 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
 /**
  * Validates Observations and determines if they need to be uploaded or not.
  */
+@ConfigurableClass
 public interface Validator extends AnnotatedConfigurable<Void, Void> {
 
     public default void init(ObservationUploader uploader) {
