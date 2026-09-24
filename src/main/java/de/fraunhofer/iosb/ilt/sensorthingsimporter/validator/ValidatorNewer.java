@@ -30,7 +30,6 @@ import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeValue;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ObservationUploader;
 import java.net.MalformedURLException;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import net.time4j.Moment;
@@ -41,7 +40,7 @@ import net.time4j.Moment;
  */
 public class ValidatorNewer implements Validator {
 
-    private static final Moment MOMENT_MIN = Moment.from(Instant.MIN);
+    private static final Moment MOMENT_MIN = Moment.axis().getMinimum();
 
     private final Map<PkValue, Moment> datastreamCache = new HashMap<>();
     private final Map<PkValue, Moment> multiDatastreamCache = new HashMap<>();
