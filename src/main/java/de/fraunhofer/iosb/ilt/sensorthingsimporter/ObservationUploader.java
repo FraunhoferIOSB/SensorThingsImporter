@@ -136,7 +136,7 @@ public class ObservationUploader implements AnnotatedConfigurable<Object, Object
     }
 
     public void addObservation(Entity obs) throws ServiceFailureException {
-        if (obs.getPrimaryKeyValues() != null && !noAct) {
+        if (obs.primaryKeyFullySet() && !noAct) {
             service.update(obs);
             updated.incrementAndGet();
         } else if (!useDataArrays && !noAct) {
