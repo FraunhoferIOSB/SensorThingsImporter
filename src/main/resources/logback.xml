@@ -3,6 +3,7 @@
     <variable name="FROST_LL" value="${FROST_LL:-INFO}" />
     <variable name="FROST_LL_DSMAPPER" value="${FROST_LL_DSMAPPER:-INFO}" />
     <variable name="FROST_LL_IMPORTER" value="${FROST_LL_IMPORTER:-INFO}" />
+    <variable name="FROST_LL_WRAPPER" value="${FROST_LL_WRAPPER:-INFO}" />
     <variable name="FROST_LL_REFLECTIONS" value="${FROST_LL_REFLECTIONS:-ERROR}" />
     <variable name="FROST_LL_STA" value="${FROST_LL_STA:-INFO}" />
     <variable name="FROST_LL_URLUTILS" value="${FROST_LL_URLUTILS:-WARN}" />
@@ -36,6 +37,7 @@
 	<logger name="de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils" level="${FROST_LL_URLUTILS}"/>
 	<logger name="de.fraunhofer.iosb.ilt.sensorthingsimporter.validator" level="${FROST_LL_VALIDATOR}"/>
 	<logger name="de.fraunhofer.iosb.ilt.sensorthingsimporter" level="${FROST_LL_IMPORTER}"/>
+	<logger name="de.fraunhofer.iosb.ilt.sensorthingsimporter.ImporterWrapper" level="${FROST_LL_WRAPPER}"/>
 	<logger name="de.fraunhofer.iosb.ilt.sta" level="${FROST_LL_STA}"/>
 	<logger name="org.apache.parquet.hadoop.InternalParquetRecordReader" level="WARN"/>
 	<logger name="org.reflections8.Reflections" level="${FROST_LL_REFLECTIONS}"/>
