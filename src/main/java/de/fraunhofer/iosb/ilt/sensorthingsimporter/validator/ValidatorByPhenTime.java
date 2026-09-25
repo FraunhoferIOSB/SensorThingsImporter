@@ -174,7 +174,10 @@ public class ValidatorByPhenTime implements Validator {
     public boolean isValid(Entity obs) throws ImportException {
         try {
             Entity ds = obs.getProperty(mdl11.npObservationDatastream);
-            Entity mds = obs.getProperty(mdlMds.npObservationMultidatastream);
+            Entity mds = null;
+            if (mdlMds != null) {
+                mds = obs.getProperty(mdlMds.npObservationMultidatastream);
+            }
             Dao observations = validateCache(ds, mds);
 
             TimeValue phenomenonTime = obs.getProperty(EP_PHENOMENONTIME);
