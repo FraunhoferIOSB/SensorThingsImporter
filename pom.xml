@@ -52,7 +52,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Dependency versions -->
-        <version.FROST-Client>2.40</version.FROST-Client>
+        <version.FROST-Client>2.41-SNAPSHOT</version.FROST-Client>
         <version.commons.collections>4.6.0</version.commons.collections>
         <version.commons.csv>1.14.1</version.commons.csv>
         <version.commons.io>2.22.0</version.commons.io>
@@ -217,6 +217,17 @@
             <id>osgeo</id>
             <name>Open Source Geospatial Foundation Repository</name>
             <url>https://repo.osgeo.org/repository/release/</url>
+        </repository>
+        <repository>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <id>central-portal-snapshots</id>
+            <name>Central Portal Snapshots</name>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
         </repository>
     </repositories>
 
