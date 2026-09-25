@@ -106,7 +106,7 @@ public class DataStreamGeneratorEea2 implements DatastreamGenerator, de.fraunhof
     @ConfigurableField(editor = EditorString.class,
             label = "Samplingpoint Template", description = "The template to use to extract the sampling point from the record.")
     @EditorString.EdOptsString(lines = 1,
-            dflt = "{Samplingpoint[3:]}")
+            dflt = "{SAMPLINGPOINT_LOCALID}")
     private String samplingPointTemplate;
 
     private FrostUtils frostUtils;

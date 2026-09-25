@@ -49,8 +49,6 @@
 								"dsGenerator": {
 									"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.eea.DataStreamGeneratorEea2",
 									"classConfig": {
-										"stationsUrl": "https://discomap.eea.europa.eu/App/AQViewer/data?fqn\u003dAirquality_Dissem.b2g.measurements",
-										"template": "{\n\t\"Page\": 0,\n\t\"SortBy\": null,\n\t\"SortAscending\": true,\n\t\"RequestFilter\": {\n\t\t\"AssessmentMethodId\": {\n\t\t\t\"FieldName\": \"AssessmentMethodId\",\n\t\t\t\"Values\": [\"$SAMPLING_POINT_ID\"]\n\t\t}\n\t}\n}"
 									}
 								}
 							}
@@ -129,7 +127,7 @@
 	"uploader": {
 		"serviceUrl": "http://localhost:8080/FROST-Server/v1.1",
 		"authMethod": {
-			"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.auth.AuthNone",
+			"className": "de.fraunhofer.iosb.ilt.frostclient.auth.AuthNone",
 			"classConfig": {}
 		},
 		"useDataArrays": true,
