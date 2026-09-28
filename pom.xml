@@ -57,14 +57,14 @@
         <version.commons.csv>1.14.1</version.commons.csv>
         <version.commons.io>2.22.0</version.commons.io>
         <version.commons.lang3>3.20.0</version.commons.lang3>
-        <version.configurable>0.37</version.configurable>
+        <version.configurable>0.38</version.configurable>
         <version.geotools>35.1</version.geotools>
         <version.groovy>3.0.25</version.groovy>
         <version.hadoop>3.5.0</version.hadoop>
-        <version.hadoop-jackson>2.22.2</version.hadoop-jackson>
+        <version.hadoop-jackson>2.22.3</version.hadoop-jackson>
         <version.javax-activation>1.1.1</version.javax-activation>
         <version.junit>4.13.2</version.junit>
-        <version.logback>1.6.3</version.logback>
+        <version.logback>1.6.4</version.logback>
 
         <!-- maven plugin versions -->
         <version.maven.plugin.central-publishing>0.11.0</version.maven.plugin.central-publishing>
@@ -80,7 +80,7 @@
         <version.openjfx>23.0.2</version.openjfx>
         <version.parquet>1.18.1</version.parquet>
         <version.quartz>2.5.2</version.quartz>
-        <version.slf4j>2.0.19</version.slf4j>
+        <version.slf4j>2.0.20</version.slf4j>
         <version.time4j>5.9.4</version.time4j>
     </properties>
 
