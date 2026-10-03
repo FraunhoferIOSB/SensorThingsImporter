@@ -25,8 +25,10 @@ import de.fraunhofer.iosb.ilt.configurable.ConfigEditor;
 import de.fraunhofer.iosb.ilt.configurable.ConfigurationException;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.Tuple;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.Tuples;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -54,10 +56,10 @@ public class Translator extends AbstractConfigurable<Void, Void> {
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(Translator.class);
     /**
-     * {varName[0:5]|default}
+     * {modifier:varName[0:5]|default}
      *
      */
-    private static final Pattern PLACE_HOLDER_PATTERN = Pattern.compile("\\{([0-9a-zA-Z_]+)(\\[([0-9]*):([0-9]*)\\])?(\\|([^}]*))?\\}");
+    private static final Pattern PLACE_HOLDER_PATTERN = Pattern.compile("\\{([0-9a-zA-Z_:/]+)(\\[([0-9]*):([0-9]*)\\])?(\\|([^}]*))?\\}");
 
     private static final TypeReference<Map<String, String>> TYPE_REF_MAP_STRING_STRING = new TypeReference<Map<String, String>>() {
         // Empty by design.
@@ -132,6 +134,14 @@ public class Translator extends AbstractConfigurable<Void, Void> {
         return fillTemplate(template, CsvTuple.of(record), targetType, removeNewlines);
     }
 
+    public static String fillTemplate(String template, Entity entity, StringType targetType) {
+        return fillTemplate(template, Tuples.EntityTuple.of(entity), targetType, true);
+    }
+
+    public static String fillTemplate(String template, Entity entity, StringType targetType, boolean removeNewlines) {
+        return fillTemplate(template, Tuples.EntityTuple.of(entity), targetType, removeNewlines);
+    }
+
     public static String fillTemplate(String template, Tuple record, StringType targetType, boolean removeNewlines) {
         if (removeNewlines) {
             return fillTemplate(StringUtils.remove(template, "\n"), record, targetType);
@@ -155,22 +165,24 @@ public class Translator extends AbstractConfigurable<Void, Void> {
             int start = matcher.start();
             filter.append(template.substring(pos, start));
             String value;
+            final String key = matcher.group(1);
             try {
-                int colNr = Integer.parseInt(matcher.group(1));
+                int colNr = Integer.parseInt(key);
                 value = record.getString(colNr);
             } catch (NumberFormatException ex) {
-                String colName = matcher.group(1);
+                String colName = key;
                 value = record.getString(colName);
             }
             if (matcher.group(2) != null) {
-                final String group3 = matcher.group(3);
-                final String group4 = matcher.group(4);
-                int subStart = isNullOrEmpty(group3) ? 0 : Integer.parseInt(group3);
-                int subEnd = isNullOrEmpty(group4) ? value.length() : Integer.parseInt(group4);
+                final String subStartStr = matcher.group(3);
+                final String subEndStr = matcher.group(4);
+                int subStart = isNullOrEmpty(subStartStr) ? 0 : Integer.parseInt(subStartStr);
+                int subEnd = isNullOrEmpty(subEndStr) ? value.length() : Integer.parseInt(subEndStr);
                 value = value.substring(subStart, subEnd);
             }
-            if (StringHelper.isNullOrEmpty(value) && matcher.group(6) != null) {
-                value = matcher.group(6);
+            final String defaultValue = matcher.group(6);
+            if (StringHelper.isNullOrEmpty(value) && defaultValue != null) {
+                value = defaultValue;
             }
             switch (targetType) {
                 case JSON:
@@ -216,11 +228,21 @@ public class Translator extends AbstractConfigurable<Void, Void> {
         }
 
         @Override
+        public Object getObject(String name) {
+            return getString(name);
+        }
+
+        @Override
         public String getString(int idx) {
             if (stripNulls) {
                 return StringUtils.replaceChars(record.get(idx), "\u0000", "");
             }
             return record.get(idx);
+        }
+
+        @Override
+        public Object getObject(int idx) {
+            return getString(idx);
         }
 
         @Override

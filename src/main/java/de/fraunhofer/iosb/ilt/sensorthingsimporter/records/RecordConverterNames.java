@@ -62,7 +62,7 @@ public class RecordConverterNames implements RecordConverter {
     public static final ZoneId ZONE_Z = ZoneId.of("Z");
 
     @ConfigurableField(editor = EditorString.class,
-            label = "Result Col", description = "The column name that holds the result, can use '{colName|default}' templates.")
+            label = "Result", description = "The template to generate the result, can use '{colName|default}' templates.")
     @EditorString.EdOptsString()
     private String colResult;
 
@@ -72,7 +72,7 @@ public class RecordConverterNames implements RecordConverter {
     private String resultMissing;
 
     @ConfigurableField(editor = EditorString.class, optional = true,
-            label = "Unit Col", description = "The column name that holds the unit of measurement, can use '{colName|default}' templates.")
+            label = "Unit", description = "The template to generate the unit of measurement, can use '{colName|default}' templates.")
     @EditorString.EdOptsString()
     private String colUnit;
 
@@ -82,18 +82,18 @@ public class RecordConverterNames implements RecordConverter {
     private UnitConverter converter;
 
     @ConfigurableField(editor = EditorList.class,
-            label = "PhenomenonTime Col", description = "The column names that holds the phenomenonTime, can use '{colName|default}' templates.")
+            label = "PhenomenonTime", description = "The template(s) to generate the phenomenonTime, can use '{colName|default}' templates.")
     @EditorList.EdOptsList(editor = EditorString.class, minCount = 1, maxCount = 2)
     @EditorString.EdOptsString()
     private List<String> colPhenTime;
 
     @ConfigurableField(editor = EditorString.class, optional = true,
-            label = "ResultTime Column", description = "The column name that holds the resultTime, can use '{colName|default}' templates.")
+            label = "ResultTime", description = "The template to generate the resultTime, can use '{colName|default}' templates.")
     @EditorString.EdOptsString()
     private String colResultTime;
 
     @ConfigurableField(editor = EditorList.class, optional = true,
-            label = "ValidTime Column", description = "The column names that holds the validTime, can use '{colName|default}' templates.")
+            label = "ValidTime", description = "The templates to generate the validTime, can use '{colName|default}' templates.")
     @EditorList.EdOptsList(editor = EditorString.class, minCount = 0, maxCount = 2)
     @EditorString.EdOptsString()
     private List<String> colValidTime;

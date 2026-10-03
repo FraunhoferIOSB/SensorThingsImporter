@@ -244,9 +244,19 @@ public class TupleSourceParquet implements TupleSource {
         }
 
         @Override
+        public Object getObject(String name) {
+            return getString(name);
+        }
+
+        @Override
         public String getString(int idx) {
             return record.getString(idx, 0);
 
+        }
+
+        @Override
+        public Object getObject(int idx) {
+            return record.getString(idx, 0);
         }
 
         public static ParquetTuple of(Group record) {

@@ -109,7 +109,7 @@ public class JsonUtils {
         try {
             return getMapper().readValue(json, TYPE_MAP_STRING_OBJECT);
         } catch (JacksonException ex) {
-            LOGGER.warn("Failed to parse json to Map: {}", ex.getMessage());
+            LOGGER.warn("Failed to parse json {} to Map: {}", json, ex.getMessage());
             LOGGER.debug("Exception: ", ex);
             return new HashMap<>();
         }

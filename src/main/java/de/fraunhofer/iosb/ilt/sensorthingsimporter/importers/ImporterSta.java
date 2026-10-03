@@ -42,12 +42,14 @@ import de.fraunhofer.iosb.ilt.frostclient.model.ModelRegistry;
 import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11MultiDatastream;
 import de.fraunhofer.iosb.ilt.frostclient.models.SensorThingsV11Sensing;
 import de.fraunhofer.iosb.ilt.frostclient.models.ext.TimeInterval;
+import de.fraunhofer.iosb.ilt.frostclient.utils.RequestHookUrlReplacer;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.Importer;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.timegen.TimeGen;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.FrostUtils;
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -158,16 +160,16 @@ public class ImporterSta implements Importer {
             service = new SensorThingsService();
             Iterator<Entity> things = null;
             try {
-                service.setBaseUrl(new URL(parent.sourceServiceUrl));
+                service.setBaseUrl(new URI(parent.sourceServiceUrl).toURL());
                 if (!Utils.isNullOrEmpty(parent.serviceUrlReplace)) {
-                    service.setUrlReplace(parent.serviceUrlReplace);
+                    service.addHook(new RequestHookUrlReplacer(parent.serviceUrlReplace, service.getBaseUrl().toString()));
                 }
                 if (parent.sourceAuthMethod != null) {
                     parent.sourceAuthMethod.setAuth(service);
                 }
                 service.init();
                 things = service.query(parent.mdl11.etThing).orderBy("id").top(1000).list().iterator();
-            } catch (MalformedURLException ex) {
+            } catch (URISyntaxException | MalformedURLException ex) {
                 LOGGER.error("Failed to create service", ex);
             } catch (StatusCodeException ex) {
                 LOGGER.error("Failed to fetch data: {} - {}\n{}", ex.getStatusCode(), ex.getStatusMessage(), ex.getReturnedContent());

@@ -17,6 +17,11 @@
  */
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.utils;
 
+import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
+import de.fraunhofer.iosb.ilt.frostclient.model.EntityType;
+import de.fraunhofer.iosb.ilt.frostclient.model.Property;
+import de.fraunhofer.iosb.ilt.frostclient.model.property.type.TypeComplex;
+import de.fraunhofer.iosb.ilt.frostclient.models.ext.MapValue;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +29,8 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  *
@@ -80,19 +87,48 @@ public class CollectionsHelper {
         return getFrom((Object) map, path);
     }
 
-    private static Object getFrom(final Object mapOrList, final List<String> path) {
+    public static Object getFrom(final Object mapOrList, final String path) {
+        String[] pathItems = StringUtils.split(path, '/');
+        return getFrom(mapOrList, Arrays.asList(pathItems));
+    }
+
+    public static Object getFrom(final Object mapOrList, final List<String> path) {
         Object currentEntry = mapOrList;
         int last = path.size();
         for (int idx = 0; idx < last; idx++) {
+            if (currentEntry == null) {
+                return null;
+            }
             String key = path.get(idx);
-            if (currentEntry instanceof Map) {
-                currentEntry = ((Map) currentEntry).get(key);
-            } else if (currentEntry instanceof List) {
-                try {
-                    currentEntry = ((List) currentEntry).get(Integer.parseInt(key));
-                } catch (NumberFormatException | IndexOutOfBoundsException ex) {
-                    LOGGER.warn("Failed to get {} from {}.", key, currentEntry, ex);
-                    return null;
+            switch (currentEntry) {
+                case Map map ->
+                    currentEntry = map.get(key);
+                case ObjectNode on ->
+                    currentEntry = on.get(key);
+                case ArrayNode an ->
+                    currentEntry = an.get(Integer.parseInt(key));
+                case Entity e -> {
+                    EntityType et = e.getType();
+                    Property p = et.getProperty(key);
+                    if (p == null) {
+                        LOGGER.debug("No property {} on {}", key, e);
+                        return null;
+                    }
+                    currentEntry = e.getProperty(p);
+                }
+                case MapValue mv -> {
+                    TypeComplex tc = mv.getType();
+                    currentEntry = mv.getProperty(key);
+                }
+                case List list -> {
+                    try {
+                        currentEntry = list.get(Integer.parseInt(key));
+                    } catch (NumberFormatException | IndexOutOfBoundsException ex) {
+                        LOGGER.warn("Failed to get {} from {}.", key, currentEntry, ex);
+                        return null;
+                    }
+                }
+                default -> {
                 }
             }
         }

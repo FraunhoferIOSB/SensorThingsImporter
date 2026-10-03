@@ -97,13 +97,10 @@ public class TupleSourceCsv implements TupleSource {
     @EditorClass.EdOptsClass(clazz = ErrorLog.class)
     private ErrorLog errorLog;
 
-    private SensorThingsService service;
     private CSVFormat format;
 
     @Override
     public void init(SensorThingsService service) throws ImportException {
-        this.service = service;
-
         CSVFormat.Builder formatBuilder = CSVFormat.DEFAULT
                 .builder()
                 .setDelimiter(tabIsDelimeter ? '\t' : delimiter.charAt(0));

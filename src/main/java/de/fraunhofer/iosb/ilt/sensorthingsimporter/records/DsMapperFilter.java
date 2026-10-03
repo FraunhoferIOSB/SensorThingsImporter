@@ -124,7 +124,7 @@ public class DsMapperFilter implements DatastreamMapper {
             if (dsGenerator != null) {
                 ds = dsGenerator.createDatastreamFor(record, errorLog);
                 if (ds != null) {
-                    LOGGER.info("Created datastream {} for filter {}.", ds, filter);
+                    LOGGER.info("Created {} for filter {}.", ds, filter);
                 }
             }
         } else {

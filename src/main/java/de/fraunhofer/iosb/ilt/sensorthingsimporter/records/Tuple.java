@@ -39,11 +39,26 @@ public interface Tuple {
     public String getString(int idx);
 
     /**
-     * Get the value mapped to the given name.
+     * Get the value at the given index.
+     *
+     * @param idx the index to check for.
+     * @return the original value at the given mapped name.
+     */
+    public Object getObject(int idx);
+
+    /**
+     * Get the value mapped to the given name as a String.
      *
      * @param name The name of the field/column to get the value for.
      * @return the string value at the given mapped name.
      */
     public String getString(String name);
 
+    /**
+     * Get the value mapped to the given name.
+     *
+     * @param name The name of the field/column to get the value for.
+     * @return the original value at the given mapped name.
+     */
+    public Object getObject(String name);
 }

@@ -29,6 +29,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.ValueNode;
 
 /**
  *
@@ -94,27 +97,49 @@ public class CsvUtils {
         if (StringHelper.isNullOrEmpty(value.toString())) {
             return deflt;
         }
+        if (value instanceof ValueNode vn) {
+            return vn.asString();
+        }
         return value.toString();
     }
 
     private static Object getFrom(String field, Object source) {
-        if (source instanceof CSVRecord) {
-            CSVRecord csvRecord = (CSVRecord) source;
-            if (csvRecord.isMapped(field)) {
-                return csvRecord.get(field);
-            }
-            return null;
-        }
-        if (source instanceof Map) {
-            Map map = (Map) source;
-            return map.get(field);
-        } else if (source instanceof List) {
-            List list = (List) source;
-            try {
-                Integer idx = Integer.valueOf(field);
-                return list.get(idx);
-            } catch (NumberFormatException ex) {
+        switch (source) {
+            case null -> {
                 return null;
+            }
+            case Tuple t -> {
+                return t.getObject(field);
+            }
+            case CSVRecord csvRecord -> {
+                if (csvRecord.isMapped(field)) {
+                    return csvRecord.get(field);
+                }
+                return null;
+            }
+            case Map map -> {
+                return map.get(field);
+            }
+            case List list -> {
+                try {
+                    Integer idx = Integer.valueOf(field);
+                    return list.get(idx);
+                } catch (NumberFormatException ex) {
+                    return null;
+                }
+            }
+            case ArrayNode an -> {
+                try {
+                    Integer idx = Integer.valueOf(field);
+                    return an.get(idx);
+                } catch (NumberFormatException ex) {
+                    return null;
+                }
+            }
+            case ObjectNode on -> {
+                return on.get(field);
+            }
+            default -> {
             }
         }
         String getterName = "get" + field.substring(0, 1).toUpperCase() + field.substring(1);

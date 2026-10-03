@@ -20,6 +20,7 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.records;
 import static de.fraunhofer.iosb.ilt.frostclient.models.CommonProperties.EP_PROPERTIES;
 
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
+import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
 import de.fraunhofer.iosb.ilt.frostclient.exception.ServiceFailureException;
@@ -49,19 +50,34 @@ public class DataStreamGeneratorNames implements DatastreamGenerator {
     private static final Logger LOGGER = LoggerFactory.getLogger(DataStreamGeneratorNames.class.getName());
 
     @ConfigurableField(editor = EditorString.class,
-            label = "Thing Filter", description = "A filter that will be used to find the Thing for the Datastream to create.")
-    @EditorString.EdOptsString(dflt = "name eq {nameColumn}", lines = 3)
+            label = "Thing Filter", description = "A filter that will be used to find the Thing for the Datastream to create. Example: name eq {nameColumn}")
+    @EditorString.EdOptsString(dflt = "", lines = 1)
     private String filterThing;
 
-    @ConfigurableField(editor = EditorString.class,
-            label = "Sensor Filter", description = "A filter that will be used to find the Sensor for the Datastream to create.")
-    @EditorString.EdOptsString(dflt = "name eq {nameColumn}", lines = 3)
-    private String filterSensor;
+    @ConfigurableField(editor = EditorClass.class, optional = true,
+            label = "ThingGen", description = "Thing Generator")
+    @EditorClass.EdOptsClass(clazz = EntityGenerator.class, dfltIsNull = true)
+    private EntityGenerator generatorThing;
 
     @ConfigurableField(editor = EditorString.class,
-            label = "ObsProp Filter", description = "A filter that will be used to find the Sensor for the Datastream to create.")
-    @EditorString.EdOptsString(dflt = "name eq {nameColumn}", lines = 3)
+            label = "Sensor Filter", description = "A filter that will be used to find the Sensor for the Datastream to create. Example: name eq {nameColumn}")
+    @EditorString.EdOptsString(dflt = "", lines = 1)
+    private String filterSensor;
+
+    @ConfigurableField(editor = EditorClass.class, optional = true,
+            label = "SensorGen", description = "Sensor Generator")
+    @EditorClass.EdOptsClass(clazz = EntityGenerator.class, dfltIsNull = true)
+    private EntityGenerator generatorSensor;
+
+    @ConfigurableField(editor = EditorString.class,
+            label = "ObsProp Filter", description = "A filter that will be used to find the ObservedProperty for the Datastream to create. Example: name eq {nameColumn}")
+    @EditorString.EdOptsString(dflt = "", lines = 1)
     private String filterObsProp;
+
+    @ConfigurableField(editor = EditorClass.class, optional = true,
+            label = "ObsPropGen", description = "Observed Property Generator")
+    @EditorClass.EdOptsClass(clazz = EntityGenerator.class, dfltIsNull = true)
+    private EntityGenerator generatorObsProp;
 
     @ConfigurableField(editor = EditorString.class,
             label = "Name", description = "The name")
@@ -95,7 +111,7 @@ public class DataStreamGeneratorNames implements DatastreamGenerator {
 
     @ConfigurableField(editor = EditorString.class,
             label = "Obs Type", description = "The type of observations")
-    @EditorString.EdOptsString(dflt = "\"http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement", lines = 1)
+    @EditorString.EdOptsString(dflt = "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement", lines = 1)
     private String templateObsType;
 
     private final Map<String, Entity> cacheThings = new HashMap<>();
@@ -114,6 +130,15 @@ public class DataStreamGeneratorNames implements DatastreamGenerator {
         final ModelRegistry mr = service.getModelRegistry();
         mdl11 = mr.getModel(SensorThingsV11Sensing.class);
         mdlMds = mr.getModel(SensorThingsV11MultiDatastream.class);
+        if (generatorObsProp != null) {
+            generatorObsProp.init(service);
+        }
+        if (generatorSensor != null) {
+            generatorSensor.init(service);
+        }
+        if (generatorThing != null) {
+            generatorThing.init(service);
+        }
     }
 
     @Override
@@ -147,6 +172,9 @@ public class DataStreamGeneratorNames implements DatastreamGenerator {
     }
 
     public Entity getThingFor(Tuple record, ErrorLog errorLog) throws ImportException {
+        if (generatorThing != null) {
+            return generatorThing.getFor(record);
+        }
         try {
             String filter = Translator.fillTemplate(filterThing, record, StringType.URL, true);
             Entity t = getThingFor(filter, errorLog);
@@ -158,6 +186,9 @@ public class DataStreamGeneratorNames implements DatastreamGenerator {
     }
 
     public Entity getSensorFor(Tuple record, ErrorLog errorLog) throws ImportException {
+        if (generatorSensor != null) {
+            return generatorSensor.getFor(record);
+        }
         try {
             String filter = Translator.fillTemplate(filterSensor, record, StringType.URL, true);
             Entity s = getSensorFor(filter, errorLog);
@@ -169,6 +200,9 @@ public class DataStreamGeneratorNames implements DatastreamGenerator {
     }
 
     public Entity getObsPropFor(Tuple record, ErrorLog errorLog) throws ImportException {
+        if (generatorObsProp != null) {
+            return generatorObsProp.getFor(record);
+        }
         try {
             String filter = Translator.fillTemplate(filterObsProp, record, StringType.URL, true);
             Entity o = getObsPropFor(filter, errorLog);

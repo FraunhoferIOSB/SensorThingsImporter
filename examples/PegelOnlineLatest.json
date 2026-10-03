@@ -1,0 +1,86 @@
+{
+  "importer": {
+    "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.ImporterTuples",
+    "classConfig": {
+      "recordConvertors": [
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.records.RecordConverterNames",
+          "classConfig": {
+            "colResult": "{currentMeasurement/value}",
+            "colUnit": "{unit}",
+            "colPhenTime": [
+              "{currentMeasurement/timestamp}"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.records.DsMapperFilter",
+              "classConfig": {
+                "filterTemplate": "Thing/properties/uuid eq \u0027{parent/uuid}\u0027 and properties/shortname eq \u0027{shortname}\u0027",
+                "dsGenerator": {
+                  "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.records.DataStreamGeneratorNames",
+                  "classConfig": {
+                    "filterThing": "",
+                    "generatorThing": {
+                      "entityTypeName": "Thing",
+                      "templateBody": "{\n  \"name\": \"{parent/longname}\",\n  \"description\": \"Pegel at {parent/longname}\",\n  \"properties\": {\n    \"uuid\": \"{parent/uuid}\",\n    \"number\": \"{parent/number}\",\n    \"shortname\": \"{parent/shortname}\",\n    \"km\": {parent/km},\n    \"agency\": \"{parent/agency}\",\n    \"water\": {\n      \"shortname\": \"{parent/water/shortname}\",\n      \"longname\": \"{parent/water/longname}\"\n    }\n  },\n  \"Locations\": [\n    {\n      \"name\": \"{parent/longname}\",\n      \"description\": \"Pegel at {parent/longname}\",\n      \"properties\": {\n        \"uuid\": \"{parent/uuid}\",\n        \"number\": \"{parent/number}\",\n        \"shortname\": \"{parent/shortname}\",\n        \"km\": {parent/km},\n        \"agency\": \"{parent/agency}\"\n      },\n      \"encodingType\": \"application/geo+json\",\n      \"location\": {\n        \"type\": \"Point\",\n        \"coordinates\": [\n              {parent/longitude}, {parent/latitude}\n        ]\n      }\n    }\n  ]\n}",
+                      "templateEqualsFilter": "properties/uuid eq \u0027{properties/uuid}\u0027",
+                      "templateCacheKey": "{properties/uuid}"
+                    },
+                    "filterSensor": "",
+                    "generatorSensor": {
+                      "entityTypeName": "Sensor",
+                      "templateBody": "{\n  \"name\": \"{longname}\",\n  \"description\": \"{longname}\",\n  \"encodingType\": \"text/plain\",\n  \"metadata\": \"unknown\",\n  \"properties\": {\n    \"shortname\": \"{shortname}\"\n  }\n}",
+                      "templateEqualsFilter": "properties/shortname eq \u0027{properties/shortname}\u0027",
+                      "templateCacheKey": "{properties/shortname}"
+                    },
+                    "filterObsProp": "",
+                    "generatorObsProp": {
+                      "entityTypeName": "ObservedProperty",
+                      "templateBody": "{\n  \"name\": \"{longname}\",\n  \"definition\": \"unknown\",\n  \"description\": \"{longname}\",\n  \"properties\": {\n    \"shortname\": \"{shortname}\"\n  }\n}",
+                      "templateEqualsFilter": "properties/shortname eq \u0027{properties/shortname}\u0027",
+                      "templateCacheKey": "{properties/shortname}"
+                    },
+                    "templateName": "{longname}",
+                    "templateDescription": "{longname} at {parent/longname}",
+                    "templateProperties": "{\n  \"shortname\": \"{shortname}\",\n  \"gaugeZero\": {gaugeZero}\n}",
+                    "templateUomName": "{unit}",
+                    "templateUomSymbol": "{unit}",
+                    "templateUomDef": "{unit}",
+                    "templateObsType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "tupleSource": {
+        "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.records.TupleSourceJson",
+        "classConfig": {
+          "input": {
+            "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.datagen.DataGeneratorFixed",
+            "classConfig": {
+              "baseUrl": "https://pegelonline.wsv.de/webservices/rest-api/v2/stations.json?includeTimeseries\u003dtrue\u0026includeCurrentMeasurement\u003dtrue"
+            }
+          },
+          "path": "[]/timeseries/[]"
+        }
+      }
+    }
+  },
+  "validator": {
+    "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.ValidatorByPhenTime",
+    "classConfig": {
+      "update": true,
+      "cacheObservations": true,
+      "deleteDuplicates": true
+    }
+  },
+  "uploader": {
+    "serviceUrl": "http://localhost:8080/FROST-Server/v1.0",
+    "useDataArrays": true
+  },
+  "validatorThreads": 4,
+  "validatorQueueSize": 10,
+  "validatorBatchSize": 10000,
+  "name": "Work"
+}
