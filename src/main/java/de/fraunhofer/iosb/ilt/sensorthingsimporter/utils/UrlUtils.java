@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
@@ -39,6 +40,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.ParseException;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.entity.DeflateInputStream;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -106,14 +108,21 @@ public class UrlUtils {
             get.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
         }
         boolean hasAccept = false;
+        boolean hasAcceptEncoding = false;
         for (var h : headers) {
             if ("accept".equalsIgnoreCase(h.getName())) {
                 hasAccept = true;
+            }
+            if ("Accept-Encoding".equalsIgnoreCase(h.getName())) {
+                hasAcceptEncoding = true;
             }
             get.addHeader(h);
         }
         if (!hasAccept) {
             get.addHeader("Accept", "*/*");
+        }
+        if (!hasAcceptEncoding) {
+            get.addHeader("Accept-Encoding", "deflate, gzip, *");
         }
         CloseableHttpResponse response = client.execute(get);
         HttpEntity entity = response.getEntity();
@@ -170,15 +179,22 @@ public class UrlUtils {
             post.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
         }
         boolean hasAccept = false;
+        boolean hasAcceptEncoding = false;
         boolean hasContentType = false;
         for (var h : headers) {
             if ("accept".equalsIgnoreCase(h.getName())) {
                 hasAccept = true;
             }
+            if ("Accept-Encoding".equalsIgnoreCase(h.getName())) {
+                hasAcceptEncoding = true;
+            }
             post.addHeader(h);
         }
         if (!hasAccept) {
             post.addHeader("Accept", "*/*");
+        }
+        if (!hasAcceptEncoding) {
+            post.addHeader("Accept-Encoding", "deflate, gzip, *");
         }
         if (!hasContentType) {
             post.addHeader("Content-Type", "application/json");
@@ -242,15 +258,32 @@ public class UrlUtils {
             if (charset == null) {
                 charset = UTF8;
             }
-            final InputStream inStream = data.getContent();
+            final InputStream inStream = getDataBinary();
             if (inStream == null) {
                 return null;
             }
+
             return new InputStreamReader(inStream, charset);
         }
 
         public InputStream getDataBinary() throws IOException {
-            return data.getContent();
+            String ce = headers.get("content-encoding");
+            if (ce == null) {
+                return data.getContent();
+            }
+            switch (ce.toLowerCase()) {
+                case "gzip", "x-gzip" -> {
+                    return new GZIPInputStream(data.getContent());
+                }
+                case "deflate" -> {
+                    return new DeflateInputStream(data.getContent());
+                }
+
+                default -> {
+                    LOGGER.warn("Unknown ContentEncoding: {}", ce);
+                    return data.getContent();
+                }
+            }
         }
 
         public String getUrl() {
