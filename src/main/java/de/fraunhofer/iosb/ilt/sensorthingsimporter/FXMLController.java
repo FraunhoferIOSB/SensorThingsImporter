@@ -151,8 +151,10 @@ public class FXMLController implements Initializable {
     private void saveToFile(JsonElement json, String title) {
         String config = new GsonBuilder().setPrettyPrinting().create().toJson(json);
         fileChooser.setTitle(title);
-        fileChooser.setInitialDirectory(openedFile.getParentFile());
-        fileChooser.setInitialFileName(openedFile.getName());
+        if (openedFile != null) {
+            fileChooser.setInitialDirectory(openedFile.getParentFile());
+            fileChooser.setInitialFileName(openedFile.getName());
+        }
         File file = fileChooser.showSaveDialog(paneConfig.getScene().getWindow());
         if (file == null) {
             return;
