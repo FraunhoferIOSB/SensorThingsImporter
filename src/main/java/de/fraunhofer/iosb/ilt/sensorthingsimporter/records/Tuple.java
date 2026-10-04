@@ -61,4 +61,11 @@ public interface Tuple {
      * @return the original value at the given mapped name.
      */
     public Object getObject(String name);
+
+    /**
+     * Get the data source for the tuple.
+     *
+     * @return the data source for the tuple.
+     */
+    public Object getSource();
 }

@@ -27,8 +27,7 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterator;
  */
 public interface TupleSource extends Iterable<Tuple>, AnnotatedConfigurable<Object, Object> {
 
-    public default void init(SensorThingsService service) throws ImportException {
-    }
+    public void init(SensorThingsService service) throws ImportException;
 
     /**
      * Create an Iterator that can report its current location in the source,

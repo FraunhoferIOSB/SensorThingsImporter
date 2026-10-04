@@ -21,6 +21,7 @@ import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
 import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
@@ -69,6 +70,13 @@ public class DataGeneratorBouncer implements DataGenerator {
             label = "Splitter", description = "The characters to use to split the input into urls.")
     @EditorString.EdOptsString(dflt = "\\n\\r ")
     private String splitter;
+
+    @Override
+    public void init(SensorThingsService service) throws ImportException {
+        if (inputData != null) {
+            inputData.init(service);
+        }
+    }
 
     public DataGenerator getInputData() {
         return inputData;

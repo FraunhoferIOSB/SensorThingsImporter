@@ -27,9 +27,9 @@ import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
 import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.datagen.DataGenerator;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.Tuples.CsvTuple;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterator;
-import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.Translator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils.HttpResponse;
 import java.io.IOException;
 import java.io.Reader;
@@ -101,6 +101,8 @@ public class TupleSourceCsv implements TupleSource {
 
     @Override
     public void init(SensorThingsService service) throws ImportException {
+        input.init(service);
+
         CSVFormat.Builder formatBuilder = CSVFormat.DEFAULT
                 .builder()
                 .setDelimiter(tabIsDelimeter ? '\t' : delimiter.charAt(0));
@@ -181,7 +183,7 @@ public class TupleSourceCsv implements TupleSource {
                 rowCount++;
                 currentLine++;
                 errorLog.setCurrentLine(currentLine);
-                return Translator.CsvTuple.of(records.next(), stripNull);
+                return CsvTuple.of(records.next(), stripNull);
             }
             return null;
         }

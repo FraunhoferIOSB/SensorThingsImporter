@@ -1,0 +1,61 @@
+{
+  "importer": {
+    "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.importers.ImporterTuples",
+    "classConfig": {
+      "recordConvertors": [
+        {
+          "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.records.RecordConverterNames",
+          "classConfig": {
+            "colResult": "value",
+            "colPhenTime": [
+              "timestamp"
+            ],
+            "dsm": {
+              "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.records.DsMapperFilter",
+              "classConfig": {
+                "filterTemplate": "Thing/properties/uuid eq \u0027{station/parent/uuid}\u0027 and properties/shortname eq \u0027{station/shortname}\u0027"
+              }
+            }
+          }
+        }
+      ],
+      "tupleSource": {
+        "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.records.TupleSourceJsonExtender",
+        "classConfig": {
+          "main": {
+            "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.records.TupleSourceJson",
+            "classConfig": {
+              "input": {
+                "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.datagen.DataGeneratorFixed",
+                "classConfig": {
+                  "baseUrl": "https://pegelonline.wsv.de/webservices/rest-api/v2/stations.json?includeTimeseries\u003dtrue"
+                }
+              },
+              "path": "[]/timeseries/[]"
+            }
+          },
+          "baseUrlTemplate": "https://pegelonline.wsv.de/webservices/rest-api/v2/stations/{parent/uuid}/{shortname}/measurements.json?start\u003dP60D",
+          "path": "[]",
+          "extensionPath": "station"
+        }
+      }
+    }
+  },
+  "validator": {
+    "className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.validator.ValidatorByPhenTime",
+    "classConfig": {
+      "update": true,
+      "cacheObservations": true,
+      "deleteDuplicates": true
+    }
+  },
+  "uploader": {
+    "serviceUrl": "http://localhost:8080/FROST-Server/v1.0",
+    "useDataArrays": true
+  },
+  "validatorThreads": 4,
+  "validatorQueueSize": 10,
+  "validatorBatchSize": 100000,
+  "validatorBatchOnDs": true,
+  "name": "Work"
+}

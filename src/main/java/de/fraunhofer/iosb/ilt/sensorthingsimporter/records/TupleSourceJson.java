@@ -21,8 +21,11 @@ import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
 import de.fraunhofer.iosb.ilt.frostclient.json.SimpleJsonMapper;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.datagen.DataGenerator;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.Tuples.JsonTuple;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.CollectionsHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterator;
@@ -38,7 +41,6 @@ import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
-import tools.jackson.databind.node.ValueNode;
 
 /**
  * Turns a JSON Document into tuples. Can work on nested objects and arrays.
@@ -70,47 +72,40 @@ public class TupleSourceJson implements TupleSource {
     private String parentKey = "parent";
 
     @Override
+    public void init(SensorThingsService service) throws ImportException {
+        input.init(service);
+    }
+
+    @Override
     public InspectingIterator<Tuple> iterator() {
         return new TupleIterator(this, path);
     }
 
-    public static final class JsonTuple implements Tuple {
+    public DataGenerator getInput() {
+        return input;
+    }
 
-        private final ObjectNode item;
+    public TupleSourceJson setInput(DataGenerator input) {
+        this.input = input;
+        return this;
+    }
 
-        public JsonTuple(ObjectNode item) {
-            this.item = item;
-        }
+    public String getPath() {
+        return path;
+    }
 
-        @Override
-        public String getString(int idx) {
-            throw new UnsupportedOperationException("Fetching by index not supported.");
-        }
+    public TupleSourceJson setPath(String path) {
+        this.path = path;
+        return this;
+    }
 
-        @Override
-        public Object getObject(int idx) {
-            throw new UnsupportedOperationException("Fetching by index not supported.");
-        }
+    public String getParentKey() {
+        return parentKey;
+    }
 
-        @Override
-        public String getString(String name) {
-            Object object = getObject(name);
-            if (object instanceof ValueNode vn) {
-                return vn.asString();
-            }
-            return Objects.toString(object);
-        }
-
-        @Override
-        public Object getObject(String name) {
-            return CollectionsHelper.getFrom(item, name);
-        }
-
-        @Override
-        public boolean isMapped(String name) {
-            return CollectionsHelper.getFrom(item, name) != null;
-        }
-
+    public TupleSourceJson setParentKey(String parentKey) {
+        this.parentKey = parentKey;
+        return this;
     }
 
     private final class TupleIterator implements InspectingIterator<Tuple> {
@@ -128,7 +123,7 @@ public class TupleSourceJson implements TupleSource {
 
         public TupleIterator(TupleSourceJson parent, String path) {
             this.tsj = parent;
-            this.dataIterator = parent.input.items(errorLog).iterator();
+            this.dataIterator = parent.getInput().items(errorLog).iterator();
             String[] pathItems = StringUtils.split(path, '/');
             boolean arrayFound = false;
             for (var item : pathItems) {
@@ -156,12 +151,12 @@ public class TupleSourceJson implements TupleSource {
         }
 
         @Override
-        public Tuple next() {
+        public JsonTuple next() {
             if (nextItem == null) {
                 return null;
             }
             ObjectNode curItem = nextItem.deepCopy();
-            curItem.putIfAbsent(parentKey, parentNode);
+            curItem.putIfAbsent(getParentKey(), parentNode);
             nextItem = findNext();
             return new JsonTuple(curItem);
         }
@@ -241,7 +236,7 @@ public class TupleSourceJson implements TupleSource {
                 return null;
             }
             ObjectNode tempNext = nextNode.deepCopy();
-            tempNext.putIfAbsent(tsj.parentKey, parentNode);
+            tempNext.putIfAbsent(tsj.getParentKey(), parentNode);
             nextNode = findNext();
             return tempNext;
         }
@@ -254,7 +249,7 @@ public class TupleSourceJson implements TupleSource {
                         JsonNode nextMain = mainIter.next();
                         if (nextMain.isObject()) {
                             ObjectNode nextMainObj = nextMain.asObject().deepCopy();
-                            nextMainObj.putIfAbsent(tsj.parentKey, parentNode);
+                            nextMainObj.putIfAbsent(tsj.getParentKey(), parentNode);
                         }
                         Object subArray = CollectionsHelper.getFrom(nextMain, pathToSub);
                         if (subArray instanceof ArrayNode an) {

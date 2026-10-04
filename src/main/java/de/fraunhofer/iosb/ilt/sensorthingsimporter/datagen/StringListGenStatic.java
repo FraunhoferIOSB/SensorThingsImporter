@@ -15,11 +15,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.datagen;
 
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import java.util.Collections;
 import java.util.List;
 
@@ -30,6 +32,11 @@ public class StringListGenStatic implements StringListGenerator {
     @EditorList.EdOptsList(editor = EditorString.class, minCount = 1, labelText = "Add Replace Value")
     @EditorString.EdOptsString()
     private List<String> strings;
+
+    @Override
+    public void init(SensorThingsService service) throws ImportException {
+        // Nothing to initialise.
+    }
 
     @Override
     public List<String> get() {

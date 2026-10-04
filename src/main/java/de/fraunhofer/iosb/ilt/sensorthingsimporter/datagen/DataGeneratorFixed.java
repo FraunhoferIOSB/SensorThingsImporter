@@ -20,6 +20,8 @@ package de.fraunhofer.iosb.ilt.sensorthingsimporter.datagen;
 import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorBoolean;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterable;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterator;
@@ -43,6 +45,11 @@ public class DataGeneratorFixed implements DataGenerator {
             label = "BodyTemplate", description = "The body for the post.")
     @EditorString.EdOptsString(lines = 5)
     private String bodyTemplate;
+
+    @Override
+    public void init(SensorThingsService service) throws ImportException {
+        // Nothing to initialise.
+    }
 
     public String getBaseUrl() {
         return baseUrl;

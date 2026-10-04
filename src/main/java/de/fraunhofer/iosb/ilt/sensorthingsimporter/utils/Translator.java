@@ -29,6 +29,7 @@ import de.fraunhofer.iosb.ilt.frostclient.model.Entity;
 import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.Tuple;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.Tuples;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.records.Tuples.CsvTuple;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -205,58 +206,4 @@ public class Translator extends AbstractConfigurable<Void, Void> {
         return filter.toString();
     }
 
-    public static class CsvTuple implements Tuple {
-
-        private final boolean stripNulls;
-        private final CSVRecord record;
-
-        public CsvTuple(CSVRecord record) {
-            this(record, false);
-        }
-
-        public CsvTuple(CSVRecord record, boolean stripNulls) {
-            this.stripNulls = stripNulls;
-            this.record = record;
-        }
-
-        @Override
-        public String getString(String name) {
-            if (stripNulls) {
-                return StringUtils.replaceChars(record.get(name), "\u0000", "");
-            }
-            return record.get(name);
-        }
-
-        @Override
-        public Object getObject(String name) {
-            return getString(name);
-        }
-
-        @Override
-        public String getString(int idx) {
-            if (stripNulls) {
-                return StringUtils.replaceChars(record.get(idx), "\u0000", "");
-            }
-            return record.get(idx);
-        }
-
-        @Override
-        public Object getObject(int idx) {
-            return getString(idx);
-        }
-
-        @Override
-        public boolean isMapped(String name) {
-            return record.isMapped(name);
-        }
-
-        public static CsvTuple of(CSVRecord record) {
-            return new CsvTuple(record);
-        }
-
-        public static CsvTuple of(CSVRecord record, boolean stripNulls) {
-            return new CsvTuple(record, stripNulls);
-        }
-
-    }
 }

@@ -24,6 +24,7 @@ import de.fraunhofer.iosb.ilt.configurable.editor.EditorList;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorString;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
 import de.fraunhofer.iosb.ilt.frostclient.utils.StringHelper;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.datagen.StringListGenerator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import java.net.MalformedURLException;
 import java.net.URL;

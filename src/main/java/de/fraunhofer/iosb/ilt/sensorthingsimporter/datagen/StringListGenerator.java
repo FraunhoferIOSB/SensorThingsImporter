@@ -15,15 +15,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.fraunhofer.iosb.ilt.sensorthingsimporter.csv;
+package de.fraunhofer.iosb.ilt.sensorthingsimporter.datagen;
 
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import java.util.List;
 
 /**
  * Interface for classes that generate a list of Strings.
  */
 public interface StringListGenerator extends AnnotatedConfigurable<Object, Object> {
+
+    public void init(SensorThingsService service) throws ImportException;
 
     public List<String> get();
 }

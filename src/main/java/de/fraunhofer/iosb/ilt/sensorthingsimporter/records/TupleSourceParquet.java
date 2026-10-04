@@ -21,6 +21,7 @@ import de.fraunhofer.iosb.ilt.configurable.annotations.ConfigurableField;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorClass;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorInt;
 import de.fraunhofer.iosb.ilt.configurable.editor.EditorSubclass;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.datagen.DataGenerator;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
@@ -71,6 +72,11 @@ public class TupleSourceParquet implements TupleSource {
             label = "Error Logger", description = "Configuration of the error logger")
     @EditorClass.EdOptsClass(clazz = ErrorLog.class)
     private ErrorLog errorLog;
+
+    @Override
+    public void init(SensorThingsService service) throws ImportException {
+        input.init(service);
+    }
 
     @Override
     public InspectingIterator<Tuple> iterator() {
@@ -257,6 +263,11 @@ public class TupleSourceParquet implements TupleSource {
         @Override
         public Object getObject(int idx) {
             return record.getString(idx, 0);
+        }
+
+        @Override
+        public Object getSource() {
+            return record;
         }
 
         public static ParquetTuple of(Group record) {

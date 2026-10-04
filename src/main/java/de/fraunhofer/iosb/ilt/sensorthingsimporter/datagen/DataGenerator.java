@@ -18,6 +18,8 @@
 package de.fraunhofer.iosb.ilt.sensorthingsimporter.datagen;
 
 import de.fraunhofer.iosb.ilt.configurable.AnnotatedConfigurable;
+import de.fraunhofer.iosb.ilt.frostclient.SensorThingsService;
+import de.fraunhofer.iosb.ilt.sensorthingsimporter.ImportException;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.ErrorLog;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.InspectingIterable;
 import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils.HttpResponse;
@@ -27,6 +29,8 @@ import de.fraunhofer.iosb.ilt.sensorthingsimporter.utils.UrlUtils.HttpResponse;
  * Reader must be closed.
  */
 public interface DataGenerator extends AnnotatedConfigurable<Object, Object> {
+
+    public void init(SensorThingsService service) throws ImportException;
 
     public InspectingIterable<HttpResponse> items(ErrorLog errorLog);
 
