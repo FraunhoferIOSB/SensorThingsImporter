@@ -61,7 +61,7 @@
         <version.geotools>35.1</version.geotools>
         <version.groovy>3.0.25</version.groovy>
         <version.hadoop>3.5.0</version.hadoop>
-        <version.hadoop-jackson>2.22.2</version.hadoop-jackson>
+        <version.hadoop-jackson>2.22.3</version.hadoop-jackson>
         <version.javax-activation>1.1.1</version.javax-activation>
         <version.junit>4.13.2</version.junit>
         <version.logback>1.6.3</version.logback>
