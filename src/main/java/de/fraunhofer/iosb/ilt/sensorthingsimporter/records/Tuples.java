@@ -58,7 +58,7 @@ public class Tuples {
             if (object instanceof ValueNode vn) {
                 return vn.asString();
             }
-            return Objects.toString(object);
+            return Objects.toString(object, null);
         }
 
         @Override
