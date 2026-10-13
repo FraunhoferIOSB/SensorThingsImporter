@@ -75,7 +75,7 @@
         <version.maven.plugin.javadoc>3.12.0</version.maven.plugin.javadoc>
         <version.maven.plugin.shade>3.6.2</version.maven.plugin.shade>
         <version.maven.plugin.source>3.4.0</version.maven.plugin.source>
-        <version.maven.plugin.spotless>3.10.3</version.maven.plugin.spotless>
+        <version.maven.plugin.spotless>3.10.4</version.maven.plugin.spotless>
 
         <version.openjfx>23.0.2</version.openjfx>
         <version.parquet>1.18.1</version.parquet>
