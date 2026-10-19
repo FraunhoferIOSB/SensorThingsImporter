@@ -52,13 +52,13 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Dependency versions -->
-        <version.FROST-Client>2.41-SNAPSHOT</version.FROST-Client>
+        <version.FROST-Client>2.41</version.FROST-Client>
         <version.commons.collections>4.6.0</version.commons.collections>
         <version.commons.csv>1.14.1</version.commons.csv>
         <version.commons.io>2.22.0</version.commons.io>
         <version.commons.lang3>3.21.0</version.commons.lang3>
         <version.configurable>0.38</version.configurable>
-        <version.geotools>35.1</version.geotools>
+        <version.geotools>35.2</version.geotools>
         <version.groovy>3.0.25</version.groovy>
         <version.hadoop>3.5.0</version.hadoop>
         <version.hadoop-jackson>2.22.3</version.hadoop-jackson>
@@ -67,7 +67,7 @@
         <version.logback>1.6.5</version.logback>
 
         <!-- maven plugin versions -->
-        <version.maven.plugin.central-publishing>0.11.0</version.maven.plugin.central-publishing>
+        <version.maven.plugin.central-publishing>0.12.0</version.maven.plugin.central-publishing>
         <version.maven.plugin.compiler>3.16.0</version.maven.plugin.compiler>
         <version.maven.plugin.dockerfile>1.4.13</version.maven.plugin.dockerfile>
         <version.maven.plugin.git-commit-id>10.0.1</version.maven.plugin.git-commit-id>
@@ -75,7 +75,7 @@
         <version.maven.plugin.javadoc>3.12.0</version.maven.plugin.javadoc>
         <version.maven.plugin.shade>3.6.2</version.maven.plugin.shade>
         <version.maven.plugin.source>3.4.0</version.maven.plugin.source>
-        <version.maven.plugin.spotless>3.10.3</version.maven.plugin.spotless>
+        <version.maven.plugin.spotless>3.10.4</version.maven.plugin.spotless>
 
         <version.openjfx>23.0.2</version.openjfx>
         <version.parquet>1.18.1</version.parquet>
