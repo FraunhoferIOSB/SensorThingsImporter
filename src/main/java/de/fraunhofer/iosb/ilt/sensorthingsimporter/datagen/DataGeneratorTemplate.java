@@ -167,7 +167,7 @@ public class DataGeneratorTemplate implements DataGenerator {
                 }
                 return UrlUtils.fetchFromUrl(finalUrl);
             } catch (IOException ex) {
-                throw new IllegalArgumentException("Failed to request URL: " + finalUrl, ex);
+                throw new IllegalArgumentException("Failed to request URL: " + finalUrl + " " + ex.getMessage(), ex);
             }
         }
     }
