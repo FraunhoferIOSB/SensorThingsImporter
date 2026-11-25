@@ -75,7 +75,7 @@
 						{
 							"replaceKey": "{polu}",
 							"replacementGen": {
-								"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.StringListGenStatic",
+								"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.datagen.StringListGenStatic",
 								"strings": [
 									"PM10",
 									"PM25",
@@ -89,7 +89,7 @@
 						{
 							"replaceKey": "{time}",
 							"replacementGen": {
-								"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.csv.StringListGeneratorTimeStrings",
+								"className": "de.fraunhofer.iosb.ilt.sensorthingsimporter.datagen.StringListGenTimeStrings",
 								"minus": 24,
 								"count": 26,
 								"delta": 1,
